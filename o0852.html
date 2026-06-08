@@ -102,6 +102,7 @@
   #tip .tname{font-weight:800; color:var(--accent2); margin-bottom:3px; font-family:monospace}
   #tip .tdesc{color:var(--txt)}
   #tip .tnote{color:var(--green); margin-top:6px; padding-top:6px; border-top:1px solid #243}
+  #tip .tval{color:var(--accent2); margin-top:6px; padding-top:6px; border-top:1px solid #243; font-family:monospace; font-size:13px}
   /* var table */
   table.vt{width:100%; border-collapse:collapse; margin:10px 0 24px; font-size:13px}
   table.vt th,table.vt td{border:1px solid var(--line); padding:7px 10px; text-align:left}
@@ -1442,10 +1443,22 @@ function showTip(html,x,y){
 }
 function hideTip(){tip.classList.remove('show');}
 
+const VALUES={};
+document.querySelectorAll('script[type="text/plain"]').forEach(function(sc){
+ sc.textContent.split('\n').forEach(function(l){
+   const m=l.match(/^\s*(?:N\d+\s+)?#(\d+)\s*=\s*([^(;]+)/);
+   if(m){ const n=m[1], v=m[2].trim().replace(/\.$/,''); if(v&&v!=='-9999'&&n!=='3000'&&!(n in VALUES)) VALUES[n]=v; }
+ });
+});
+
 function tipFor(t){
  if(t.classList && t.classList.contains('var')){
    const v=VARS[t.dataset.v];
-   if(v) return `<div class="tname">#${t.dataset.v}</div><div class="tdesc"><b>${v[0]}</b>${v[1]?'<br>'+v[1]:''}</div>`;
+   if(v){
+     const val=VALUES[t.dataset.v];
+     const extra=val?`<div class="tval">${/^[-\d.]+$/.test(val)?'설정값':'계산식'}: <b>${val.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</b></div>`:'';
+     return `<div class="tname">#${t.dataset.v}</div><div class="tdesc"><b>${v[0]}</b>${v[1]?'<br>'+v[1]:''}</div>`+extra;
+   }
  }
  if(t.classList && (t.classList.contains('gc')||t.classList.contains('mc'))){
    const c=t.dataset.c;

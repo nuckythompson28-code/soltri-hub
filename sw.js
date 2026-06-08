@@ -1,5 +1,5 @@
 // 공장집사 서비스워커 — 앱 셸 캐시(오프라인) + 백그라운드 갱신
-const CACHE = 'soltri-hub-v2';
+const CACHE = 'soltri-hub-v3';
 const ASSETS = ['./', 'index.html', 'o0852.html', 'o0400.html',
   'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => {
