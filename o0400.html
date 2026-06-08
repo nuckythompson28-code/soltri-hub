@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O0400 반토막 — 인터랙티브 코드 분석</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#222b36;
+    --txt:#d7dee8; --dim:#8a97a6; --accent:#4fb6ff; --accent2:#ffb454;
+    --green:#7ee787; --red:#ff7b72; --purple:#d2a8ff; --comment:#6b7785;
+    --num:#79c0ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:var(--bg); color:var(--txt); font-size:15px; line-height:1.55;
+  }
+  /* ===== Layout ===== */
+  .app{display:grid; grid-template-columns:260px 1fr; height:100vh}
+  .sidebar{background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:18px 14px}
+  .main{overflow-y:auto; padding:26px 34px 80px; scroll-behavior:smooth}
+  .brand{font-size:18px; font-weight:800; letter-spacing:.5px; margin-bottom:4px}
+  .brand span{color:var(--accent)}
+  .brand-sub{font-size:12px; color:var(--dim); margin-bottom:18px}
+  /* nav */
+  .nav-h{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px}
+  .nav a{display:block; padding:9px 12px; border-radius:8px; color:var(--txt);
+    text-decoration:none; font-size:14px; margin-bottom:3px; border:1px solid transparent; cursor:pointer}
+  .nav a:hover{background:var(--panel2)}
+  .nav a.active{background:var(--panel2); border-color:var(--accent); color:#fff}
+  .nav a small{display:block; color:var(--dim); font-size:11px; margin-top:2px}
+  .nav a.active small{color:var(--accent)}
+  .badge{display:inline-block; font-size:10px; padding:1px 6px; border-radius:6px; background:#2a3441; color:var(--accent2); margin-left:4px}
+  .legend{margin-top:22px; font-size:12px}
+  .legend .row{display:flex; align-items:center; gap:7px; margin:5px 0; color:var(--dim)}
+  .sw{width:13px; height:13px; border-radius:3px; flex:none}
+  /* ===== Pages ===== */
+  .page{display:none; max-width:1080px}
+  .page.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  h1{font-size:26px; margin:0 0 4px; font-weight:800}
+  .role{color:var(--accent2); font-weight:600; font-size:14px; margin-bottom:14px}
+  .summary{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:14px 18px; border-radius:10px; margin-bottom:22px; color:var(--txt)}
+  .summary b{color:var(--accent)}
+  /* flow diagram */
+  .flow{display:flex; align-items:stretch; gap:0; flex-wrap:wrap; margin:18px 0 26px}
+  .flow .node{flex:1; min-width:150px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:.15s; position:relative}
+  .flow .node:hover{border-color:var(--accent); transform:translateY(-2px)}
+  .flow .node .pid{font-weight:800; font-size:16px; color:var(--accent)}
+  .flow .node .pdesc{font-size:12px; color:var(--dim); margin-top:4px}
+  .flow .arrow{display:flex; align-items:center; color:var(--dim); font-size:22px; padding:0 6px}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:18px 0}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .card h3{margin:0 0 8px; font-size:15px; color:var(--accent2)}
+  .card p{margin:0; font-size:13px; color:var(--dim)}
+  .warn{background:#2a1d1d; border:1px solid #5a2d2d; border-left:3px solid var(--red);
+    padding:12px 16px; border-radius:10px; margin:14px 0; font-size:14px}
+  .warn b{color:var(--red)}
+  .tip{background:#1d2a22; border:1px solid #2d5a3a; border-left:3px solid var(--green);
+    padding:12px 16px; border-radius:10px; margin:14px 0; font-size:14px}
+  .tip b{color:var(--green)}
+  /* ===== Code block ===== */
+  .codewrap{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:30px}
+  .codehead{display:flex; justify-content:space-between; align-items:center; padding:10px 16px;
+    background:var(--panel2); border-bottom:1px solid var(--line); font-size:13px}
+  .codehead .ttl{font-weight:700}
+  .codehead .hint{color:var(--dim); font-size:12px}
+  pre.code{margin:0; padding:14px 0; overflow-x:auto; font-family:"D2Coding","Consolas","Courier New",monospace;
+    font-size:13.5px; line-height:1.7}
+  .ln{display:flex; padding:0 16px; white-space:pre}
+  .ln:hover{background:#1b2husa}
+  .ln.has-note{cursor:help}
+  .ln.has-note:hover{background:#1e2733}
+  .ln .gut{width:42px; flex:none; color:#46505c; text-align:right; padding-right:14px; user-select:none}
+  .ln .src{flex:1}
+  .ln.block{background:#13242f; border-top:1px solid #1e3a47}
+  .ln.danger-line{background:#2a1818}
+  /* tokens */
+  .cm{color:var(--comment)}
+  .var{color:var(--purple); border-bottom:1px dotted #5a4a6e; cursor:help}
+  .var:hover{color:#fff; background:#3a2d4e}
+  .gc{color:var(--accent); cursor:help; border-bottom:1px dotted #2d4a5e}
+  .gc:hover{color:#fff; background:#1e3a4e}
+  .mc{color:var(--accent2); cursor:help; border-bottom:1px dotted #5e4a2d}
+  .mc:hover{color:#fff; background:#4e3a1e}
+  .kw{color:var(--red); font-weight:600}
+  .num2{color:var(--num)}
+  .jump{color:var(--green); text-decoration:underline dotted; cursor:pointer; font-weight:600}
+  .jump:hover{color:#fff; background:#1d3a26}
+  .label{color:var(--green); font-weight:700}
+  .ln.flash{background:#3a3a1d!important; transition:background .1s}
+  /* tooltip */
+  #tip{position:fixed; z-index:999; max-width:min(340px, calc(100vw - 24px)); background:#0a0d11; border:1px solid var(--accent);
+    border-radius:10px; padding:11px 14px; font-size:13px; line-height:1.5; color:var(--txt);
+    box-shadow:0 8px 30px rgba(0,0,0,.6); pointer-events:none; opacity:0; transition:opacity .1s; display:none}
+  #tip.show{opacity:1; display:block}
+  #tip .tname{font-weight:800; color:var(--accent2); margin-bottom:3px; font-family:monospace}
+  #tip .tdesc{color:var(--txt)}
+  #tip .tnote{color:var(--green); margin-top:6px; padding-top:6px; border-top:1px solid #243}
+  /* var table */
+  table.vt{width:100%; border-collapse:collapse; margin:10px 0 24px; font-size:13px}
+  table.vt th,table.vt td{border:1px solid var(--line); padding:7px 10px; text-align:left}
+  table.vt th{background:var(--panel2); color:var(--accent2)}
+  table.vt td:first-child{font-family:monospace; color:var(--purple); white-space:nowrap}
+  .scrollhint{position:fixed; bottom:18px; right:24px; background:var(--panel2); border:1px solid var(--line);
+    padding:8px 14px; border-radius:20px; font-size:12px; color:var(--dim)}
+  /* SVG diagrams */
+  .svgbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:16px 0 26px}
+  .svgbox h3{margin:0 0 4px; font-size:16px; color:var(--accent2)}
+  .svgbox .cap{font-size:13px; color:var(--dim); margin-bottom:12px}
+  .svgbox svg{width:100%; height:auto; display:block}
+  svg text{font-family:"Pretendard","맑은 고딕",sans-serif}
+  svg text.var{fill:var(--purple); cursor:help; font-weight:600}
+  svg text.var:hover{fill:#fff}
+  svg .part{fill:#1e3a4e; stroke:var(--accent); stroke-width:2}
+  svg .part2{fill:#13242f; stroke:#3a6a8a; stroke-width:1.5}
+  svg .raw{fill:#3a2d1e; stroke:var(--accent2); stroke-width:2}
+  svg .dim{stroke:var(--dim); stroke-width:1}
+  svg .dimt{stroke:var(--dim); stroke-width:1; stroke-dasharray:3 3}
+  svg .center{stroke:#5a6675; stroke-width:1; stroke-dasharray:10 4 3 4}
+  svg .lead{stroke:#8a97a6; stroke-width:1}
+  svg .lbl{fill:var(--txt); font-size:14px}
+  svg .lbls{fill:var(--dim); font-size:12px}
+  svg .chuck{fill:#2a3441; stroke:#5a6675; stroke-width:1.5}
+  svg .kerf{fill:#5a2d2d; opacity:.55}
+  /* 모바일 햄버거 / 서랍 */
+  .menu-btn{display:none; position:fixed; top:10px; left:12px; z-index:60; width:44px; height:44px;
+    border-radius:11px; border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+    font-size:21px; align-items:center; justify-content:center; cursor:pointer}
+  .backdrop{display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:45}
+  .backdrop.show{display:block}
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed; top:0; left:0; bottom:0; width:248px; z-index:50;
+      transform:translateX(-100%); transition:transform .25s ease; box-shadow:4px 0 24px rgba(0,0,0,.5)}
+    .sidebar.open{transform:none}
+    .menu-btn{display:flex}
+    .main{padding:62px 16px 80px}
+    h1{font-size:21px}
+    .summary,.warn,.tip{font-size:13.5px; padding:12px 14px}
+    .flow{flex-direction:column}
+    .flow .arrow{transform:rotate(90deg); padding:4px 0}
+    pre.code{font-size:12.5px}
+    .ln .gut{width:34px; padding-right:8px}
+    .scrollhint{display:none}
+    .cards{grid-template-columns:1fr}
+    table.vt{font-size:12px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴 열기">☰</button>
+<div class="backdrop" id="backdrop"></div>
+<div class="app">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="brand">O<span>0400</span> 반토막</div>
+    <div class="brand-sub">Soltri · CNC 파팅(절단) 프로그램</div>
+
+    <div class="nav-h">페이지</div>
+    <nav class="nav" id="nav">
+      <a data-page="overview" class="active">📊 전체 개요<small>7개 프로그램의 흐름</small></a>
+      <a data-page="O0400">① O0400<small>입력 · 설정 (메인)</small></a>
+      <a data-page="O0410">② O0410<small>전체 절삭 로직</small></a>
+      <a data-page="O7001">③ O7001<small>면가공 FACE</small></a>
+      <a data-page="O7002">④ O7002<small>스텝/보링 절삭</small></a>
+      <a data-page="O7003">⑤ O7003<small>면취 CHAMFER</small></a>
+      <a data-page="O7004">⑥ O7004<small>절단 PARTING</small></a>
+      <a data-page="O7005">⑦ O7005<small>잔여분 스텝절삭</small></a>
+      <a data-page="shape">🔧 가공 형상<small>소재 → 제품 다이어그램</small></a>
+      <a data-page="vars">📖 변수 사전<small>#100 ~ #532 전체</small></a>
+    </nav>
+
+    <div class="legend">
+      <div class="nav-h">색상 안내</div>
+      <div class="row"><span class="sw" style="background:#d2a8ff"></span>변수 (#숫자)</div>
+      <div class="row"><span class="sw" style="background:#4fb6ff"></span>G코드 (이동·절삭)</div>
+      <div class="row"><span class="sw" style="background:#ffb454"></span>M코드 (보조기능)</div>
+      <div class="row"><span class="sw" style="background:#7ee787"></span>점프 (클릭 이동)</div>
+      <div class="row"><span class="sw" style="background:#6b7785"></span>주석 (설명문)</div>
+      <div style="margin-top:14px; color:var(--dim); font-size:12px; line-height:1.5">
+        💡 코드에 <b>마우스 호버</b>(PC) /<br><b>탭</b>(모바일)하면 설명이 뜹니다.<br>초록색은 누르면 이동!
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main" id="main">
+
+    <!-- OVERVIEW -->
+    <section class="page active" id="page-overview">
+      <h1>O0400 반토막 파팅 프로그램</h1>
+      <div class="role">파이프 소재 한 척 분량을 여러 개의 링으로 잘라내는 모듈형 프로그램</div>
+      <div class="summary">
+        작업자가 <b>치수·개수·조건을 입력</b>(O0400)하면 → 로직(O0410)이 <b>1개 점유 길이·묶음·개수를 계산</b>하고
+        → <b>면가공→보링→면취→절단</b> 서브(O7001~7004)를 순서대로 호출하며 소재 끝까지 반복합니다.
+        O0852와 달리 <b>오토링크(바피더) 없는 단일 척 가공</b>이며 서브프로그램으로 모듈화돼 있습니다.
+      </div>
+
+      <h3 style="color:var(--accent2)">프로그램 흐름 (클릭하면 이동)</h3>
+      <div class="flow">
+        <div class="node" data-page="O0400"><div class="pid">O0400</div><div class="pdesc">메인<br>입력·설정</div></div>
+        <div class="arrow">→</div>
+        <div class="node" data-page="O0410"><div class="pid">O0410</div><div class="pdesc">로직<br>계산·루프</div></div>
+        <div class="arrow">→</div>
+        <div class="node" data-page="O7001"><div class="pid">O7001~7005</div><div class="pdesc">서브<br>면·보링·면취·절단</div></div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><h3>① O0400 (MAIN)</h3><p>작업자 입력 영역. 치수·개수·면취·이송·모드 설정 후 <code>M98 P0410</code>으로 로직 호출.</p></div>
+        <div class="card"><h3>② O0410 (FULL CUTTING)</h3><p>1개 점유·묶음·개수 계산, 서브 호출 루프, 잔여분 처리. 수정 금지.</p></div>
+        <div class="card"><h3>③ O7001 면가공</h3><p>끝면 평탄+황삭보링+마킹. <code>M00</code>으로 소재 장착 대기.</p></div>
+        <div class="card"><h3>④ O7002 / O7005 보링</h3><p>한 묶음 깊이만큼 안쪽 스텝 보링. O7005는 잔여분(#532) 전용.</p></div>
+        <div class="card"><h3>⑤ O7003 면취</h3><p>타입3=우측만 / 타입4=좌·우 양쪽 모따기.</p></div>
+        <div class="card"><h3>⑥ O7004 절단</h3><p>안쪽까지 파고들어 링 분리 → <code>M12</code> 배출.</p></div>
+      </div>
+
+      <div class="warn"><b>⚠️ 작업자 핵심 주의사항</b><br>
+        1. <code>#103</code>은 <b>완성 외경</b> — O0852와 변수 체계가 달라 혼동 주의<br>
+        2. <code>#506</code>(묶음길이=#505×#123)이 <b>60 미만</b>이어야 함 — 넘으면 <code>#123</code> 줄이기<br>
+        3. <code>M53/M54</code>(받침대)는 <b>하드코딩</b> — 다른 기계엔 그대로 못 씀<br>
+        4. O7001의 <code>M00</code>에서 소재 장착 후 사이클 스타트<br>
+        5. 면취 타입(<code>#121</code>) 3/4 정확히 — 서브 동작이 갈림
+      </div>
+
+      <div class="tip"><b>💡 사용법</b><br>
+        왼쪽에서 프로그램을 고르고, 코드에 호버(PC)/탭(모바일)하면 변수·코드·줄 설명이 뜹니다.
+        <b style="color:var(--green)">초록색 글씨(GOTO, P7001 등)</b>는 누르면 해당 위치·프로그램으로 점프합니다.
+      </div>
+    </section>
+
+        <!-- code pages get injected here -->
+    <section class="page" id="page-O0400"></section>
+    <section class="page" id="page-O0410"></section>
+    <section class="page" id="page-O7001"></section>
+    <section class="page" id="page-O7002"></section>
+    <section class="page" id="page-O7003"></section>
+    <section class="page" id="page-O7004"></section>
+    <section class="page" id="page-O7005"></section>
+
+    <!-- SHAPE DIAGRAMS -->
+    <section class="page" id="page-shape">
+      <h1>🔧 가공 형상 다이어그램</h1>
+      <div class="role">소재가 어떻게 제품이 되는지 — 치수에 호버/탭하면 변수 설명이 뜹니다</div>
+      <div class="summary">
+        <b>두꺼운 파이프 소재</b>를 → 바깥을 깎고(OD↓) 구멍을 넓혀(ID↑) → 얇은 <b>링</b>으로 만든 뒤
+        → <b>한 묶음(#123개)씩 보링하고 잘라내</b> 여러 개를 뽑습니다. (오토링크 없는 단일 척)
+      </div>
+
+      <div class="svgbox">
+        <h3>① 단면 비교 — 절삭으로 제거되는 살 (내·외경 동시)</h3>
+        <div class="cap"><b>내외경 바이트</b>라 바깥(OD)뿐 아니라 <b>구멍(ID)도 함께 절삭</b>됩니다. 붉은 띠 두 곳이 깎여나가는 부분 — 개념도라 두께는 과장돼 있습니다.</div>
+        <svg viewBox="0 0 600 330">
+          <circle cx="230" cy="165" r="130" fill="#5a2d2d"/>
+          <circle cx="230" cy="165" r="110" class="part"/>
+          <circle cx="230" cy="165" r="86" fill="#5a2d2d"/>
+          <circle cx="230" cy="165" r="66" fill="#0f1216" stroke="#3a6a8a" stroke-width="1"/>
+          <circle cx="230" cy="165" r="130" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <circle cx="230" cy="165" r="66" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="230" y1="165" x2="230" y2="22" class="dimt"/>
+          <line x1="224" y1="35" x2="236" y2="35" class="dim"/>
+          <line x1="224" y1="55" x2="236" y2="55" class="dim"/>
+          <line x1="224" y1="79" x2="236" y2="79" class="dim"/>
+          <line x1="224" y1="99" x2="236" y2="99" class="dim"/>
+          <text class="var" x="220" y="39" text-anchor="end" data-v="101">#101 원자재 외경</text>
+          <text class="var" x="220" y="59" text-anchor="end" data-v="103">#103 완성 외경</text>
+          <text class="var" x="220" y="83" text-anchor="end" data-v="104">#104 완성 내경</text>
+          <text class="var" x="220" y="103" text-anchor="end" data-v="102">#102 원자재 내경</text>
+          <rect x="400" y="68" width="16" height="16" fill="#5a2d2d"/>
+          <text class="lbl" x="424" y="81">외경 절삭부 (#101→#103)</text>
+          <line x1="350" y1="165" x2="398" y2="76" class="lead"/>
+          <rect x="400" y="110" width="16" height="16" class="part"/>
+          <text class="lbl" x="424" y="123">제품 (완성 단면)</text>
+          <line x1="328" y1="165" x2="398" y2="118" class="lead"/>
+          <rect x="400" y="152" width="16" height="16" fill="#5a2d2d"/>
+          <text class="lbl" x="424" y="165">내경 절삭부 (#102→#104)</text>
+          <text class="lbls" x="424" y="183" style="fill:var(--accent2)">← 내외경 바이트로 함께 깎임</text>
+          <line x1="306" y1="172" x2="398" y2="160" class="lead"/>
+        </svg>
+      </div>
+
+      <div class="svgbox">
+        <h3>② 제품 1개 단면 상세 — 면취 4곳 ⭐</h3>
+        <div class="cap">옆에서 자른 단면(상·하 대칭). 네 모서리 면취값(내·외경 × 좌·우)이 어디 들어가는지 보여줍니다.</div>
+        <svg viewBox="0 0 600 430">
+          <line x1="40" y1="215" x2="560" y2="215" class="center"/>
+          <text class="lbls" x="50" y="210">중심선(축)</text>
+          <path class="part" d="M 170 96 L 186 80 L 414 80 L 430 96 L 430 134 L 414 150 L 186 150 L 170 134 Z"/>
+          <path class="part2" d="M 170 280 L 186 296 L 414 296 L 430 280 L 430 334 L 414 350 L 186 350 L 170 334 Z" opacity="0.6"/>
+          <line x1="178" y1="88" x2="120" y2="55" class="lead"/>
+          <text class="var" x="118" y="48" text-anchor="end" data-v="110">#110 외경 좌측</text>
+          <line x1="422" y1="88" x2="480" y2="55" class="lead"/>
+          <text class="var" x="482" y="48" data-v="108">#108 외경 우측</text>
+          <line x1="178" y1="142" x2="200" y2="195" class="lead"/>
+          <text class="var" x="150" y="210" data-v="109">#109 내경 좌측</text>
+          <line x1="422" y1="142" x2="400" y2="195" class="lead"/>
+          <text class="var" x="330" y="210" data-v="107">#107 내경 우측</text>
+          <line x1="170" y1="380" x2="430" y2="380" class="dim"/>
+          <line x1="170" y1="372" x2="170" y2="388" class="dim"/>
+          <line x1="430" y1="372" x2="430" y2="388" class="dim"/>
+          <text class="var" x="300" y="402" text-anchor="middle" data-v="105">#105 제품 길이(폭)</text>
+          <line x1="90" y1="80" x2="90" y2="350" class="dim"/>
+          <line x1="84" y1="80" x2="96" y2="80" class="dim"/>
+          <line x1="84" y1="350" x2="96" y2="350" class="dim"/>
+          <text class="var" x="78" y="220" text-anchor="middle" data-v="103" transform="rotate(-90 78 220)">#103 완성외경</text>
+          <line x1="120" y1="150" x2="120" y2="280" class="dimt"/>
+          <text class="var" x="300" y="240" text-anchor="middle" data-v="104">#104 완성내경(구멍)</text>
+        </svg>
+      </div>
+
+      <div class="svgbox">
+        <h3>③ 소재 분할 — 묶음 보링 후 절단 (단일 척)</h3>
+        <div class="cap"><b>척은 왼쪽</b>, 가공은 <b>오른쪽→왼쪽</b>. 오토링크 없이 <b>한 척 분량</b>만 가공하며, <b>한 묶음(#123개)</b>을 한 번에 보링한 뒤 하나씩 잘라냅니다.</div>
+        <svg viewBox="0 0 760 300">
+          <rect x="40" y="45" width="70" height="160" class="chuck"/>
+          <text class="lbls" x="75" y="225" text-anchor="middle">척(Chuck)</text>
+          <rect x="110" y="65" width="590" height="40" class="raw"/>
+          <rect x="110" y="155" width="590" height="40" class="raw"/>
+          <line x1="110" y1="130" x2="700" y2="130" class="center"/>
+          <text class="lbls" x="690" y="126" text-anchor="end">구멍(ID)</text>
+          <g>
+            <rect x="242" y="65" width="18" height="40" class="kerf"/><rect x="242" y="155" width="18" height="40" class="kerf"/>
+            <rect x="352" y="65" width="18" height="40" class="kerf"/><rect x="352" y="155" width="18" height="40" class="kerf"/>
+            <rect x="462" y="65" width="18" height="40" class="kerf"/><rect x="462" y="155" width="18" height="40" class="kerf"/>
+            <rect x="572" y="65" width="18" height="40" class="kerf"/><rect x="572" y="155" width="18" height="40" class="kerf"/>
+            <rect x="682" y="65" width="18" height="40" class="kerf"/><rect x="682" y="155" width="18" height="40" class="kerf"/>
+          </g>
+          <line x1="370" y1="52" x2="700" y2="52" class="dimt" style="stroke:var(--green)"/>
+          <line x1="370" y1="46" x2="370" y2="58" class="dim" style="stroke:var(--green)"/>
+          <line x1="700" y1="46" x2="700" y2="58" class="dim" style="stroke:var(--green)"/>
+          <text class="var" x="535" y="42" text-anchor="middle" data-v="123" style="fill:#7ee787">한 묶음 #123개 = #506 (한 번에 보링)</text>
+          <line x1="590" y1="215" x2="682" y2="215" class="dim"/>
+          <line x1="590" y1="208" x2="590" y2="222" class="dim"/>
+          <line x1="682" y1="208" x2="682" y2="222" class="dim"/>
+          <text class="var" x="636" y="237" text-anchor="middle" data-v="105">#105 제품폭</text>
+          <line x1="682" y1="215" x2="700" y2="215" class="dim"/>
+          <line x1="691" y1="218" x2="715" y2="250" class="lead"/>
+          <text class="var" x="722" y="262" text-anchor="middle" data-v="106">#106 톱폭</text>
+          <line x1="590" y1="118" x2="700" y2="118" class="dimt"/>
+          <text class="var" x="645" y="112" text-anchor="middle" data-v="505">#505 = 제품폭+톱폭</text>
+          <line x1="690" y1="278" x2="170" y2="278" class="dim" style="stroke:var(--accent2)"/>
+          <polyline points="182,272 168,278 182,284" fill="none" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text class="lbls" x="430" y="295" text-anchor="middle" style="fill:var(--accent2)">가공 진행 방향 (오른쪽 → 왼쪽 척)</text>
+          <text class="lbls" x="300" y="180" text-anchor="middle">총 <tspan class="var" fill="#d2a8ff" data-v="120">#120</tspan>개 — 한 척 분량 (오토링크 없음)</text>
+        </svg>
+      </div>
+
+      <div class="tip"><b>💡 핵심 공식</b><br>
+        1개 점유 <span style="color:var(--purple)">#505</span> = <span style="color:var(--purple)">#105</span>(제품폭)+<span style="color:var(--purple)">#106</span>(톱폭)<br>
+        한 묶음 <span style="color:var(--purple)">#506</span> = #505 × <span style="color:var(--purple)">#123</span> <b>(60 미만 필수 — 보링바 한계)</b><br>
+        전체 길이 <span style="color:var(--purple)">#100</span> = <span style="color:var(--purple)">#120</span>(개수) × #505
+      </div>
+    </section>
+
+    <!-- VARS -->
+    <section class="page" id="page-vars">
+      <h1>📖 변수 사전</h1>
+      <div class="role">이 매크로가 사용하는 모든 변수(#숫자)의 의미</div>
+      <div id="vartables"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="tip"></div>
+<div class="scrollhint">호버 = 설명 · 초록 글씨 = 클릭 이동</div>
+
+<!-- ===== RAW SOURCE (그대로 보존) ===== -->
+<script type="text/plain" id="src-O0400">%
+O0400(MAIN PROGRAM);
+N1;
+#120=13; (HOW MANY)
+#101=80. (MAT DIA OD);
+#102=68. (MAT DIA ID);
+#103=74.90 (WORK OD);
+#104=70. (WORK ID);
+#105=15 (CUTTING LENGTH);
+#106=1.90 (BITE SIZE);
+#123=3 (CUTTING COUNTER);
+(CHAMFER_DIMENSIONS);
+#107=0.40 (ID RIGHT);
+#108=0.40 (OD RIGHT);
+#109=0.30 (ID LEFT);
+#110=0.30 (OD LEFT);
+#111=0.15 (T01 ROUGH FEED).;
+#112=0.11 (T01 BORING FEED);
+#113=0.15 (T01 CHAMFER FEED);
+#114=0.09 (T02 CUTTING FEED);
+#115=1600 (T01 MIN RPM);
+#116=1600 (T02 MIN RPM);
+#117=1600 (T03 MIN RPM);
+#121=4 (3= 3 CHAMFER , 4= 4CHAMFER) ;
+#122=0 (ROUGH 0=OFF 1=ON) ;
+#124=0 ( 0=NORMAL MODE 1=MANUAL MODE);
+#100=254;
+M98 P0410;
+M30;
+%</script>
+<script type="text/plain" id="src-O0410">%
+O0410(G100 FULL CUTTING);
+#500=0 (W.SHIF ORIGIN);
+#501=[#101+5.];
+#502=[#102-2.];
+#503=[#103+1.];
+#504=[#104-2.];
+#505=[#105+#106];
+#506=[#105+#106]*#123;
+IF[#506LT60] GOTO12;
+N11 #3000=1 (DOWN #123);
+N12;
+#507=#506+0.5;
+#508=[#103+#104]/2.;
+#509=1 (ROUGH INT);
+#510=1 (CHAMFER INT);
+#100=[#120*#505+0.1];
+IF [#124 EQ 1] GOTO 88;
+IF[#100 GT 200] GOTO 88;
+#3000=2 (UP #120(HOWMANY));
+N88;
+G10 L2 P0 Z[#100];
+G30 U0 W0;
+N200(FACE CUTTING);
+M98 P7001 (Call FACE_CUTTING);
+N310(T01 STEP CUTTING);
+#520=0;
+#522=0;
+M98 P7002 (Call STEP_CUTTING);
+N320 (CHAMFER_CUTTING);
+M98 P7003 (Call CHAMFER_CUTTING);
+#522=#522+#505;
+N330 (CUTTING);
+M98 P7004 (Call CUTTING_OPERATION);
+N340 ;
+#520=#520+1;
+IF[#520NE#123]GOTO 320;
+#500=#500+#506;
+G10 L2 P0 W-[#506];
+IF[[#500+#506]LT#100] GOTO 310;
+N400(CALCULATION);
+#530=#100-#500;
+#531=FIX[#530/#505];
+IF[#531LT1] GOTO 450;
+#532=[#531*#505]+0.5;
+N410(T01 STEP CUTTING);
+#520=0;
+#522=0;
+M98 P7005 (Call Modified STEP_CUTTING);
+N420 (T01 CHAMFER_CUTTING);
+M98 P7003 (Call CHAMFER_CUTTING);
+#522=#522+#505;
+N430 (T02 CUTTING);
+M98 P7004 (Call CUTTING_OPERATION);
+N441;
+#520=#520+1;
+IF[#520LT#531] GOTO 420;
+N450 (EXIT);
+G30 U0 W0 M5;
+G10 L2 P0 Z0;
+M99;
+%</script>
+<script type="text/plain" id="src-O7001">%
+O7001 (FACE_CUTTING);
+G00 X[#501] T02;
+Z0.;
+M00;
+N201(ROUGH BORING);
+G00 X[#103+#509] T01;
+G97 G00 Z[#105+#106+10] S#115 M03;
+G98 G01 Z0 F[#115*#111];
+G00 Z[#105+#106+10] ;
+N202 (MARKING);
+G00 Z[[#105+#106]/3]; T02;
+X[#501] ;
+G97 S#116 M03;
+G98 G01 X[#103] F[#116*#114];
+N203(FACE CUTTING)2;
+G00 X[#501];
+Z0;
+G97 S#116 M03;
+G98 G01 X[#502] F[#116*#114];
+G00 Z5;
+%</script>
+<script type="text/plain" id="src-O7002">%
+O7002 (STEP_CUTTING);
+#520=0;
+IF[#122 EQ 0] GOTO 22;
+N11 (ROUGH);
+G00 X[#103+#509] T01;
+G97 G00 Z[-#522+5.] S#115 M03;
+G98 G01 Z-[#522+#506] F[#115*#111];
+G00 W[#506+20.];
+N22 (STEP CUTTING2);
+IF[#121 EQ 4] GOTO 33;
+G00 X#103 M54 T01;
+G97 G00 Z[-#522+3] S#115 M03;
+G98 G01 Z-[#522+#506] F[#115*#112];
+M53;
+G4 X0.5;
+U0.2;
+G00 Z[-#522+3];
+M54;
+N33 (END STEP_CUTTING);
+M99
+%</script>
+<script type="text/plain" id="src-O7003">%
+O7003 (CHAMFER_CUTTING);
+IF[#121 EQ 4] GOTO 11;
+(3_CHAMFER CUTTING);
+G97 S#115 M03 T01;
+G00 X#103;
+G00 Z[-#522+3];
+G98 G01 Z[-#522+#510] F[#115*#113];
+X[#103-[[#510+#108]*2]];
+X[#103+[[#510+#107]*2]];
+GOTO 22;
+N11(4_CHAMFER);
+G00 X#103; M54 T01;
+G97 G00 Z[-#522+3] S#115 M03;
+G98 G01 Z[-#522+#510] F[#115*#113];
+(RIGHT SIDE);
+G01 X[#103-[[#510+#108]*2]];
+G01 X[#103+[[#510+#107]*2]];
+G01 X#103;
+(LEFT SIDE);
+G98 G01 Z-[#522+#105] F[#115*#112];
+G01 X[#103- [#110*2]] F[#115*#113];
+G01 X[#103+[#109*2]];
+G00 X#103;
+M53;
+G4 X0.5;
+U0.2;
+N22(END_CHAMFER);
+M99
+%</script>
+<script type="text/plain" id="src-O7004">%
+O7004 (CUTTING_OPERATION);
+IF [#121 EQ 4] GOTO 11;
+G00 Z[#110-#522] T02;
+G97 G00 X[#103+1] S#116 M03;
+G98 G01 X[#103] F[#116*#114];
+U-[#110*2] W-[#110];
+X[#504];
+GOTO 22;
+N11 (4_CHAMFER);
+G00 Z-[#522]; T02;
+G97 G00 X[#503] S#116 M03;
+G98 G01 X[#103] F[#116*#114];
+X[#504] ;
+N22(CUTTING_END);
+M12;
+M99;
+%</script>
+<script type="text/plain" id="src-O7005">%
+O7005 (STEP_CUTTING);
+#520=0;
+IF[#122 EQ 0] GOTO 22;
+N11 (ROUGH);
+G00 X[#103+#509] T01;
+G97 G00 Z[-#522+5.] S#115 M03;
+G98 G01 Z-[#522+#532] F[#115*#111];
+G00 W[#532+20.];
+N22 (STEP CUTTING2);
+IF[#121 EQ 4] GOTO 33;
+G00 X#103 M54 T01;
+G97 G00 Z[-#522+3] S#115 M03;
+G98 G01 Z-[#522+#532] F[#115*#112];
+M53; 
+G4 X0.5;
+U0.2;
+G00 Z[-#522+3];
+M54;
+N33 (END STEP_CUTTING);
+M99
+%</script>
+<script>
+/* ============ 사전 데이터 ============ */
+const VARS = {
+ 100:["전체 가공 길이 (총 Z)","O0410에서 #120×#505로 재계산되어 작업 원점 Z로 설정됨. O0400의 254는 임시값"],
+ 101:["원자재 바깥지름 (MAT OD)","소재 실제 외경"],
+ 102:["원자재 안지름 (MAT ID)","소재 실제 구멍 지름"],
+ 103:["완성 바깥지름 (WORK OD)","제품 최종 외경. ※O0852의 #111에 해당 — 번호 체계 다름!"],
+ 104:["완성 안지름 (WORK ID)","제품 최종 구멍 지름"],
+ 105:["제품 길이 (CUTTING LENGTH)","제품 1개의 폭"],
+ 106:["톱폭 (BITE SIZE)","절단 바이트가 잘라먹는 폭. #105+#106 = 1개 점유(#505)"],
+ 107:["내경 우측 면취 (ID RIGHT)",""],
+ 108:["외경 우측 면취 (OD RIGHT)",""],
+ 109:["내경 좌측 면취 (ID LEFT)",""],
+ 110:["외경 좌측 면취 (OD LEFT)","절단(O7004)에서 후퇴량으로도 사용됨"],
+ 111:["T01 황삭 이송 (ROUGH FEED)",""],
+ 112:["T01 보링 이송 (BORING FEED)",""],
+ 113:["T01 면취 이송 (CHAMFER FEED)",""],
+ 114:["T02 절단 이송 (CUTTING FEED)",""],
+ 115:["T01 회전수 (MIN RPM)",""],
+ 116:["T02 회전수 (MIN RPM)",""],
+ 117:["T03 회전수 (MIN RPM)",""],
+ 120:["생산 개수 (HOW MANY)","만들 제품 총 개수"],
+ 121:["면취 타입","3=3면취 / 4=4면취. 서브 동작 분기 기준"],
+ 122:["황삭 ON/OFF","0=OFF, 1=ON"],
+ 123:["한 묶음 절삭 횟수 (COUNTER)","한 번 보링으로 처리할 개수. #505×#123=#506(60 미만 필수)"],
+ 124:["모드","0=일반, 1=수동. 수동이면 길이 검사 건너뜀"],
+ 500:["작업 원점 시프트량 (W.SHIFT)","묶음마다 #506씩 누적 이동"],
+ 501:["접근 외경 (#101+5)","공구 충돌 방지 접근 위치"],
+ 502:["접근 내경 (#102-2)",""],
+ 503:["완성외경 접근 (#103+1)","타입4 절단 접근"],
+ 504:["완성내경 접근 (#104-2)","절단 마무리 좌표"],
+ 505:["제품 1개 점유 길이","#105(제품폭)+#106(톱폭). 개수 계산 기준"],
+ 506:["한 묶음 길이","#505×#123. 보링바 행정 한계로 60 미만이어야 함"],
+ 507:["#506+0.5 (여유)",""],
+ 508:["중간 지름 (#103+#104)/2",""],
+ 509:["황삭 여유 (ROUGH INT)","황삭 시 외경에 더하는 여유"],
+ 510:["면취 여유 (CHAMFER INT)",""],
+ 520:["묶음 내 개수 카운터","#123/#531에 도달하면 묶음 종료"],
+ 522:["Z 위치 누적","개수×#505. 가공 진행 깊이"],
+ 530:["잔여 길이 (#100-#500)","마지막 묶음 후 남은 길이"],
+ 531:["잔여 개수 FIX[#530/#505]","남은 길이로 더 만들 개수"],
+ 532:["잔여 묶음 길이 (#531×#505+0.5)","O7005가 사용하는 보링 깊이"],
+ 3000:["매크로 알람 출력","#3000=숫자 → 기계 정지 + 화면 메시지(괄호 안)"],
+};
+
+const CODES = {
+ "G00":["급속 이송","공구를 최고속도로 이동(절삭 아님). ⚠️ 충돌 위험 구간 — 경로 확인"],
+ "G01":["직선 절삭 이송","지정 이송속도(F)로 직선 가공"],
+ "G04":["일시정지 (드웰)","지정 시간만큼 멈춤. 다음 동작 완료를 기다림"],
+ "G4":["일시정지 (드웰)","G04와 동일"],
+ "G10":["데이터 설정","프로그램으로 좌표계 입력. 여기선 워크 원점(Z) 설정"],
+ "G30":["2차 원점 복귀","기계의 두 번째 기준점으로 복귀"],
+ "G97":["회전수 일정 (rpm)","주축을 정해진 RPM으로 고정 회전"],
+ "G98":["분당 이송 (mm/min)","이송을 분당 거리로 지정"],
+ "M00":["프로그램 정지","기계가 멈추고 작업자 확인을 기다림(소재 장착 등)"],
+ "M03":["주축 정회전","스핀들 시계방향 회전 시작"],
+ "M05":["주축 정지","스핀들 회전 멈춤"],
+ "M5":["주축 정지","M05와 동일"],
+ "M12":["제품 배출 / 절단 완료","파팅 후 제품 분리·배출 동작(기계 사양)"],
+ "M30":["프로그램 종료","끝내고 선두로 리셋"],
+ "M53":["받침대(바 지지) 내림 DOWN","가공 후 받침 해제. ※하드코딩(단일 기계군)"],
+ "M54":["받침대(바 지지) 올림 UP","가공 전 소재를 받쳐 떨림 방지. ※하드코딩"],
+ "M98":["서브프로그램 호출","다른 O번호 프로그램을 불러 실행. P 다음이 호출 번호"],
+ "M99":["서브프로그램 복귀","호출한 곳으로 되돌아감"],
+ "FIX":["소수점 버림 (내림)","FIX[7.8]=7. 개수 계산에 사용"],
+ "IF":["조건 분기","조건이 참이면 GOTO로 점프"],
+ "GOTO":["점프","지정한 N번호 줄로 이동"],
+ "EQ":["= 같다",""],"NE":["≠ 다르다",""],"GT":["> 크다",""],"LT":["< 작다",""],
+ "GE":["≥ 크거나 같다",""],"LE":["≤ 작거나 같다",""],"AND":["그리고",""],"OR":["또는",""],
+ "T01":["1번 공구 (보링/면취)",""],"T02":["2번 공구 (면·절단)",""],"T03":["3번 공구",""],
+};
+
+
+/* 줄별 추가 설명 (원본 파일 줄번호 기준) */
+const NOTES = {
+ O0400:{
+  2:"메인 프로그램 시작. 작업자가 치수·조건을 입력하는 곳.",
+  4:"생산 개수.",
+  7:"⚠️ 완성 외경. O0852와 달리 #103이 '완성 OD'입니다 — 번호 체계 혼동 주의.",
+  11:"한 묶음에 처리할 개수. #505×이 값이 60 미만이어야 함(보링바 한계).",
+  24:"면취 타입 3/4 선택 — 서브 동작이 갈림.",
+  27:"임시값. 실제 전체 길이는 O0410에서 #120×#505로 재계산됨.",
+  28:"전체 절삭 로직(O0410) 호출.",
+  29:"프로그램 종료.",
+ },
+ O0410:{
+  2:"전체 절삭 로직. 작업자 수정 금지 영역.",
+  4:"접근/안전 좌표 미리 계산.",
+  8:"제품 1개 점유 길이 = 제품폭 + 톱폭.",
+  9:"한 묶음 길이 = 1개길이 × 묶음횟수.",
+  10:"묶음길이 60 미만이면 통과(N12). 아니면 알람.",
+  11:"⚠️ 알람: 묶음횟수(#123)를 줄이세요.",
+  17:"전체 가공 길이 = 개수 × 1개길이.",
+  19:"일반모드인데 전체길이 ≤200이면 → 개수 늘리라는 알람(소재 효율).",
+  22:"G10으로 작업 원점 Z 설정.",
+  25:"면가공(O7001) 호출 — 1회.",
+  26:"⭐ 스텝/보링 절삭 루프 입구.",
+  29:"묶음 깊이만큼 보링(O7002).",
+  31:"면취(O7003).",
+  34:"절단(O7004) — 제품 1개 분리.",
+  37:"묶음 내 #123개 될 때까지 면취+절단 반복.",
+  38:"원점을 한 묶음(#506)만큼 이동.",
+  40:"소재 끝까지 안 갔으면 다음 묶음 보링으로.",
+  41:"⭐ 잔여분 계산.",
+  43:"남은 길이로 더 만들 개수.",
+  44:"잔여 1개 미만이면 종료.",
+  49:"잔여 전용 보링(O7005, #532 사용).",
+  58:"종료: 원점복귀 + 주축정지.",
+ },
+ O7001:{
+  2:"면가공 서브 — 끝면 평탄 + 황삭보링 + 마킹.",
+  5:"M00: 소재 장착 후 사이클 스타트 대기.",
+  6:"황삭 보링 시작.",
+  11:"마킹(기준 자리 잡기).",
+  15:"끝면 절삭2 — 면을 #502까지.",
+ },
+ O7002:{
+  2:"스텝/보링 절삭 서브 (묶음 #506).",
+  4:"황삭 OFF면 보링으로 바로.",
+  5:"황삭(거친 보링).",
+  11:"타입4면 스텝 생략.",
+  12:"받침대 올리고(M54) 보링.",
+  14:"받침대 내림(M53).",
+  21:"서브 종료, 호출처로 복귀.",
+ },
+ O7003:{
+  2:"면취 서브.",
+  3:"타입4면 양면 면취(N11)로.",
+  4:"타입3: 우측만 면취.",
+  12:"⭐ 타입4: 우·좌 양쪽 면취.",
+  19:"좌측 면취 (Z를 제품길이 #105까지).",
+  26:"서브 종료.",
+ },
+ O7004:{
+  2:"절단(파팅) 서브 — 제품 분리.",
+  3:"타입4면 다른 절단 루틴(N11).",
+  4:"절단공구로 안쪽 파고듦.",
+  7:"내경 면취 후 #504까지 절단.",
+  14:"M12: 제품 배출.",
+  15:"서브 종료.",
+ },
+ O7005:{
+  2:"잔여분 스텝/보링 서브. O7002와 동일하나 #532(잔여묶음) 사용.",
+  8:"잔여 묶음 깊이만큼 보링.",
+  22:"서브 종료.",
+ },
+};
+
+
+const START={O0400:1,O0410:1,O7001:1,O7002:1,O7003:1,O7004:1,O7005:1};
+const TITLES={
+ O0400:["① O0400 (MAIN PROGRAM)","입력 · 설정 — 작업자 영역",
+   "치수·개수·조건을 입력받아 전체 절삭 로직(O0410)을 호출합니다."],
+ O0410:["② O0410 (FULL CUTTING)","전체 절삭 로직 · 루프 제어",
+   "1개 점유·묶음·개수를 계산하고 <b>면가공→보링→면취→절단</b> 서브를 순서대로 호출하며 소재 끝까지 반복합니다."],
+ O7001:["③ O7001 (FACE_CUTTING)","면가공 서브",
+   "끝면을 평탄하게 깎고 황삭 보링·마킹을 합니다. <b>M00</b>으로 소재 장착을 기다립니다."],
+ O7002:["④ O7002 (STEP_CUTTING)","스텝/보링 절삭 서브",
+   "한 묶음 깊이(#506)만큼 안쪽을 보링합니다. 받침대(M53/M54)로 떨림을 막습니다."],
+ O7003:["⑤ O7003 (CHAMFER_CUTTING)","면취 서브",
+   "면취 타입(#121)에 따라 우측만(3) 또는 좌·우 양쪽(4) 모따기를 합니다."],
+ O7004:["⑥ O7004 (CUTTING_OPERATION)","절단(파팅) 서브",
+   "절단 공구로 안쪽까지 파고들어 링 1개를 분리하고 <b>M12</b>로 배출합니다."],
+ O7005:["⑦ O7005 (잔여 STEP_CUTTING)","잔여분 스텝/보링",
+   "O7002와 동일하나, 마지막에 남은 잔여 묶음(#532)을 보링합니다."],
+};
+
+
+/* ============ 렌더링 ============ */
+const tip=document.getElementById('tip');
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function tokenize(line, prog){
+ // 주석 분리: (...) 부분
+ let out='', i=0;
+ const labels=window.LBL[prog];
+ // 먼저 라벨(줄 첫머리 N숫자) 처리
+ // 토큰 스캐너
+ const re=/(\([^)]*\))|(#\d+)|\b(GOTO)\s*(\d+)|\b(M98\s+P)(\d+)|\b(P)(\d+)\b|\b(N\d+)|\b(G0?\d+\.?\d*)|\b(M\d+)|(M\[#\d+\])|\b(FIX|IF|EQ|NE|GT|LT|GE|LE|AND|OR)\b|\b(T0\d)\b/g;
+ let m, last=0;
+ while((m=re.exec(line))){
+   out+=esc(line.slice(last,m.index));
+   last=re.lastIndex;
+   if(m[1]){ out+=`<span class="cm">${esc(m[1])}</span>`; }
+   else if(m[2]){ const n=m[2].slice(1); out+=`<span class="var" data-v="${n}">${m[2]}</span>`; }
+   else if(m[3]){ // GOTO n
+     const t=m[4];
+     out+=`<span class="gc" data-c="GOTO">GOTO</span> <span class="jump" data-jp="${prog}:${t}">${t}</span>`;
+   }
+   else if(m[5]){ // M98 P####
+     out+=`<span class="mc" data-c="M98">M98</span> <span class="jump" data-prog="O${m[6]}">P${m[6]}</span>`;
+   }
+   else if(m[7]){ // P####  (단독)
+     out+=`P${m[8]}`;
+   }
+   else if(m[9]){ // N label
+     out+=`<span class="label" id="lbl-${prog}-${m[9].slice(1)}">${m[9]}</span>`;
+   }
+   else if(m[10]){ const c=m[10].replace(/^G0?/,'G').toUpperCase(); // Gxx
+     // normalize G4->G04 lookup
+     let key=m[10].toUpperCase(); if(!CODES[key]&&CODES["G0"+key.slice(1)])key="G0"+key.slice(1);
+     out+=`<span class="gc" data-c="${key}">${m[10]}</span>`; }
+   else if(m[11]){ out+=`<span class="mc" data-c="${m[11].toUpperCase()}">${m[11]}</span>`; }
+   else if(m[12]){ out+=`<span class="mc" data-c="MVAR">${esc(m[12])}</span>`; }
+   else if(m[13]){ out+=`<span class="gc" data-c="${m[13]}">${m[13]}</span>`; }
+   else if(m[14]){ out+=`<span class="gc" data-c="${m[14]}">${m[14]}</span>`; }
+ }
+ out+=esc(line.slice(last));
+ return out;
+}
+
+// 라벨 인덱스 미리 구축
+window.LBL={};
+function buildLabels(prog,text){
+ const set={}; text.split('\n').forEach(l=>{const mm=l.match(/^\s*(N\d+)/);if(mm)set[mm[1].slice(1)]=true;});
+ window.LBL[prog]=set;
+}
+
+function renderProgram(prog){
+ const text=document.getElementById('src-'+prog).textContent.replace(/^\n/,'');
+ buildLabels(prog,text);
+ const lines=text.split('\n');
+ const start=START[prog], notes=NOTES[prog]||{};
+ const [t,role,sum]=TITLES[prog];
+ let html=`<h1>${t}</h1><div class="role">${role}</div><div class="summary">${sum}</div>`;
+ html+=`<div class="codewrap"><div class="codehead"><span class="ttl">${prog} 소스</span><span class="hint">호버=설명 · 초록=클릭이동</span></div><pre class="code">`;
+ lines.forEach((line,idx)=>{
+   const orig=start+idx;
+   const note=notes[orig];
+   let cls='ln';
+   const trimmed=line.trim();
+   if(/^\([A-Z0-9=. *!\[\]_>#~:&-]*\)/.test(trimmed) && (idx===0 || true)){}
+   // block highlight: lines that are pure (X. ...) section headers or [n] sections
+   if(/^\(\s*\[?\d|^\(\s*[A-Z]\.|^\(===|^\(0\.|^\(\d\./.test(trimmed)) cls+=' block';
+   if(/DANGER|STOP EDITING|SYSTEM AUTO/.test(line)) cls+=' danger-line';
+   if(note) cls+=' has-note';
+   html+=`<div class="${cls}" data-note="${note?esc(note).replace(/"/g,'&quot;'):''}">`+
+         `<span class="gut">${orig}</span><span class="src">${tokenize(line,prog)||'&nbsp;'}</span></div>`;
+ });
+ html+=`</pre></div>`;
+ document.getElementById('page-'+prog).innerHTML=html;
+}
+
+['O0400','O0410','O7001','O7002','O7003','O7004','O7005'].forEach(renderProgram);
+
+/* 변수 사전 표 */
+(function(){
+ const groups=[["입력값 #101~#119",101,119],["절삭조건 #120~#130",120,130],
+   ["기계 M코드 #131~#134",131,134],["계산·시스템 변수",140,602]];
+ let html='';
+ const keys=Object.keys(VARS).map(Number).filter(n=>n>=100).sort((a,b)=>a-b);
+ [["① 입력값 (작업자 입력)",n=>n>=100&&n<=124],
+  ["② 계산·시스템 변수",n=>n>=500]].forEach(([t,f])=>{
+   html+=`<h3 style="color:var(--accent2);margin-top:24px">${t}</h3><table class="vt"><tr><th>변수</th><th>이름</th><th>설명</th></tr>`;
+   keys.filter(f).forEach(n=>{const v=VARS[n];html+=`<tr><td>#${n}</td><td>${v[0]}</td><td style="color:var(--dim)">${v[1]||''}</td></tr>`;});
+   html+=`</table>`;
+ });
+ document.getElementById('vartables').innerHTML=html;
+})();
+
+/* ============ 인터랙션 ============ */
+const main=document.getElementById('main');
+
+function showTip(html,x,y){
+ tip.innerHTML=html; tip.classList.add('show');
+ const r=tip.getBoundingClientRect(), m=10;
+ let tx=x+14, ty=y+16;
+ if(tx+r.width>innerWidth-m) tx=x-r.width-14;
+ if(ty+r.height>innerHeight-m) ty=y-r.height-16;
+ // 화면 밖으로 안 나가게 양쪽 클램프 (모바일 좌측 잘림 방지)
+ tx=Math.max(m, Math.min(tx, innerWidth-r.width-m));
+ ty=Math.max(m, Math.min(ty, innerHeight-r.height-m));
+ tip.style.left=tx+'px'; tip.style.top=ty+'px';
+}
+function hideTip(){tip.classList.remove('show');}
+
+function tipFor(t){
+ if(t.classList && t.classList.contains('var')){
+   const v=VARS[t.dataset.v];
+   if(v) return `<div class="tname">#${t.dataset.v}</div><div class="tdesc"><b>${v[0]}</b>${v[1]?'<br>'+v[1]:''}</div>`;
+ }
+ if(t.classList && (t.classList.contains('gc')||t.classList.contains('mc'))){
+   const c=t.dataset.c;
+   if(c==='MVAR') return `<div class="tname">M[#변수]</div><div class="tdesc">변수 M코드. 기계별로 정해진 보조기능 번호(받침대·오토링크)를 실행합니다.</div>`;
+   const d=CODES[c];
+   if(d) return `<div class="tname">${c}</div><div class="tdesc"><b>${d[0]}</b>${d[1]?'<br>'+d[1]:''}</div>`;
+ }
+ const ln=t.closest && t.closest('.ln');
+ if(ln && ln.dataset.note) return `<div class="tnote" style="border:none;padding:0;margin:0;color:var(--green)">💬 ${ln.dataset.note}</div>`;
+ return null;
+}
+document.body.addEventListener('mousemove',e=>{const h=tipFor(e.target);if(h)showTip(h,e.clientX,e.clientY);else hideTip();});
+
+/* 점프 (GOTO / 프로그램 이동) */
+document.body.addEventListener('click',e=>{
+ const j=e.target.closest('.jump');
+ if(j){
+   if(j.dataset.prog){ switchPage(j.dataset.prog); return; }
+   if(j.dataset.jp){
+     const [prog,n]=j.dataset.jp.split(':');
+     switchPage(prog);
+     setTimeout(()=>{
+       const el=document.getElementById('lbl-'+prog+'-'+n);
+       if(el){const row=el.closest('.ln'); row.scrollIntoView({block:'center'}); row.classList.add('flash'); setTimeout(()=>row.classList.remove('flash'),900);}
+     },80);
+   }
+   return;
+ }
+ const nav=e.target.closest('[data-page]');
+ if(nav){ switchPage(nav.dataset.page); return; }
+ // 모바일: 탭하면 툴팁 표시 / 빈 곳 탭하면 닫기
+ const h=tipFor(e.target);
+ if(h){ showTip(h,e.clientX,e.clientY); return; }
+ if(!e.target.closest('#tip')) hideTip();
+});
+
+function switchPage(p){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ document.getElementById('page-'+p).classList.add('active');
+ document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.page===p));
+ main.scrollTop=0;
+ closeDrawer();
+}
+
+/* 모바일 서랍 토글 */
+const sidebar=document.querySelector('.sidebar'), backdrop=document.getElementById('backdrop');
+function openDrawer(){sidebar.classList.add('open');backdrop.classList.add('show');}
+function closeDrawer(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.getElementById('menuBtn').addEventListener('click',openDrawer);
+backdrop.addEventListener('click',closeDrawer);
+</script>
+</body>
+</html>

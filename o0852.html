@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O0852 매크로 — 인터랙티브 코드 분석</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#222b36;
+    --txt:#d7dee8; --dim:#8a97a6; --accent:#4fb6ff; --accent2:#ffb454;
+    --green:#7ee787; --red:#ff7b72; --purple:#d2a8ff; --comment:#6b7785;
+    --num:#79c0ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:var(--bg); color:var(--txt); font-size:15px; line-height:1.55;
+  }
+  /* ===== Layout ===== */
+  .app{display:grid; grid-template-columns:260px 1fr; height:100vh}
+  .sidebar{background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:18px 14px}
+  .main{overflow-y:auto; padding:26px 34px 80px; scroll-behavior:smooth}
+  .brand{font-size:18px; font-weight:800; letter-spacing:.5px; margin-bottom:4px}
+  .brand span{color:var(--accent)}
+  .brand-sub{font-size:12px; color:var(--dim); margin-bottom:18px}
+  /* nav */
+  .nav-h{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px}
+  .nav a{display:block; padding:9px 12px; border-radius:8px; color:var(--txt);
+    text-decoration:none; font-size:14px; margin-bottom:3px; border:1px solid transparent; cursor:pointer}
+  .nav a:hover{background:var(--panel2)}
+  .nav a.active{background:var(--panel2); border-color:var(--accent); color:#fff}
+  .nav a small{display:block; color:var(--dim); font-size:11px; margin-top:2px}
+  .nav a.active small{color:var(--accent)}
+  .badge{display:inline-block; font-size:10px; padding:1px 6px; border-radius:6px; background:#2a3441; color:var(--accent2); margin-left:4px}
+  .legend{margin-top:22px; font-size:12px}
+  .legend .row{display:flex; align-items:center; gap:7px; margin:5px 0; color:var(--dim)}
+  .sw{width:13px; height:13px; border-radius:3px; flex:none}
+  /* ===== Pages ===== */
+  .page{display:none; max-width:1080px}
+  .page.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  h1{font-size:26px; margin:0 0 4px; font-weight:800}
+  .role{color:var(--accent2); font-weight:600; font-size:14px; margin-bottom:14px}
+  .summary{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+    padding:14px 18px; border-radius:10px; margin-bottom:22px; color:var(--txt)}
+  .summary b{color:var(--accent)}
+  /* flow diagram */
+  .flow{display:flex; align-items:stretch; gap:0; flex-wrap:wrap; margin:18px 0 26px}
+  .flow .node{flex:1; min-width:150px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:14px; text-align:center; cursor:pointer; transition:.15s; position:relative}
+  .flow .node:hover{border-color:var(--accent); transform:translateY(-2px)}
+  .flow .node .pid{font-weight:800; font-size:16px; color:var(--accent)}
+  .flow .node .pdesc{font-size:12px; color:var(--dim); margin-top:4px}
+  .flow .arrow{display:flex; align-items:center; color:var(--dim); font-size:22px; padding:0 6px}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:18px 0}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px}
+  .card h3{margin:0 0 8px; font-size:15px; color:var(--accent2)}
+  .card p{margin:0; font-size:13px; color:var(--dim)}
+  .warn{background:#2a1d1d; border:1px solid #5a2d2d; border-left:3px solid var(--red);
+    padding:12px 16px; border-radius:10px; margin:14px 0; font-size:14px}
+  .warn b{color:var(--red)}
+  .tip{background:#1d2a22; border:1px solid #2d5a3a; border-left:3px solid var(--green);
+    padding:12px 16px; border-radius:10px; margin:14px 0; font-size:14px}
+  .tip b{color:var(--green)}
+  /* ===== Code block ===== */
+  .codewrap{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:30px}
+  .codehead{display:flex; justify-content:space-between; align-items:center; padding:10px 16px;
+    background:var(--panel2); border-bottom:1px solid var(--line); font-size:13px}
+  .codehead .ttl{font-weight:700}
+  .codehead .hint{color:var(--dim); font-size:12px}
+  pre.code{margin:0; padding:14px 0; overflow-x:auto; font-family:"D2Coding","Consolas","Courier New",monospace;
+    font-size:13.5px; line-height:1.7}
+  .ln{display:flex; padding:0 16px; white-space:pre}
+  .ln:hover{background:#1b2husa}
+  .ln.has-note{cursor:help}
+  .ln.has-note:hover{background:#1e2733}
+  .ln .gut{width:42px; flex:none; color:#46505c; text-align:right; padding-right:14px; user-select:none}
+  .ln .src{flex:1}
+  .ln.block{background:#13242f; border-top:1px solid #1e3a47}
+  .ln.danger-line{background:#2a1818}
+  /* tokens */
+  .cm{color:var(--comment)}
+  .var{color:var(--purple); border-bottom:1px dotted #5a4a6e; cursor:help}
+  .var:hover{color:#fff; background:#3a2d4e}
+  .gc{color:var(--accent); cursor:help; border-bottom:1px dotted #2d4a5e}
+  .gc:hover{color:#fff; background:#1e3a4e}
+  .mc{color:var(--accent2); cursor:help; border-bottom:1px dotted #5e4a2d}
+  .mc:hover{color:#fff; background:#4e3a1e}
+  .kw{color:var(--red); font-weight:600}
+  .num2{color:var(--num)}
+  .jump{color:var(--green); text-decoration:underline dotted; cursor:pointer; font-weight:600}
+  .jump:hover{color:#fff; background:#1d3a26}
+  .label{color:var(--green); font-weight:700}
+  .ln.flash{background:#3a3a1d!important; transition:background .1s}
+  /* tooltip */
+  #tip{position:fixed; z-index:999; max-width:min(340px, calc(100vw - 24px)); background:#0a0d11; border:1px solid var(--accent);
+    border-radius:10px; padding:11px 14px; font-size:13px; line-height:1.5; color:var(--txt);
+    box-shadow:0 8px 30px rgba(0,0,0,.6); pointer-events:none; opacity:0; transition:opacity .1s; display:none}
+  #tip.show{opacity:1; display:block}
+  #tip .tname{font-weight:800; color:var(--accent2); margin-bottom:3px; font-family:monospace}
+  #tip .tdesc{color:var(--txt)}
+  #tip .tnote{color:var(--green); margin-top:6px; padding-top:6px; border-top:1px solid #243}
+  /* var table */
+  table.vt{width:100%; border-collapse:collapse; margin:10px 0 24px; font-size:13px}
+  table.vt th,table.vt td{border:1px solid var(--line); padding:7px 10px; text-align:left}
+  table.vt th{background:var(--panel2); color:var(--accent2)}
+  table.vt td:first-child{font-family:monospace; color:var(--purple); white-space:nowrap}
+  .scrollhint{position:fixed; bottom:18px; right:24px; background:var(--panel2); border:1px solid var(--line);
+    padding:8px 14px; border-radius:20px; font-size:12px; color:var(--dim)}
+  /* SVG diagrams */
+  .svgbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:16px 0 26px}
+  .svgbox h3{margin:0 0 4px; font-size:16px; color:var(--accent2)}
+  .svgbox .cap{font-size:13px; color:var(--dim); margin-bottom:12px}
+  .svgbox svg{width:100%; height:auto; display:block}
+  svg text{font-family:"Pretendard","맑은 고딕",sans-serif}
+  svg text.var{fill:var(--purple); cursor:help; font-weight:600}
+  svg text.var:hover{fill:#fff}
+  svg .part{fill:#1e3a4e; stroke:var(--accent); stroke-width:2}
+  svg .part2{fill:#13242f; stroke:#3a6a8a; stroke-width:1.5}
+  svg .raw{fill:#3a2d1e; stroke:var(--accent2); stroke-width:2}
+  svg .dim{stroke:var(--dim); stroke-width:1}
+  svg .dimt{stroke:var(--dim); stroke-width:1; stroke-dasharray:3 3}
+  svg .center{stroke:#5a6675; stroke-width:1; stroke-dasharray:10 4 3 4}
+  svg .lead{stroke:#8a97a6; stroke-width:1}
+  svg .lbl{fill:var(--txt); font-size:14px}
+  svg .lbls{fill:var(--dim); font-size:12px}
+  svg .chuck{fill:#2a3441; stroke:#5a6675; stroke-width:1.5}
+  svg .kerf{fill:#5a2d2d; opacity:.55}
+  /* 모바일 햄버거 / 서랍 */
+  .menu-btn{display:none; position:fixed; top:10px; left:12px; z-index:60; width:44px; height:44px;
+    border-radius:11px; border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+    font-size:21px; align-items:center; justify-content:center; cursor:pointer}
+  .backdrop{display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:45}
+  .backdrop.show{display:block}
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed; top:0; left:0; bottom:0; width:248px; z-index:50;
+      transform:translateX(-100%); transition:transform .25s ease; box-shadow:4px 0 24px rgba(0,0,0,.5)}
+    .sidebar.open{transform:none}
+    .menu-btn{display:flex}
+    .main{padding:62px 16px 80px}
+    h1{font-size:21px}
+    .summary,.warn,.tip{font-size:13.5px; padding:12px 14px}
+    .flow{flex-direction:column}
+    .flow .arrow{transform:rotate(90deg); padding:4px 0}
+    pre.code{font-size:12.5px}
+    .ln .gut{width:34px; padding-right:8px}
+    .scrollhint{display:none}
+    .cards{grid-template-columns:1fr}
+    table.vt{font-size:12px}
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴 열기">☰</button>
+<div class="backdrop" id="backdrop"></div>
+<div class="app">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="brand">O<span>0852</span> 매크로</div>
+    <div class="brand-sub">Soltri · CNC 자동 가공 시스템</div>
+
+    <div class="nav-h">페이지</div>
+    <nav class="nav" id="nav">
+      <a data-page="overview" class="active">📊 전체 개요<small>4개 프로그램의 흐름</small></a>
+      <a data-page="O0852">① O0852<small>입력 · 검증 (작업자 영역)</small></a>
+      <a data-page="O9001">② O9001<small>길이 계산 · 알람</small></a>
+      <a data-page="O9002">③ O9002<small>실제 가공 반복</small></a>
+      <a data-page="O9003">④ O9003<small>자투리 끌어오기</small></a>
+      <a data-page="shape">🔧 가공 형상<small>소재 → 제품 다이어그램</small></a>
+      <a data-page="vars">📖 변수 사전<small>#101 ~ #542 전체</small></a>
+    </nav>
+
+    <div class="legend">
+      <div class="nav-h">색상 안내</div>
+      <div class="row"><span class="sw" style="background:#d2a8ff"></span>변수 (#숫자)</div>
+      <div class="row"><span class="sw" style="background:#4fb6ff"></span>G코드 (이동·절삭)</div>
+      <div class="row"><span class="sw" style="background:#ffb454"></span>M코드 (보조기능)</div>
+      <div class="row"><span class="sw" style="background:#7ee787"></span>점프 (클릭 이동)</div>
+      <div class="row"><span class="sw" style="background:#6b7785"></span>주석 (설명문)</div>
+      <div style="margin-top:14px; color:var(--dim); font-size:12px; line-height:1.5">
+        💡 코드에 <b>마우스 호버</b>(PC) /<br><b>탭</b>(모바일)하면 설명이 뜹니다.<br>초록색은 누르면 이동!
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main" id="main">
+
+    <!-- OVERVIEW -->
+    <section class="page active" id="page-overview">
+      <h1>O0852 자동 가공 매크로</h1>
+      <div class="role">봉(bar) 소재에서 링·부싱을 자동으로 연속 가공하는 통합 매크로</div>
+      <div class="summary">
+        작업자가 <b>치수와 조건만 입력</b>하면 → 입력값을 <b>검증</b>하고 → 기계별 설정을 <b>자동 적용</b>한 뒤
+        → 면취·스텝·절단을 <b>반복</b>하며 → 바피더(오토링크)로 소재를 <b>자동 송급</b>하는,
+        무인 운전을 위한 방어적 프로그램입니다.
+      </div>
+
+      <h3 style="color:var(--accent2)">프로그램 흐름 (클릭하면 이동)</h3>
+      <div class="flow">
+        <div class="node" data-page="O0852"><div class="pid">O0852</div><div class="pdesc">접수 창구<br>입력·검증</div></div>
+        <div class="arrow">→</div>
+        <div class="node" data-page="O9001"><div class="pid">O9001</div><div class="pdesc">계산실<br>개수 산출·알람</div></div>
+        <div class="arrow">→</div>
+        <div class="node" data-page="O9002"><div class="pid">O9002</div><div class="pdesc">작업 현장<br>가공 반복</div></div>
+        <div class="arrow">→</div>
+        <div class="node" data-page="O9003"><div class="pid">O9003</div><div class="pdesc">마무리<br>자투리 가공</div></div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><h3>① O0852 (JOB_SETUP)</h3><p>작업자가 만지는 <b>유일한</b> 영역. 치수·조건 입력, 빈값 검증, 기계 선택. <code>! DANGER !</code> 아래는 수정 금지.</p></div>
+        <div class="card"><h3>② O9001 (MAIN LOGIC)</h3><p>총 길이·생산 개수를 계산하고, 물리적으로 불가능한 입력을 12종 알람으로 차단.</p></div>
+        <div class="card"><h3>③ O9002 (MAIN MACHINING)</h3><p>면취→스텝→절단을 목표 개수만큼 반복. 소재 다 쓰면 오토링크로 자동 송급.</p></div>
+        <div class="card"><h3>④ O9003 (PULL REMAIN)</h3><p>마지막에 짧게 남은 자투리도 끌어와 마저 가공하는 알뜰 루틴.</p></div>
+      </div>
+
+      <div class="warn"><b>⚠️ 작업자 핵심 주의사항</b><br>
+        1. 수정 금지선(<code>! DANGER !</code>) 아래 절대 손대지 말 것<br>
+        2. 기계번호(<code>#130</code>) 정확히 — 틀리면 받침대 UP/DOWN이 반대로 작동<br>
+        3. 긴 부품(완성길이 &gt;40mm)은 <code>#119=1</code>로 승인 후 진행<br>
+        4. 소재종류(<code>#105</code>) 정확히 — 이송속도가 자동으로 바뀜<br>
+        5. 입력값 하나라도 비면 알람으로 정지
+      </div>
+
+      <div class="tip"><b>💡 사용법</b><br>
+        왼쪽에서 프로그램을 고르고, 코드 위에 마우스를 올려 보세요. 변수·코드·각 줄의 설명이 바로 뜹니다.
+        <b style="color:var(--green)">초록색 글씨(GOTO, P9001 등)</b>는 클릭하면 해당 위치나 프로그램으로 점프합니다.
+      </div>
+    </section>
+
+    <!-- code pages get injected here -->
+    <section class="page" id="page-O0852"></section>
+    <section class="page" id="page-O9001"></section>
+    <section class="page" id="page-O9002"></section>
+    <section class="page" id="page-O9003"></section>
+
+    <!-- SHAPE DIAGRAMS -->
+    <section class="page" id="page-shape">
+      <h1>🔧 가공 형상 다이어그램</h1>
+      <div class="role">소재가 어떻게 제품이 되는지 — 치수 위에 마우스를 올리면 변수 설명이 뜹니다</div>
+      <div class="summary">
+        이 매크로는 <b>두꺼운 파이프(봉) 소재</b>를 → 바깥을 깎고(OD↓) 구멍을 넓혀(ID↑) → 얇은 <b>링/부싱</b>으로 만든 뒤
+        → 톱으로 잘라 <b>여러 개를 연속</b>으로 뽑아냅니다.
+      </div>
+
+      <div class="svgbox">
+        <h3>① 단면 비교 — 절삭으로 제거되는 살 (내·외경 동시)</h3>
+        <div class="cap"><b>내외경 바이트</b>라 바깥(OD)뿐 아니라 <b>구멍(ID)도 함께 절삭</b>됩니다. 붉은 띠 두 곳이 깎여나가는 부분 — 개념도라 두께는 과장돼 있습니다.</div>
+        <svg viewBox="0 0 600 330">
+          <circle cx="230" cy="165" r="130" fill="#5a2d2d"/>
+          <circle cx="230" cy="165" r="110" class="part"/>
+          <circle cx="230" cy="165" r="86" fill="#5a2d2d"/>
+          <circle cx="230" cy="165" r="66" fill="#0f1216" stroke="#3a6a8a" stroke-width="1"/>
+          <circle cx="230" cy="165" r="130" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <circle cx="230" cy="165" r="66" fill="none" stroke="var(--accent2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="230" y1="165" x2="230" y2="22" class="dimt"/>
+          <line x1="224" y1="35" x2="236" y2="35" class="dim"/>
+          <line x1="224" y1="55" x2="236" y2="55" class="dim"/>
+          <line x1="224" y1="79" x2="236" y2="79" class="dim"/>
+          <line x1="224" y1="99" x2="236" y2="99" class="dim"/>
+          <text class="var" x="220" y="39" text-anchor="end" data-v="109">#109 원자재 외경</text>
+          <text class="var" x="220" y="59" text-anchor="end" data-v="111">#111 완성 외경</text>
+          <text class="var" x="220" y="83" text-anchor="end" data-v="112">#112 완성 내경</text>
+          <text class="var" x="220" y="103" text-anchor="end" data-v="110">#110 원자재 내경</text>
+          <rect x="400" y="68" width="16" height="16" fill="#5a2d2d"/>
+          <text class="lbl" x="424" y="81">외경 절삭부 (#109→#111)</text>
+          <line x1="350" y1="165" x2="398" y2="76" class="lead"/>
+          <rect x="400" y="110" width="16" height="16" class="part"/>
+          <text class="lbl" x="424" y="123">제품 (완성 단면)</text>
+          <line x1="328" y1="165" x2="398" y2="118" class="lead"/>
+          <rect x="400" y="152" width="16" height="16" fill="#5a2d2d"/>
+          <text class="lbl" x="424" y="165">내경 절삭부 (#110→#112)</text>
+          <text class="lbls" x="424" y="183" style="fill:var(--accent2)">← 내외경 바이트로 함께 깎임</text>
+          <line x1="306" y1="172" x2="398" y2="160" class="lead"/>
+        </svg>
+      </div>
+
+      <!-- 2. 제품 1개 상세 -->
+      <div class="svgbox">
+        <h3>② 제품 1개 단면 상세 — 면취(모따기) 4곳 ⭐</h3>
+        <div class="cap">옆에서 자른 단면(상·하 대칭). 네 모서리의 R·면취값이 어디에 들어가는지 보여줍니다. 라벨에 호버하세요.</div>
+        <svg viewBox="0 0 600 430">
+          <!-- 중심선 -->
+          <line x1="40" y1="215" x2="560" y2="215" class="center"/>
+          <text class="lbls" x="50" y="210">중심선(축)</text>
+
+          <!-- 윗벽 (모서리 면취) -->
+          <path class="part" d="M 170 96 L 186 80 L 414 80 L 430 96 L 430 134 L 414 150 L 186 150 L 170 134 Z"/>
+          <!-- 아랫벽 (대칭, 흐리게) -->
+          <path class="part2" d="M 170 280 L 186 296 L 414 296 L 430 280 L 430 334 L 414 350 L 186 350 L 170 334 Z" opacity="0.6"/>
+
+          <!-- 면취 라벨 -->
+          <line x1="178" y1="88" x2="120" y2="55" class="lead"/>
+          <text class="var" x="118" y="48" text-anchor="end" data-v="118">#118 외경면취(OD-L)</text>
+          <line x1="422" y1="88" x2="480" y2="55" class="lead"/>
+          <text class="var" x="482" y="48" data-v="116">#116 외경R(OD-R)</text>
+          <line x1="178" y1="142" x2="200" y2="195" class="lead"/>
+          <text class="var" x="150" y="210" data-v="117">#117 내경면취(ID-L)</text>
+          <line x1="422" y1="142" x2="400" y2="195" class="lead"/>
+          <text class="var" x="330" y="210" data-v="115">#115 내경R(ID-R)</text>
+
+          <!-- 폭 치수 #113 -->
+          <line x1="170" y1="380" x2="430" y2="380" class="dim"/>
+          <line x1="170" y1="372" x2="170" y2="388" class="dim"/>
+          <line x1="430" y1="372" x2="430" y2="388" class="dim"/>
+          <text class="var" x="300" y="402" text-anchor="middle" data-v="113">#113 완성길이(제품 폭)</text>
+
+          <!-- 외경/내경 반경 표시 (왼쪽) -->
+          <line x1="90" y1="80" x2="90" y2="350" class="dim"/>
+          <line x1="84" y1="80" x2="96" y2="80" class="dim"/>
+          <line x1="84" y1="350" x2="96" y2="350" class="dim"/>
+          <text class="var" x="78" y="220" text-anchor="middle" data-v="111" transform="rotate(-90 78 220)">#111 외경</text>
+          <line x1="120" y1="150" x2="120" y2="280" class="dimt"/>
+          <text class="var" x="300" y="240" text-anchor="middle" data-v="112">#112 내경(구멍)</text>
+        </svg>
+      </div>
+
+      <!-- 3. 분할 & 송급 -->
+      <div class="svgbox">
+        <h3>③ 소재 분할 & 자동 송급 (옆에서 본 모습)</h3>
+        <div class="cap"><b>척은 왼쪽</b>, 소재는 오른쪽으로 뻗어 있고 가공은 <b>오른쪽(자유단)→왼쪽(척)</b> 방향으로 진행됩니다. 소진되면 오토링크가 오른쪽에서 소재를 밀어 넣습니다.</div>
+        <svg viewBox="0 0 760 300">
+          <!-- 척 (왼쪽) -->
+          <rect x="40" y="45" width="70" height="160" class="chuck"/>
+          <text class="lbls" x="75" y="225" text-anchor="middle">척(Chuck)</text>
+          <text class="var" x="75" y="35" text-anchor="middle" data-v="103">#103</text>
+
+          <!-- 소재 본체 (외벽 위/아래) + 구멍 -->
+          <rect x="110" y="65" width="590" height="40" class="raw"/>
+          <rect x="110" y="155" width="590" height="40" class="raw"/>
+          <line x1="110" y1="130" x2="700" y2="130" class="center"/>
+          <text class="lbls" x="690" y="126" text-anchor="end">구멍(ID)</text>
+
+          <!-- 송급 화살표 (오른쪽 → 왼쪽) -->
+          <text class="lbl" x="735" y="135" style="fill:var(--green);font-size:26px" text-anchor="middle">⇐</text>
+          <text class="lbls" x="735" y="160" text-anchor="middle">송급</text>
+
+          <!-- 안전잔량 (척 바로 앞, 못 깎고 남기는 부분) -->
+          <rect x="110" y="65" width="38" height="130" fill="#1d2a22" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="129" y1="130" x2="95" y2="248" class="lead"/>
+          <text class="var" x="95" y="262" text-anchor="middle" data-v="129" style="font-size:12px">#129 안전잔량</text>
+
+          <!-- 절단 위치 (kerf) : pitch=110, piece=92, kerf=18. 가공은 우→좌 -->
+          <g>
+            <rect x="242" y="65" width="18" height="40" class="kerf"/><rect x="242" y="155" width="18" height="40" class="kerf"/>
+            <rect x="352" y="65" width="18" height="40" class="kerf"/><rect x="352" y="155" width="18" height="40" class="kerf"/>
+            <rect x="462" y="65" width="18" height="40" class="kerf"/><rect x="462" y="155" width="18" height="40" class="kerf"/>
+            <rect x="572" y="65" width="18" height="40" class="kerf"/><rect x="572" y="155" width="18" height="40" class="kerf"/>
+            <rect x="682" y="65" width="18" height="40" class="kerf"/><rect x="682" y="155" width="18" height="40" class="kerf"/>
+          </g>
+
+          <!-- 치수: 맨 오른쪽(먼저 가공되는) 제품 기준 -->
+          <!-- 제품 [590-682], 톱폭 [682-700] -->
+          <line x1="590" y1="215" x2="682" y2="215" class="dim"/>
+          <line x1="590" y1="208" x2="590" y2="222" class="dim"/>
+          <line x1="682" y1="208" x2="682" y2="222" class="dim"/>
+          <text class="var" x="636" y="237" text-anchor="middle" data-v="113">#113 제품폭</text>
+
+          <line x1="682" y1="215" x2="700" y2="215" class="dim"/>
+          <line x1="691" y1="218" x2="715" y2="250" class="lead"/>
+          <text class="var" x="722" y="262" text-anchor="middle" data-v="114">#114 톱폭</text>
+
+          <line x1="590" y1="40" x2="700" y2="40" class="dimt"/>
+          <line x1="590" y1="34" x2="590" y2="46" class="dim"/>
+          <line x1="700" y1="34" x2="700" y2="46" class="dim"/>
+          <text class="var" x="645" y="28" text-anchor="middle" data-v="505">#505 = 제품폭+톱폭</text>
+
+          <!-- 가공 진행 방향 화살표 (우 → 좌) -->
+          <line x1="690" y1="278" x2="170" y2="278" class="dim" style="stroke:var(--accent2)"/>
+          <polyline points="182,272 168,278 182,284" fill="none" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text class="lbls" x="430" y="295" text-anchor="middle" style="fill:var(--accent2)">가공 진행 방향 (오른쪽 자유단 → 왼쪽 척)</text>
+
+          <text class="lbls" x="430" y="118" text-anchor="middle">총 <tspan class="var" fill="#d2a8ff" data-v="517">#517</tspan>개 연속 가공 → 소진 시 <tspan class="var" fill="#d2a8ff" data-v="519">#519</tspan>회 자동 송급(오토링크)</text>
+        </svg>
+      </div>
+
+      <div class="tip"><b>💡 핵심 공식</b><br>
+        제품 1개가 차지하는 길이 <span style="color:var(--purple)">#505</span> = <span style="color:var(--purple)">#113</span>(제품 폭) + <span style="color:var(--purple)">#114</span>(톱폭)<br>
+        총 생산 개수 <span style="color:var(--purple)">#517</span> = 유효길이 ÷ #505 (내림). 톱이 잘라먹는 폭까지 계산해 정확히 몇 개 나오는지 산출합니다.
+      </div>
+    </section>
+
+    <!-- VARS -->
+    <section class="page" id="page-vars">
+      <h1>📖 변수 사전</h1>
+      <div class="role">이 매크로가 사용하는 모든 변수(#숫자)의 의미</div>
+      <div id="vartables"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="tip"></div>
+<div class="scrollhint">호버 = 설명 · 초록 글씨 = 클릭 이동</div>
+
+<!-- ===== RAW SOURCE (그대로 보존) ===== -->
+<script type="text/plain" id="src-O0852">%
+O0852(JOB_SETUP);
+GOTO 9000;
+N10(INPUT_DATA_START);
+#101=43 (MAT LEN OO 0~99);
+#102=500 (MAT LEN OOO 100~500);
+#103=75 (CHUCK LENGTH);
+#104=1 (INIT FACE CUT);
+#105=1 (MAT TYPE 1:CN 2:RS 3:CM);
+#106=3 (PROC: 3=CHAM 4=CHAM);
+#107=0 (ROUGH: 1=ON);
+#108=1 (SINGLE: 1=ON);
+(B. DIMENSIONS [109-118]);
+#109=70 (RAW OD);
+#110=56 (RAW ID);
+#111=64.90 (FIN OD);
+#112=58.30 (FIN ID);
+#113=7.823 (FIN LENGTH);
+#114=2.02 (TIP WIDTH);
+#115=0.34 (ID-R: ID RADIUS);
+#116=0.36 (OD-R: OD RADIUS);
+#117=0.37 (ID-L: ID CHAMFER);
+#118=0.60 (OD-L: OD CHAMFER);
+#119=0 (LEN>40 CONFIRM 1=OK);
+(C. CUTTING COND [120-128]);
+#120=1700 (T01 RPM);
+#121=1700 (T02 RPM);
+#122=1 (PULL DIST);
+#123=0.2 (MARGIN VALUE);
+;
+(D. FEED RATE CONFIG);
+IF [#105 EQ 1] GOTO 6010 (CN10);
+IF [#105 EQ 2] GOTO 6020 (RS40);
+IF [#105 EQ 3] GOTO 6030 (CM20);
+GOTO 6040 (DEFAULT);
+;
+N6010 (CASE 1: CN);
+#124=0.15 (T01 ROUGH FEED);
+#125=0.12 (T01 STEP FEED);
+#126=0.15 (T01 CHAMFER FEED);
+#127=0.09 (T02 CUT FEED);
+GOTO 6090;
+;
+N6020 (CASE 2: RS);
+#124=0.13;
+#125=0.08;
+#126=0.05;
+#127=0.08;
+GOTO 6090;
+;
+N6030 (CASE 3: CM);
+#124=0.13;
+#125=0.09;
+#126=0.09;
+#127=0.09;
+GOTO 6090;
+;
+N6040 (CASE 4: OTHERS);
+#124=0.15;
+#125=0.10;
+#126=0.10;
+#127=0.10;
+;
+N6090 (FEED SET DONE);
+;
+;
+;
+(=== ADVANCED SETTINGS ===);
+(#500 SERIES: SYSTEM VARS);
+#530=12 (SAFETY LENGTH);
+#531=15 (CHUCK LEFT LIMIT);
+#532=1.03 (CHUCK2JAW);
+#506=55 (Z ROUGH MAX DEPTH);
+#507=1 (Z ROUGH FREE DEPTH);
+#508=0.2 (T01 TIP NOSE R);
+#509=0.4 (ROUGH INT);
+#510=1 (CHAMFER INT);
+;
+(****************************);
+(! DANGER: STOP EDITING !);
+(! SYSTEM AUTO CONFIG !);
+(****************************);
+;
+(0. MACHINE SELECT);
+#130=10 (NO:1,4,5,7,8,9,10,13,14);
+;
+([2.5] SAFETY OVERRIDE);
+#129=0 (RESET RESIDUAL);
+(CHECK RS40 OR SMALL DIA);
+IF [#105 EQ 2] GOTO 2900 (RS40 SAFETY);
+IF [#109 LT 30] GOTO 2900 (DIA SAFETY);
+GOTO 2901;
+N2900 #129=15 (FORCE SAFE RES 15);
+N2901;
+([3] VERIFY: CHECK EMPTY);
+(CHECK MISSING INPUTS);
+(SETTINGS #101-108);
+IF [#101 EQ -9999] GOTO 3101;
+IF [#102 EQ -9999] GOTO 3102;
+IF [#103 EQ -9999] GOTO 3103;
+IF [#104 EQ -9999] GOTO 3104;
+IF [#105 EQ -9999] GOTO 3105;
+IF [#106 EQ -9999] GOTO 3106;
+IF [#107 EQ -9999] GOTO 3107;
+IF [#108 EQ -9999] GOTO 3108;
+(DIMS #109-118);
+IF [#109 EQ -9999] GOTO 3109;
+IF [#110 EQ -9999] GOTO 3110;
+IF [#111 EQ -9999] GOTO 3111;
+IF [#112 EQ -9999] GOTO 3112;
+IF [#113 EQ -9999] GOTO 3113;
+IF [#114 EQ -9999] GOTO 3114;
+IF [#115 EQ -9999] GOTO 3115;
+IF [#116 EQ -9999] GOTO 3116;
+IF [#117 EQ -9999] GOTO 3117;
+IF [#118 EQ -9999] GOTO 3118;
+(CONDS #120-123);
+IF [#120 EQ -9999] GOTO 3120;
+IF [#121 EQ -9999] GOTO 3121;
+IF [#122 EQ -9999] GOTO 3122;
+IF [#123 EQ -9999] GOTO 3123;
+(MACHINE);
+IF [#130 EQ -9999] GOTO 3130;
+;
+(CHECK LONG PART SAFETY);
+IF [#113 LE 40] GOTO 31190 (SKIP IF SHORT);
+IF [#119 NE 1] GOTO 3119 (ALARM IF NOT 1);
+N31190;
+;
+(CHECK SYS VAR INTEGRITY);
+IF [#530 EQ -9999] GOTO 3530;
+IF [#531 EQ -9999] GOTO 3531;
+IF [#532 EQ -9999] GOTO 3532;
+IF [#506 EQ -9999] GOTO 3506;
+IF [#507 EQ -9999] GOTO 3507;
+IF [#508 EQ -9999] GOTO 3508;
+IF [#509 EQ -9999] GOTO 3509;
+IF [#510 EQ -9999] GOTO 3510;
+;
+([4] SETUP: MACHINE SET);
+IF [#130 EQ 1] GOTO 8001;
+IF [#130 EQ 4] GOTO 8004;
+IF [#130 EQ 5] GOTO 8005;
+IF [#130 EQ 7] GOTO 8007;
+IF [#130 EQ 8] GOTO 8008;
+IF [#130 EQ 9] GOTO 8009;
+IF [#130 EQ 10] GOTO 8010;
+IF [#130 EQ 13] GOTO 8013;
+IF [#130 EQ 14] GOTO 8014;
+#3000=99 (MACHINE NO ERROR);
+([5] RUN: START MACHINING);
+N20 (RUN MAIN LOGIC);
+;
+M98 P9001;
+M30;
+([6] WARNING: ERROR MSG);
+(SETTINGS ERRORS);
+N3101 #3000=101(NO #101 MAT OO);
+N3102 #3000=102(NO #102 MAT OOO);
+N3103 #3000=103(NO #103 CHUCK);
+N3104 #3000=104(NO #104 FACE CUT);
+N3105 #3000=105(NO #105 MAT TYPE);
+N3106 #3000=106(NO #106 PROC);
+N3107 #3000=107(NO #107 ROUGH);
+N3108 #3000=108(NO #108 SINGLE);
+(DIM ERRORS);
+N3109 #3000=109(NO #109 RAW OD);
+N3110 #3000=110(NO #110 RAW ID);
+N3111 #3000=111(NO #111 FIN OD);
+N3112 #3000=112(NO #112 FIN ID);
+N3113 #3000=113(NO #113 FIN LEN);
+N3114 #3000=114(NO #114 TIP WID);
+N3115 #3000=115(NO #115 ID-R);
+N3116 #3000=116(NO #116 OD-R);
+N3117 #3000=117(NO #117 ID-L);
+N3118 #3000=118(NO #118 OD-L);
+N3119 #3000=119(LEN>40! SET #119=1);
+(COND ERRORS);
+N3120 #3000=120(NO #120 T01 RPM);
+N3121 #3000=121(NO #121 T02 RPM);
+N3122 #3000=122(NO #122 PULL);
+N3123 #3000=123(NO #123 MARGIN);
+N3130 #3000=130(NO #130 MAC NO);
+(SYSTEM VAR ERRORS);
+N3530 #3000=530 (ERR #530 MISSING);
+N3531 #3000=531 (ERR #531 MISSING);
+N3532 #3000=532 (ERR #532 MISSING);
+N3506 #3000=506 (ERR #506 MISSING);
+N3507 #3000=507 (ERR #507 MISSING);
+N3508 #3000=508 (ERR #508 MISSING);
+N3509 #3000=509 (ERR #509 MISSING);
+N3510 #3000=510 (ERR #510 MISSING);
+;
+([7] CLEANUP: RESET VARS);
+N9000;
+(SETTINGS);
+#101=-9999;
+#102=-9999;
+#103=-9999;
+#104=-9999;
+#105=-9999;
+#106=-9999;
+#107=-9999;
+#108=-9999;
+(DIMENSIONS);
+#109=-9999;
+#110=-9999;
+#111=-9999;
+#112=-9999;
+#113=-9999;
+#114=-9999;
+#115=-9999;
+#116=-9999;
+#117=-9999;
+#118=-9999;
+#119=-9999;
+(CONDITIONS);
+#120=-9999;
+#121=-9999;
+#122=-9999;
+#123=-9999;
+(MACHINE);
+#130=-9999;
+(SYS CHECKS);
+#530=-9999;
+#531=-9999;
+#532=-9999;
+#506=-9999;
+#507=-9999;
+#508=-9999;
+#509=-9999;
+#510=-9999;
+GOTO 10;
+([8] MACHINE CONFIG STORE);
+N8001 (UNIT 1 AL-1);
+#131=56 (AL OPEN);
+#132=55 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+N8004 (UNIT 4 HA-4);
+#131=52 (AL OPEN);
+#132=51 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+N8005 (UNIT 5 AL-5);
+#131=171 (AL OPEN);
+#132=170 (AL CLOSE);
+#133=53 (BR UP);
+#134=54 (BR DOWN);
+GOTO 20;
+N8007 (UNIT 7 AL-7);
+#131=64 (AL OPEN);
+#132=63 (AL CLOSE);
+#133=53 (BR UP);
+#134=54 (BR DOWN);
+GOTO 20;
+N8008 (UNIT 8 AL-8);
+#131=64 (AL OPEN);
+#132=63 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+N8009 (UNIT 9 AL-9);
+#131=63 (AL OPEN);
+#132=64 (AL CLOSE);
+#133=53 (BR UP);
+#134=54 (BR DOWN);
+GOTO 20;
+N8010 (UNIT 10 AL-10);
+#131=64 (AL OPEN);
+#132=63 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+N8013 (UNIT 13 HA-S3);
+#131=56 (AL OPEN);
+#132=55 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+N8014 (UNIT 14 HA-S4);
+#131=56 (AL OPEN);
+#132=55 (AL CLOSE);
+#133=54 (BR UP);
+#134=53 (BR DOWN);
+GOTO 20;
+%</script>
+
+<script type="text/plain" id="src-O9001">O9001(MAIN LOGIC - PROTECTED);
+;
+(CALCULATE TOTAL LENGTH);
+(#140 IS INTERNAL CALC VAR);
+(#129 IS SAFE RESIDUAL);
+#140=#101+#102-#129 (TOTAL LEN);
+;
+(FEED RATES INHERITED FROM O0852);
+;
+N90 (FEED SET COMPLETE);
+;
+(OPTIMIZATION PARAMS);
+#505 = #113 + #114 (TOTAL UNIT LEN);
+(#530 IS SAFETY LEN FROM O0852);
+(#103 IS CHUCK LEN);
+#602 = FIX[[#103 - #530] / #505];
+#103 = [#602 * #505] + #530;
+;
+N999 (FINAL CALCULATION);
+#500 = #103 - #530 (EFF LEN);
+#517 = FIX[#500 / #505] (NUM PCS);
+#518 = #517 * #505 (TOT MACH LEN);
+;
+;
+(ALARM CHECKS);
+N900;
+(1. EXISTING CHECKS);
+IF [#140 GT 580] GOTO 901;
+IF [#140 LE #103] GOTO 907 (LEN SHORT);
+IF [#109 LT #111] GOTO 902 (OD ERR);
+IF [#110 GT #112] GOTO 903 (ID ERR);
+IF [#125 GE 0.14] GOTO 904;
+;
+(2. MAT UNIT CHECK);
+IF [[#102 NE 0] AND [#102 NE 100] AND [#102 NE 200] AND [#102 NE 300] AND [#102 NE 400] AND [#102 NE 500]] GOTO 905;
+IF [#101 GT 99] GOTO 906;
+;
+(3. PARAMETER LIMITS);
+IF [#104 GT 40] GOTO 910;
+IF [#129 GT 30] GOTO 911;
+IF [#123 LT 0] OR [#123 GT 3] GOTO 912;
+IF [[#106 NE 3] AND [#106 NE 4]] GOTO 913;
+;
+(4. SAFETY CHECKS);
+(CHECK 2: OD VS ID);
+IF [#109 LE #110] GOTO 3203 (OD<=ID);
+IF [#111 LE #112] GOTO 3204 (FIN OD<=ID);
+;
+(CHECK 3: INVALID VALS);
+IF [#109 LE 0] GOTO 3205 (OD INVALID);
+IF [#120 LE 0] GOTO 3206 (T01 RPM ERR);
+IF [#121 LE 0] GOTO 3207 (T02 RPM ERR);
+;
+(CHECK 4: TIP WIDTH);
+IF [#114 GE #113] GOTO 3208 (TIP > FIN LEN);
+;
+GOTO 9999 (ALL CHECKS OK);
+;
+;
+(ALARM MESSAGES);
+N901 #3000 = 1 (ERR: LEN > 580);
+N902 #3000 = 2 (ERR: OD < WORK OD);
+N903 #3000 = 3 (ERR: ID > WORK ID);
+N904 #3000 = 4 (ALM: T01 FEED > 0.14);
+N905 #3000 = 5 (ERR: CHECK #102);
+N906 #3000 = 6 (ERR: CHECK #101);
+N907 #3000 = 7 (ERR: LEN < REQ LEN);
+N910 #3000 = 10 (ERR: INIT CUT > 40);
+N911 #3000 = 11 (ERR: RES > 70);
+N912 #3000 = 12 (ERR: BAD MAT TYPE);
+N913 #3000 = 13 (ERR: #106 NOT 3/4);
+;
+(NEW LOGIC ALARMS 32xx);
+N3203 #3000=203 (ERR: OD <= ID);
+N3204 #3000=204 (ERR: FIN OD <= ID);
+N3205 #3000=205 (ERR: BAD DIM);
+N3206 #3000=206 (ERR: T01 RPM);
+N3207 #3000=207 (ERR: T02 RPM);
+N3208 #3000=208 (WARN: TIP > LEN);
+;
+N9999 (START PROCESS);
+;
+(SIZE2);
+;
+M[#131] (VAR CLAMP OPEN);
+;
+M98 P9002;
+;
+N22(CLOSING);
+M05;
+G53 G00 X[-310.] Z0.;
+M99;</script>
+
+<script type="text/plain" id="src-O9002">O9002(MAIN MACHINING - PROTECTED);
+#500 = #103 - #530;
+#501 = #109 + 4.;
+#502 = #110 - 3.5;
+#503 = #111 + 4.;
+#504 = #112 - 5.;
+#505 = #113 + #114;
+N10 (BORINGBAR & CHUCK);
+#517=FIX[#500/#505];
+#518=#517*#505;
+#519=FIX[[#140-#531-#532-#530-#518-#114-#104]/[#518+#114+#123]];
+#525=0;
+N30(0POINT);
+G10 L2 P0 Z[#103];
+G30 U0 W0;
+N80 (TOMAK OPTION);
+IF[#519 GT 1] GOTO 90;
+G00 X+[#109+20] T02;
+Z0;
+M00;
+GOTO 100;
+N90 (MATERIAL INSTALL);
+G00 X[#501-60] T02;
+Z[#114+#104];
+M00;
+;
+N100(FACE CUTTING);
+G00 W3. T02;
+X[#501];
+Z0.;
+G97 M03 S#121;
+G98 G01 X[#502] F[#121*#127];
+G00 X[#111] T01;
+;
+;
+N110 (VALUE DEF);
+#515=FIX[[#506-#507]/#505];
+IF [#108 EQ 1] GOTO 11;
+GOTO 12;
+N11;
+#515=1;
+N12;
+#516=#515*#505;
+#521=0;
+#522=#521*#505;
+N120 (CALCULATION);
+IF[#515 LE #517] GOTO 130;
+#515=#517;
+#516=#515*#505;
+;
+N130 (STEP CUTTING);
+#520=0;
+IF[#107 EQ 0] GOTO 1302;
+N1301 (ROUGH);
+G00 X[#111+#509] M[#134] T01 (DOWN);
+G97 G00 Z[-#522+5.] S#120 M03;
+G98 G01 Z-[#522+#516] F[#120*#124];
+G00 W[#516+20.];
+N1302 (STEP CUTTING2);
+IF[#106 EQ 4] GOTO 1303;
+G00 X#111 M[#133] T01 (UP);
+G97 G00 Z[-#522+3] S#120 M03;
+G98 G01 Z-[#522+#516] F[#120*#125];
+M[#134] (DOWN);
+G4X.1;
+U0.2;
+G00 Z[-#522+3];
+M[#133] (UP);
+N1303 (END STEP CUT);
+;
+N160 (CHAMFER CUT);
+IF[#106 EQ 4] GOTO 1601;
+(TYPE 3 CHAMFER);
+G97 S#120 M03 T01;
+G00 X#111;
+G00 Z[-#522+3];
+G98 G01 Z[-#522+#510] F[#120*0.15];
+F[#120*#126];
+X[#111-[[#510+#116]*2.]];
+X[#111+[[#510+#115]*2.]];
+IF [#105 NE 2] GOTO 1603;
+G4 X0.5;
+GOTO 1603;
+N1601 (TYPE 4 CHAMFER);
+G00 X#111 M[#133] T01(UP);
+G97 G00 Z[-#522+3];
+S#120 M03;
+G98 G01 Z[-#522+#510] F[#120*0.15];
+F[#120*#126];
+G01 X[#111-[[#510+#116]*2.]];
+G01 X[#111+[[#510+#115]*2.]];
+IF [#105 NE 2] GOTO 1602;
+G4 X0.5;
+N1602;
+G01 X #111;
+G98 G01 Z-[#522+#113] F[#120*#125];
+F[#120*#126];
+G01 X[#111- [#118*2.]];
+G01 X[#111+[#117*2.]];
+G00 X#111;
+M[#134] (DOWN);
+G4 X.1;
+U0.2;
+N1603 (END CHAMFER);
+;
+N170 (COUNT);
+#520=#520+1;
+#521=#521+1;
+#522=#522+#505;
+;
+N180 (CUTTING);
+IF [#106 EQ 4] GOTO 1801;
+G00 Z[#118-#522] T02;
+G97 G00 X[#111+1] S#121 M03;
+G98 G01 X[#111] F[#121*#127];
+U-[#118*2] W-[#118];
+X[#504];
+GOTO 1802;
+N1801 (4_CHAMFER);
+G00 Z-[#522] T02;
+G97 G00 X[#503] S#121 M03;
+G98 G01 X[#111] F[#121*#127];
+X[#504];
+N1802(CUTTING END);
+M12;
+;
+N190 (IF OR ELSE);
+IF [#520 LT #515] GOTO 160;
+IF [[#521+#515] GT #517] GOTO 200;
+GOTO 130;
+N200 (LAST CUTTING);
+G00 X[#111] T01;
+#515=FIX[[#500-#522]/#505];
+#516=#515*#505;
+IF [#515 GE 1] GOTO 130;
+IF [#525 EQ #519] GOTO 230;
+;
+N210 (AUTOLINK);
+M05;
+G00 T03;
+X0 Z[-#522+50];
+G98 Z[-#522+#122] F200;
+M[#132] (AL CLOSE);
+G04 P500;
+M69;
+G04 P2500;
+W[#518+#114+#123];
+G04 P500;
+M68;
+G04 P2500;
+M[#131] (AL OPEN);
+G04 P500;
+G00 Z100.;
+;
+#525=#525+1.;
+IF [#525 EQ #519] GOTO 220;
+GOTO 221;
+N220 (AL STOP);
+#528=[#518+#114+#104]+#519*[#518+#114+#123];
+#538=[#140-#528]-[#531+#532+#530]-[#114+#123];
+#539=FIX[#538/#505];
+IF [#539 GT 0] GOTO 221;
+N221 (JUST GO);
+GOTO 100;
+N230 (PULL REMAIN);
+#528=[#518+#114+#104]+#519*[#518+#114+#123];
+#538=[#140-#528]-[#531+#532+#530]-[#114+#123];
+#539=FIX[#538/#505];
+#540=#539*#505;
+#541=#500-#518;
+#542=#140-#528-#114-#540-#541-#530-#531-#532;
+IF [#539 EQ 0] GOTO 250;
+N240(SUB4014);
+M98 P9003;
+N250 (WORK RETRACT);
+M[#134] (DOWN);
+M05;
+G53 G00 X[-310.] Z0.;
+M99;</script>
+
+<script type="text/plain" id="src-O9003">O9003(60G PULL REMAIN - PROTECTED);
+N90 (PULL REMAIN);
+M05;
+G00 X0 Z[-#522+50] T03;
+G98 Z[-#522+#122] F200;
+M[#132] (AL CLOSE);
+G04 P500;
+M69;
+G04 P2500;
+W[#540+#114-#541+#123];
+G04 P500;
+M68;
+G04 P2500;
+M[#131] (AL OPEN);
+G04 P500;
+G00 Z100.;
+(RE-SIZE);
+#103=#530+#540;
+#500=#103-#530;
+N20 (BORINGBAR ADJ);
+#515=FIX[[#506-#507]/#505];
+IF [#108 EQ 1] GOTO 21;
+GOTO 22;
+N21;
+#515=1;
+N22;
+#516=#515*#505;
+#517=FIX[#500/#505];
+#518=#517*#505;
+IF [#515 LE #517] GOTO 95;
+#515=#517;
+#516=#518;
+N95 (0POINT);
+G10 L2 P0 Z[#103];
+;
+N100 (FACE CUTTING);
+G00 W3. T02;
+X[#501];
+Z0.;
+G97 M03 S#121;
+G98 G01 X[#502] F[#121*#127];
+G00 X[#111] T01;
+#521=0;
+#522=#521*#505;
+;
+N130 (STEP CUTTING);
+#520=0;
+IF[#107 EQ 0] GOTO 1302;
+N1301 (ROUGH);
+G00 X[#111+#509] M[#134] T01 (DOWN);
+G97 G00 Z[-#522+5.] S#120 M03;
+G98 G01 Z-[#522+#516] F[#120*#124];
+G00 W[#516+20.];
+N1302 (STEP CUTTING2);
+IF[#106 EQ 4] GOTO 1303;
+G00 X#111 M[#133] T01 (UP);
+G97 G00 Z[-#522+3] S#120 M03;
+G98 G01 Z-[#522+#516] F[#120*#125];
+M[#134] (DOWN);
+G4X.1;
+U0.2;
+G00 Z[-#522+3];
+M[#133] (UP);
+N1303 (END STEP CUT);
+;
+N160 (CHAMFER CUT);
+IF[#106 EQ 4] GOTO 1601;
+(TYPE 3 CHAMFER);
+G97 S#120 M03 T01;
+G00 X#111;
+G00 Z[-#522+3];
+G98 G01 Z[-#522+#510] F[#120*0.15];
+F[#120*#126];
+X[#111-[[#510+#116]*2.]];
+X[#111+[[#510+#115]*2.]];
+IF [#105 NE 2] GOTO 1603;
+G4 X0.5;
+GOTO 1603;
+N1601 (TYPE 4 CHAMFER);
+G00 X#111 M[#133] T01(UP);
+G97 G00 Z[-#522+3];
+S#120 M03;
+G98 G01 Z[-#522+#510] F[#120*0.15];
+F[#120*#126];
+G01 X[#111-[[#510+#116]*2.]];
+G01 X[#111+[[#510+#115]*2.]];
+IF [#105 NE 2] GOTO 1602;
+G4 X0.5;
+N1602;
+G01 X #111;
+G98 G01 Z-[#522+#113] F[#120*#125];
+F[#120*#126];
+G01 X[#111- [#118*2.]];
+G01 X[#111+[#117*2.]];
+G00 X#111;
+M[#134] (DOWN);
+G4 X.1;
+U0.2;
+N1603 (END CHAMFER);
+;
+N170 (COUNT);
+#520=#520+1;
+#521=#521+1;
+#522=#522+#505;
+;
+N180 (CUTTING);
+IF [#106 EQ 4] GOTO 1801;
+G00 Z[#118-#522] T02;
+G97 G00 X[#111+1] S#121 M03;
+G98 G01 X[#111] F[#121*#127];
+U-[#118*2] W-[#118];
+X[#504];
+GOTO 1802;
+N1801 (4_CHAMFER);
+G00 Z-[#522] T02;
+G97 G00 X[#503] S#121 M03;
+G98 G01 X[#111] F[#121*#127];
+X[#504];
+N1802(CUTTING END);
+M12;
+;
+N190 (IF OR ELSE);
+IF [#520 LT #515] GOTO 160;
+IF [[#521+#515] GT #517] GOTO 200;
+GOTO 130;
+N200 (LAST CUTTING);
+G00 X[#111] T01;
+#515=FIX[[#500-#522]/#505];
+#516=#515*#505;
+IF [#515 GE 1] GOTO 130;
+N250 (WORK RETRACT);
+M99;</script>
+
+<script>
+/* ============ 사전 데이터 ============ */
+const VARS = {
+ 101:["소재 길이 OO자리 (0~99mm)","#102와 합쳐 총 소재 길이를 구성합니다. 예: #101=43, #102=500 → 543mm"],
+ 102:["소재 길이 OOO자리 (100~500mm)","100단위 자리. 0/100/200/300/400/500 중 하나여야 함(아니면 알람 905)"],
+ 103:["척(Chuck) 길이","소재를 무는 부분 길이. O9001에서 1개 단위(#505)의 정수배로 자동 재계산됩니다"],
+ 104:["첫 면(Face) 깎기 여부","소재 끝면을 평평하게 깎는 양/여부"],
+ 105:["소재 종류","1:CN / 2:RS / 3:CM. 이 값에 따라 이송속도(#124~127)가 자동으로 달라집니다. RS는 안전잔량도 강제됨"],
+ 106:["가공 타입","3 또는 4. 면취(chamfer) 가공 순서가 달라집니다. 다른 값이면 알람 913"],
+ 107:["황삭(거친 깎기) ON/OFF","1=ON. 켜면 정밀가공 전 거칠게 먼저 깎아냅니다"],
+ 108:["싱글 모드 ON/OFF","1=ON이면 한 번에 1단(#515=1)씩만 가공"],
+ 109:["원자재 바깥지름 (RAW OD)","소재의 실제 바깥지름. 완성 OD(#111)보다 커야 함(아니면 알람 902)"],
+ 110:["원자재 안지름 (RAW ID)","소재의 실제 구멍 지름. 완성 ID(#112)보다 작아야 함"],
+ 111:["완성 바깥지름 (FIN OD)","제품의 최종 바깥지름"],
+ 112:["완성 안지름 (FIN ID)","제품의 최종 구멍 지름"],
+ 113:["완성 길이 (제품 1개 폭)","제품 한 개의 두께. 40mm 초과 시 #119=1 승인 필요"],
+ 114:["절단 팁 폭 (톱날 두께)","절단 공구가 잘라먹는 폭. 제품길이+이 값 = 1개 점유길이(#505)"],
+ 115:["내경 R (ID Radius)","구멍 모서리 라운드 값"],
+ 116:["외경 R (OD Radius)","바깥 모서리 라운드 값"],
+ 117:["내경 면취 (ID Chamfer)","구멍 모서리 모따기"],
+ 118:["외경 면취 (OD Chamfer)","바깥 모서리 모따기. 기본 0.60"],
+ 119:["긴 부품 확인 플래그","완성길이>40mm일 때 작업자가 1로 승인해야 진행(안전장치)"],
+ 120:["T01 (1번 공구) 회전수 RPM",""],
+ 121:["T02 (2번 공구) 회전수 RPM",""],
+ 122:["소재 끌어오는 거리 (PULL DIST)","오토링크가 소재를 미는 기준 위치"],
+ 123:["마진(여유) 값","송급 시 더해주는 여유. 0~3 범위 아니면 알람 912"],
+ 124:["T01 황삭 이송","거친 깎기 이송속도(소재종류별 자동)"],
+ 125:["T01 스텝 이송","계단식 절삭 이송. 0.14 이상이면 알람 904"],
+ 126:["T01 면취 이송","모따기 가공 이송"],
+ 127:["T02 절삭 이송","절단 공구 이송"],
+ 129:["안전 잔량 (Safe Residual)","끝까지 안 쓰고 남기는 길이. RS소재/가는지름이면 강제 15mm"],
+ 130:["기계 번호","1,4,5,7,8,9,10,13,14 중 하나. 기계마다 M코드가 다르므로 정확히!"],
+ 131:["오토링크 OPEN M코드","기계별로 다름(변수 M코드로 사용)"],
+ 132:["오토링크 CLOSE M코드","소재를 잡는 M코드"],
+ 133:["받침대 UP M코드","기계마다 53/54가 뒤바뀜 — 주의!"],
+ 134:["받침대 DOWN M코드","기계마다 53/54가 뒤바뀜 — 주의!"],
+ 140:["총 사용가능 길이","#101+#102-#129. 580 초과 시 알람 901"],
+ 500:["유효 길이 (EFF LEN)","#103-#530. 실제 가공 가능 길이"],
+ 501:["접근 지름 (원자재OD+4)","공구 충돌 방지용 안전 접근 위치"],
+ 502:["원자재ID-3.5","면취 시 안쪽 접근 좌표"],
+ 503:["완성OD+4","타입4 가공 접근 좌표"],
+ 504:["완성ID-5","절단 마무리 좌표"],
+ 505:["제품 1개 점유 길이","#113(완성길이)+#114(톱폭). 몇 개 나오는지의 기준 단위"],
+ 506:["Z 황삭 최대 깊이",""],
+ 507:["Z 황삭 여유 깊이",""],
+ 508:["T01 팁 노즈 R",""],
+ 509:["황삭 여유 (ROUGH INT)",""],
+ 510:["면취 여유 (CHAMFER INT)",""],
+ 515:["한 번에 깎을 단(段) 수","보링바 길이 한계로 계산. 싱글모드면 1"],
+ 516:["#515 × #505","현재 묶음의 Z 길이"],
+ 517:["총 생산 개수 (NUM PCS)","FIX[유효길이÷1개길이]. 내림 계산"],
+ 518:["총 가공 길이","#517 × #505"],
+ 519:["오토링크 횟수","소재를 몇 번 자동 송급할지"],
+ 520:["현재 깎은 개수 카운터","루프마다 +1"],
+ 521:["누적 개수 카운터",""],
+ 522:["현재 Z 위치 누적","개수×#505. 가공이 진행될수록 깊어짐"],
+ 525:["오토링크 실행 횟수 카운터",""],
+ 528:["자투리 계산용 (총 점유)",""],
+ 538:["자투리 계산용 (남은 길이)",""],
+ 539:["자투리에서 더 나올 개수",""],
+ 540:["#539×#505 (자투리 가공길이)",""],
+ 541:["#500-#518 (잔여)",""],
+ 542:["최종 잔여 계산",""],
+ 530:["안전 길이 (SAFETY LENGTH)","척 끝~가공 시작점 여유. 기본 12"],
+ 531:["척 좌측 한계","기본 15"],
+ 532:["척~조(jaw) 거리","기본 1.03"],
+ 602:["척 길이 보정 계산용","#103을 #505 정수배로 맞추는 중간값"],
+ 3000:["매크로 알람 출력","#3000=숫자 → 기계에 알람을 띄우고 정지시킴. 괄호 안이 화면 메시지"],
+ 3:["가공 좌표/드웰 임시","문맥에 따라 다름"],
+};
+const CODES = {
+ "G00":["급속 이송","공구를 최고속도로 이동(절삭 아님). ⚠️ 충돌 위험 구간 — 경로 확인 필수"],
+ "G01":["직선 절삭 이송","지정 이송속도(F)로 직선 가공"],
+ "G04":["일시정지 (드웰)","지정 시간만큼 멈춤. P500=0.5초. 기계 동작 완료를 기다림"],
+ "G4":["일시정지 (드웰)","G04와 동일. 다음 동작 전 대기"],
+ "G10":["데이터 설정","프로그램으로 좌표계/공구보정값을 입력. 여기선 워크좌표 원점 설정"],
+ "G30":["2차 원점 복귀","기계의 두 번째 기준점으로 복귀"],
+ "G53":["기계좌표계 지정","공작물 좌표 무시하고 기계 절대좌표로 이동"],
+ "G97":["회전수 일정 (rpm)","주축을 정해진 RPM으로 고정 회전"],
+ "G98":["분당 이송 (mm/min)","이송을 분당 거리로 지정"],
+ "M00":["프로그램 정지","기계가 멈추고 작업자 확인을 기다림(소재 장착 등)"],
+ "M03":["주축 정회전","스핀들 시계방향 회전 시작"],
+ "M05":["주축 정지","스핀들 회전 멈춤"],
+ "M12":["절단 완료 신호/배출","제품 분리 후 동작(기계 사양)"],
+ "M30":["프로그램 종료","끝내고 선두로 리셋"],
+ "M68":["척 잠금 (유압 클램프)","소재를 다시 꽉 무는 동작"],
+ "M69":["척 풀기 (유압 언클램프)","소재를 놓아 송급 가능하게"],
+ "M98":["서브프로그램 호출","다른 O번호 프로그램을 불러 실행. P 다음이 호출할 번호"],
+ "M99":["서브프로그램 복귀","호출한 곳으로 되돌아감"],
+ "FIX":["소수점 버림 (내림)","FIX[7.8]=7. 개수 계산에 사용(나머지는 버림)"],
+ "IF":["조건 분기","조건이 참이면 GOTO로 점프"],
+ "GOTO":["점프","지정한 N번호 줄로 이동"],
+ "EQ":["= 같다",""],"NE":["≠ 다르다",""],"GT":["> 크다",""],"LT":["< 작다",""],
+ "GE":["≥ 크거나 같다",""],"LE":["≤ 작거나 같다",""],"AND":["그리고",""],"OR":["또는",""],
+ "T01":["1번 공구 (보링/면취)",""],"T02":["2번 공구 (면·절단)",""],"T03":["3번 공구 (소재 미는 봉)",""],
+};
+
+/* 줄별 추가 설명 (원본 파일 줄번호 기준) */
+const NOTES = {
+ O0852:{
+  2:"프로그램 시작. 작업자가 만지는 유일한 프로그램입니다.",
+  3:"가장 먼저 변수 초기화(N9000)로 점프 → 지난 가공의 찌꺼기 값을 -9999로 싹 지우고 N10으로 복귀. 사고 방지 핵심 장치.",
+  4:"여기서부터 작업자가 값을 입력합니다.",
+  32:"소재 종류(#105)에 따라 이송속도 묶음으로 자동 분기. 작업자가 일일이 외울 필요 없음.",
+  70:"여기부터는 시스템 변수. 함부로 바꾸면 안 되는 영역의 시작.",
+  80:"⛔ 수정 금지선. 이 아래는 작업자가 절대 손대면 안 됩니다.",
+  85:"현재 가공할 기계 번호. 기계마다 M코드가 달라서 반드시 정확히 입력!",
+  88:"안전 잔량 초기화. 기본은 0(끝까지 사용).",
+  90:"RS 소재면 → 안전 잔량 강제 적용으로 점프.",
+  91:"지름이 30mm 미만(가는 소재)이면 → 위험하므로 안전 잔량 강제.",
+  93:"가는 소재/RS는 끝까지 안 쓰고 15mm를 남겨 휨·튐 사고 방지.",
+  98:"입력값이 비었는지(-9999인지) 하나하나 검사. 빠진 값이 있으면 해당 알람으로 점프.",
+  126:"완성길이가 40 이하면 이 검사 건너뜀.",
+  127:"40 초과인데 #119=1 승인이 없으면 알람 3119로 정지.",
+  141:"기계번호에 맞는 설정(N80xx)으로 분기.",
+  150:"위 목록에 없는 기계번호면 에러 99.",
+  154:"메인 로직(O9001) 호출 — 본격 시작.",
+  155:"전체 작업 종료.",
+  158:"여기부터는 알람 메시지 모음. #3000에 번호를 넣으면 화면에 뜨고 기계가 멈춤.",
+  195:"변수 초기화 루틴. 모든 입력값을 -9999로 리셋.",
+  233:"초기화 끝나면 입력 시작점(N10)으로 복귀.",
+  234:"기계별 M코드 저장소. 선택된 기계의 OPEN/CLOSE/UP/DOWN 코드를 채움.",
+  235:"1호기 설정.",
+  265:"⚠️ 9호기는 UP=53/DOWN=54로 다른 기계와 반대! 기계번호 착오 시 받침대 역동작 위험.",
+  271:"현재 예시는 10호기 선택됨.",
+ },
+ O9001:{
+  291:"메인 로직. PROTECTED — 작업자 수정 금지.",
+  296:"총 사용가능 길이 = 소재길이 합 − 안전잔량.",
+  303:"제품 1개가 차지하는 길이 = 완성길이 + 톱폭. 모든 개수 계산의 기준.",
+  306:"척 길이를 1개 단위의 정수배로 보정(딱 떨어지게).",
+  310:"유효 길이 = 척길이 − 안전길이.",
+  311:"총 생산 개수 = 유효길이 ÷ 1개길이 (내림).",
+  318:"총길이 580 초과 → 기계 한계 초과 알람.",
+  319:"소재가 척보다도 짧으면 → 길이 부족 알람.",
+  320:"원자재 OD가 완성 OD보다 작으면 가공 불가 → 알람.",
+  321:"원자재 ID가 완성 ID보다 크면 → 알람.",
+  322:"스텝 이송이 0.14 이상이면 위험 → 알람.",
+  325:"#102가 100단위(0/100/.../500)가 아니면 → 알람 905.",
+  336:"바깥지름이 안지름보다 작거나 같으면 말이 안 됨 → 알람.",
+  345:"톱폭이 제품길이 이상이면 제품이 안 나옴 → 경고.",
+  347:"모든 검사 통과 → 가공 시작(N9999)으로.",
+  375:"변수 M코드로 척(클램프) 열기.",
+  377:"실제 가공 프로그램(O9002) 호출.",
+  380:"마무리: 주축 정지 후 기계좌표로 후퇴.",
+ },
+ O9002:{
+  385:"실제 가공. PROTECTED.",
+  387:"안전 접근용 좌표들 미리 계산(소재에 안 부딪히게 여유).",
+  394:"총 가공 길이 = 개수 × 1개길이.",
+  395:"오토링크(자동 송급) 횟수 계산.",
+  398:"G10으로 워크 원점(Z) 설정.",
+  401:"송급 횟수가 1보다 크면(여러 번) 자동 설치 루틴으로.",
+  404:"M00: 작업자가 소재 장착하고 사이클 스타트 누를 때까지 대기.",
+  411:"면(face) 깎기 시작.",
+  416:"직선절삭으로 끝면을 평평하게. 이송 = 회전수 × 절삭계수.",
+  421:"보링바 길이 한계로 한 번에 깎을 단수 계산.",
+  430:"단수가 총개수보다 많으면 총개수로 제한.",
+  435:"⭐ 스텝(계단식) 절삭 시작 — 핵심 가공 루프의 입구.",
+  438:"황삭 ON일 때만 거친 깎기 먼저.",
+  445:"받침대 UP(변수 M코드) 후 Z축으로 파고들며 절삭.",
+  455:"⭐ 면취(모따기) 가공.",
+  463:"외경 R/면취 가공. 지름값이라 반경×2.",
+  464:"내경 R/면취 가공.",
+  490:"카운터 증가: 깎은 개수·누적·Z위치.",
+  495:"⭐ 절단 — 여기서 제품 1개가 떨어져 나옵니다!",
+  499:"절단 공구로 안쪽까지 파고들어 분리.",
+  511:"⭐ 반복 제어: 덜 깎았으면 면취로, 거의 다 됐으면 마지막으로, 아니면 스텝으로.",
+  515:"마지막 묶음 가공.",
+  520:"오토링크 다 썼으면 자투리 처리(N230)로.",
+  522:"⭐ 오토링크 — 무인 자동 소재 송급의 심장.",
+  527:"오토링크가 소재를 꽉 잡음.",
+  528:"0.5초 대기 — 동작 완료 기다림(생략하면 사고).",
+  529:"척 풀기.",
+  531:"소재를 가공한 만큼 앞으로 밀어냄.",
+  533:"척 다시 잠금.",
+  535:"오토링크 놓음.",
+  543:"자투리에서 더 나올 개수 계산.",
+  549:"⭐ 자투리 끌어오기 분기.",
+  558:"자투리 가공 프로그램(O9003) 호출.",
+  560:"작업 종료: 받침대 내리고 후퇴.",
+ },
+ O9003:{
+  566:"자투리(짧게 남은 소재) 전용 가공. PROTECTED.",
+  567:"남은 소재를 끌어오는 루틴(오토링크와 동일 동작).",
+  583:"남은 길이로 척 길이를 다시 설정(RE-SIZE).",
+  585:"보링바·개수 재계산.",
+  601:"여기서부터는 O9002와 거의 동일한 가공 루프(면취→스텝→절단).",
+  696:"끝나면 호출한 O9002로 복귀.",
+ },
+};
+
+const START={O0852:1,O9001:291,O9002:385,O9003:566};
+const TITLES={
+ O0852:["① O0852 (JOB_SETUP)","입력 · 검증 — 작업자가 만지는 유일한 영역",
+   "치수·조건을 입력받아 <b>빈값을 검증</b>하고, 선택한 <b>기계의 M코드를 자동 세팅</b>한 뒤 메인 로직을 호출합니다."],
+ O9001:["② O9001 (MAIN LOGIC)","길이 계산 · 알람 검사",
+   "총 길이와 <b>생산 개수</b>를 계산하고, 물리적으로 불가능하거나 위험한 입력을 <b>12종 알람</b>으로 차단한 뒤 가공을 시작합니다."],
+ O9002:["③ O9002 (MAIN MACHINING)","실제 가공 반복 — 칼이 움직이는 곳",
+   "면취 → 스텝 → 절단을 <b>목표 개수만큼 반복</b>합니다. 소재를 다 쓰면 <b>오토링크</b>로 새 소재를 자동 송급합니다."],
+ O9003:["④ O9003 (PULL REMAIN)","자투리 끌어오기",
+   "마지막에 짧게 남은 <b>자투리도 버리지 않고</b> 끌어와, 가능한 만큼 더 가공하는 알뜰 루틴입니다."],
+};
+
+/* ============ 렌더링 ============ */
+const tip=document.getElementById('tip');
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function tokenize(line, prog){
+ // 주석 분리: (...) 부분
+ let out='', i=0;
+ const labels=window.LBL[prog];
+ // 먼저 라벨(줄 첫머리 N숫자) 처리
+ // 토큰 스캐너
+ const re=/(\([^)]*\))|(#\d+)|\b(GOTO)\s+(\d+)|\b(M98\s+P)(\d+)|\b(P)(\d+)\b|\b(N\d+)|\b(G0?\d+\.?\d*)|\b(M\d+)|(M\[#\d+\])|\b(FIX|IF|EQ|NE|GT|LT|GE|LE|AND|OR)\b|\b(T0\d)\b/g;
+ let m, last=0;
+ while((m=re.exec(line))){
+   out+=esc(line.slice(last,m.index));
+   last=re.lastIndex;
+   if(m[1]){ out+=`<span class="cm">${esc(m[1])}</span>`; }
+   else if(m[2]){ const n=m[2].slice(1); out+=`<span class="var" data-v="${n}">${m[2]}</span>`; }
+   else if(m[3]){ // GOTO n
+     const t=m[4];
+     out+=`<span class="gc" data-c="GOTO">GOTO</span> <span class="jump" data-jp="${prog}:${t}">${t}</span>`;
+   }
+   else if(m[5]){ // M98 P####
+     out+=`<span class="mc" data-c="M98">M98</span> <span class="jump" data-prog="O${m[6]}">P${m[6]}</span>`;
+   }
+   else if(m[7]){ // P####  (단독)
+     out+=`P${m[8]}`;
+   }
+   else if(m[9]){ // N label
+     out+=`<span class="label" id="lbl-${prog}-${m[9].slice(1)}">${m[9]}</span>`;
+   }
+   else if(m[10]){ const c=m[10].replace(/^G0?/,'G').toUpperCase(); // Gxx
+     // normalize G4->G04 lookup
+     let key=m[10].toUpperCase(); if(!CODES[key]&&CODES["G0"+key.slice(1)])key="G0"+key.slice(1);
+     out+=`<span class="gc" data-c="${key}">${m[10]}</span>`; }
+   else if(m[11]){ out+=`<span class="mc" data-c="${m[11].toUpperCase()}">${m[11]}</span>`; }
+   else if(m[12]){ out+=`<span class="mc" data-c="MVAR">${esc(m[12])}</span>`; }
+   else if(m[13]){ out+=`<span class="gc" data-c="${m[13]}">${m[13]}</span>`; }
+   else if(m[14]){ out+=`<span class="gc" data-c="${m[14]}">${m[14]}</span>`; }
+ }
+ out+=esc(line.slice(last));
+ return out;
+}
+
+// 라벨 인덱스 미리 구축
+window.LBL={};
+function buildLabels(prog,text){
+ const set={}; text.split('\n').forEach(l=>{const mm=l.match(/^\s*(N\d+)/);if(mm)set[mm[1].slice(1)]=true;});
+ window.LBL[prog]=set;
+}
+
+function renderProgram(prog){
+ const text=document.getElementById('src-'+prog).textContent.replace(/^\n/,'');
+ buildLabels(prog,text);
+ const lines=text.split('\n');
+ const start=START[prog], notes=NOTES[prog]||{};
+ const [t,role,sum]=TITLES[prog];
+ let html=`<h1>${t}</h1><div class="role">${role}</div><div class="summary">${sum}</div>`;
+ html+=`<div class="codewrap"><div class="codehead"><span class="ttl">${prog} 소스</span><span class="hint">호버=설명 · 초록=클릭이동</span></div><pre class="code">`;
+ lines.forEach((line,idx)=>{
+   const orig=start+idx;
+   const note=notes[orig];
+   let cls='ln';
+   const trimmed=line.trim();
+   if(/^\([A-Z0-9=. *!\[\]_>#~:&-]*\)/.test(trimmed) && (idx===0 || true)){}
+   // block highlight: lines that are pure (X. ...) section headers or [n] sections
+   if(/^\(\s*\[?\d|^\(\s*[A-Z]\.|^\(===|^\(0\.|^\(\d\./.test(trimmed)) cls+=' block';
+   if(/DANGER|STOP EDITING|SYSTEM AUTO/.test(line)) cls+=' danger-line';
+   if(note) cls+=' has-note';
+   html+=`<div class="${cls}" data-note="${note?esc(note).replace(/"/g,'&quot;'):''}">`+
+         `<span class="gut">${orig}</span><span class="src">${tokenize(line,prog)||'&nbsp;'}</span></div>`;
+ });
+ html+=`</pre></div>`;
+ document.getElementById('page-'+prog).innerHTML=html;
+}
+
+['O0852','O9001','O9002','O9003'].forEach(renderProgram);
+
+/* 변수 사전 표 */
+(function(){
+ const groups=[["입력값 #101~#119",101,119],["절삭조건 #120~#130",120,130],
+   ["기계 M코드 #131~#134",131,134],["계산·시스템 변수",140,602]];
+ let html='';
+ const keys=Object.keys(VARS).map(Number).filter(n=>n>=100).sort((a,b)=>a-b);
+ [["① 입력값 (작업자 입력)",n=>n>=101&&n<=119],
+  ["② 절삭조건·기계",n=>n>=120&&n<=134],
+  ["③ 계산·시스템 변수",n=>n>=140]].forEach(([t,f])=>{
+   html+=`<h3 style="color:var(--accent2);margin-top:24px">${t}</h3><table class="vt"><tr><th>변수</th><th>이름</th><th>설명</th></tr>`;
+   keys.filter(f).forEach(n=>{const v=VARS[n];html+=`<tr><td>#${n}</td><td>${v[0]}</td><td style="color:var(--dim)">${v[1]||''}</td></tr>`;});
+   html+=`</table>`;
+ });
+ document.getElementById('vartables').innerHTML=html;
+})();
+
+/* ============ 인터랙션 ============ */
+const main=document.getElementById('main');
+
+function showTip(html,x,y){
+ tip.innerHTML=html; tip.classList.add('show');
+ const r=tip.getBoundingClientRect(), m=10;
+ let tx=x+14, ty=y+16;
+ if(tx+r.width>innerWidth-m) tx=x-r.width-14;
+ if(ty+r.height>innerHeight-m) ty=y-r.height-16;
+ // 화면 밖으로 안 나가게 양쪽 클램프 (모바일 좌측 잘림 방지)
+ tx=Math.max(m, Math.min(tx, innerWidth-r.width-m));
+ ty=Math.max(m, Math.min(ty, innerHeight-r.height-m));
+ tip.style.left=tx+'px'; tip.style.top=ty+'px';
+}
+function hideTip(){tip.classList.remove('show');}
+
+function tipFor(t){
+ if(t.classList && t.classList.contains('var')){
+   const v=VARS[t.dataset.v];
+   if(v) return `<div class="tname">#${t.dataset.v}</div><div class="tdesc"><b>${v[0]}</b>${v[1]?'<br>'+v[1]:''}</div>`;
+ }
+ if(t.classList && (t.classList.contains('gc')||t.classList.contains('mc'))){
+   const c=t.dataset.c;
+   if(c==='MVAR') return `<div class="tname">M[#변수]</div><div class="tdesc">변수 M코드. 기계별로 정해진 보조기능 번호(받침대·오토링크)를 실행합니다.</div>`;
+   const d=CODES[c];
+   if(d) return `<div class="tname">${c}</div><div class="tdesc"><b>${d[0]}</b>${d[1]?'<br>'+d[1]:''}</div>`;
+ }
+ const ln=t.closest && t.closest('.ln');
+ if(ln && ln.dataset.note) return `<div class="tnote" style="border:none;padding:0;margin:0;color:var(--green)">💬 ${ln.dataset.note}</div>`;
+ return null;
+}
+document.body.addEventListener('mousemove',e=>{const h=tipFor(e.target);if(h)showTip(h,e.clientX,e.clientY);else hideTip();});
+
+/* 점프 (GOTO / 프로그램 이동) */
+document.body.addEventListener('click',e=>{
+ const j=e.target.closest('.jump');
+ if(j){
+   if(j.dataset.prog){ switchPage(j.dataset.prog); return; }
+   if(j.dataset.jp){
+     const [prog,n]=j.dataset.jp.split(':');
+     switchPage(prog);
+     setTimeout(()=>{
+       const el=document.getElementById('lbl-'+prog+'-'+n);
+       if(el){const row=el.closest('.ln'); row.scrollIntoView({block:'center'}); row.classList.add('flash'); setTimeout(()=>row.classList.remove('flash'),900);}
+     },80);
+   }
+   return;
+ }
+ const nav=e.target.closest('[data-page]');
+ if(nav){ switchPage(nav.dataset.page); return; }
+ // 모바일: 탭하면 툴팁 표시 / 빈 곳 탭하면 닫기
+ const h=tipFor(e.target);
+ if(h){ showTip(h,e.clientX,e.clientY); return; }
+ if(!e.target.closest('#tip')) hideTip();
+});
+
+function switchPage(p){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ document.getElementById('page-'+p).classList.add('active');
+ document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.page===p));
+ main.scrollTop=0;
+ closeDrawer();
+}
+
+/* 모바일 서랍 토글 */
+const sidebar=document.querySelector('.sidebar'), backdrop=document.getElementById('backdrop');
+function openDrawer(){sidebar.classList.add('open');backdrop.classList.add('show');}
+function closeDrawer(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.getElementById('menuBtn').addEventListener('click',openDrawer);
+backdrop.addEventListener('click',closeDrawer);
+</script>
+</body>
+</html>
