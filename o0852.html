@@ -71,7 +71,7 @@
   .codehead .ttl{font-weight:700}
   .codehead .hint{color:var(--dim); font-size:12px}
   pre.code{margin:0; padding:14px 0; overflow-x:auto; font-family:"D2Coding","Consolas","Courier New",monospace;
-    font-size:13.5px; line-height:1.7}
+    font-size:13.5px; line-height:1.5}
   .ln{display:flex; padding:0 16px; white-space:pre}
   .ln:hover{background:#1b2husa}
   .ln.has-note{cursor:help}
@@ -1347,6 +1347,42 @@ function buildLabels(prog,text){
  window.LBL[prog]=set;
 }
 
+/* 수동 설명이 없는 줄은 코드를 해석해 자동 설명 생성 */
+function autoNote(raw){
+ var line=(raw||'').trim();
+ if(line===''||line===';') return '빈 줄 / 구분';
+ if(line==='%') return '프로그램 경계 표시 (%)';
+ var cm=line.match(/\(([^)]*)\)\s*;?\s*$/); var cmt=cm?cm[1].trim():'';
+ var code=line.replace(/\([^)]*\)/g,'').replace(/;+\s*$/,'').trim();
+ var m;
+ if(m=code.match(/^O(\d+)/)) return '프로그램 번호 O'+m[1]+' 선언'+(cmt?' — '+cmt:'');
+ if(/^N\d+$/.test(code)) return '라벨 N'+code.slice(1)+' (점프 목적지)'+(cmt?' · '+cmt:'');
+ var lbl='', body=code;
+ if(m=code.match(/^N(\d+)\s+(.*)$/)){ lbl='[N'+m[1]+'] '; body=m[2].trim(); }
+ if(/^#3000\s*=/.test(body)){ m=body.match(/^#3000\s*=\s*(.+)$/); return lbl+'알람 발생 (#3000='+m[1].trim()+') → 기계 정지'+(cmt?' · '+cmt:''); }
+ if(m=body.match(/^#(\d+)\s*=\s*(.+)$/)){
+   var n=+m[1], val=m[2].trim().replace(/\.$/,'');
+   var name=(VARS[n]&&VARS[n][0])||'변수';
+   if(val==='-9999') return lbl+'#'+n+' ('+name+') 초기화 — 빈값(-9999)';
+   return lbl+'#'+n+' ('+name+') ← '+val+(cmt?' · '+cmt:'');
+ }
+ if(m=body.match(/^IF\s*(.+?)\s*GOTO\s*(\d+)/i)) return lbl+'조건 ['+m[1].trim()+'] 참이면 N'+m[2]+'로 점프'+(cmt?' · '+cmt:'');
+ if(m=body.match(/^GOTO\s*(\d+)/i)) return lbl+'N'+m[1]+'로 무조건 점프';
+ if(m=body.match(/M98\s*P(\d+)/i)) return lbl+'서브프로그램 O'+m[1]+' 호출'+(cmt?' · '+cmt:'');
+ if(/\bM99\b/.test(body)) return lbl+'서브프로그램 종료 — 호출한 곳으로 복귀';
+ if(/\bM30\b/.test(body)) return lbl+'프로그램 종료';
+ var toks=body.match(/G0?\d+\.?\d*|M\[#\d+\]|M\d+|T0\d/gi)||[]; var parts=[];
+ toks.forEach(function(t){
+   if(/^M\[/.test(t)){ parts.push('변수 M코드(받침대/오토링크)'); return; }
+   var key=t.toUpperCase();
+   if(CODES[key]) parts.push(key+'='+CODES[key][0]);
+   else if(key.charAt(0)==='G'&&CODES['G0'+key.slice(1)]) parts.push(key+'='+CODES['G0'+key.slice(1)][0]);
+ });
+ if(parts.length) return lbl+parts.join(', ')+(cmt?' · '+cmt:'');
+ if(cmt) return lbl+cmt;
+ return lbl+body;
+}
+
 function renderProgram(prog){
  const text=document.getElementById('src-'+prog).textContent.replace(/^\n/,'');
  buildLabels(prog,text);
@@ -1357,7 +1393,7 @@ function renderProgram(prog){
  html+=`<div class="codewrap"><div class="codehead"><span class="ttl">${prog} 소스</span><span class="hint">호버=설명 · 초록=클릭이동</span></div><pre class="code">`;
  lines.forEach((line,idx)=>{
    const orig=start+idx;
-   const note=notes[orig];
+   const note=notes[orig]||autoNote(line);
    let cls='ln';
    const trimmed=line.trim();
    if(/^\([A-Z0-9=. *!\[\]_>#~:&-]*\)/.test(trimmed) && (idx===0 || true)){}
