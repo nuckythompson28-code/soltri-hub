@@ -1,0 +1,87 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✅ CNC 미니 평가 — 10문항</title>
+<style>
+ :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
+   --accent:#ff8c42;--green:#7ee787;--red:#ff7b72;--blue:#4fb6ff}
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+ body{margin:0;font-family:"Pretendard","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+   line-height:1.6;padding:26px 16px 70px}
+ .wrap{max-width:620px;margin:0 auto}
+ a.back{color:var(--dim);text-decoration:none;font-size:14px}
+ h1{font-size:24px;margin:10px 0 2px} .sub{color:var(--accent);font-weight:700;margin:0 0 16px}
+ .bar{height:7px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-bottom:18px}
+ .bar>div{height:100%;background:var(--accent);width:0;transition:width .3s}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+ .qno{font-size:12px;color:var(--dim);font-weight:700;margin-bottom:6px}
+ .q{font-size:17px;font-weight:700;margin-bottom:14px}
+ .opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+   border-radius:10px;padding:12px 14px;margin-bottom:9px;font-size:15px;cursor:pointer;transition:.12s}
+ .opt:hover{border-color:var(--accent)}
+ .opt.correct{background:#16301f;border-color:var(--green);color:#fff}
+ .opt.wrong{background:#301818;border-color:var(--red);color:#fff}
+ .opt:disabled{cursor:default}
+ .exp{margin-top:6px;font-size:14px;background:#13241a;border-left:3px solid var(--green);border-radius:8px;padding:10px 13px;display:none}
+ .exp.show{display:block} .exp b{color:var(--green)}
+ .nav{margin-top:16px;text-align:right}
+ .btn{background:var(--accent);color:#1a1208;border:none;border-radius:10px;padding:11px 22px;font-weight:800;font-size:15px;cursor:pointer}
+ .btn:disabled{opacity:.4;cursor:default}
+ .result{text-align:center;padding:20px}
+ .score{font-size:46px;font-weight:900;margin:10px 0}
+ .pass{color:var(--green)} .fail{color:var(--red)}
+ .result p{color:var(--dim)}
+ .result .btn{margin-top:14px}
+</style></head><body><div class="wrap">
+ <a class="back" href="index.html">← 공장집사</a>
+ <h1>✅ CNC 미니 평가</h1>
+ <p class="sub">완전초보 반나절 이해도 체크 · 10문항 (7개 이상이면 합격)</p>
+ <div class="bar"><div id="bar"></div></div>
+ <div id="area"></div>
+</div>
+<script>
+const QS=[
+ {q:"기계 앞에서 가장 먼저 익혀야 할 것은?",o:["가공 속도 설정","비상정지(빨간 버튼) 위치","공구 교환법","프로그램 수정"],a:1,e:"무엇보다 안전. 비상정지 위치부터 몸에 익힙니다."},
+ {q:"프로그램의 X 값은 무엇을 뜻하나?",o:["반지름","지름","길이","각도"],a:1,e:"선반에서 X는 지름값입니다. 반지름으로 착각하면 2배로 깎입니다."},
+ {q:"G00은 어떤 동작인가?",o:["천천히 절삭","급속 이동(절삭 아님)","주축 정지","공구 교환"],a:1,e:"G00은 급속이동 — 칼이 번개같이 움직여 충돌 위험이 큽니다."},
+ {q:"척(소재를 무는 부분)은 어느 쪽에 있나?",o:["왼쪽","오른쪽","위","아래"],a:0,e:"척은 왼쪽. 가공은 오른쪽(자유단)에서 왼쪽으로 진행됩니다."},
+ {q:"코드 중 M00을 만나면 작업자는?",o:["전원을 끈다","소재를 장착하고 사이클 스타트","공구를 바꾼다","아무것도 안 한다"],a:1,e:"M00은 일시정지. 소재 장착 등 확인 후 사이클 스타트를 누릅니다."},
+ {q:"이 프로그램(O0400)이 만드는 제품은?",o:["사각 블록","파이프를 토막낸 링/부싱","나사","기어"],a:1,e:"두꺼운 파이프를 깎아 얇은 링을 여러 개 잘라냅니다."},
+ {q:"만들 개수를 바꾸려면 어느 변수를 고치나?",o:["#103","#120","#505","#530"],a:1,e:"#120 = HOW MANY(개수). 작업자가 입력하는 칸입니다."},
+ {q:"O0400에서 '완성 외경'을 나타내는 변수는?",o:["#101","#103","#110","#505"],a:1,e:"#103 = WORK OD(완성 외경). #101은 원자재 외경입니다."},
+ {q:"'! DANGER !' 아래나 'PROTECTED' 표시 구간은?",o:["자유롭게 수정","절대 수정 금지","매번 새로 작성","삭제"],a:1,e:"보호 구간은 절대 손대지 않습니다. 작업자는 입력값만 바꿉니다."},
+ {q:"M03은 무슨 뜻인가?",o:["주축 정회전","주축 정지","급속이동","프로그램 종료"],a:0,e:"M03 = 주축 정회전 시작. M05가 정지입니다."}
+];
+let i=0, score=0;
+const area=document.getElementById('area'), bar=document.getElementById('bar');
+function render(){
+ bar.style.width=(i/QS.length*100)+'%';
+ const Q=QS[i];
+ let h='<div class="card"><div class="qno">문제 '+(i+1)+' / '+QS.length+'</div><div class="q">'+Q.q+'</div>';
+ Q.o.forEach((o,k)=>{h+='<button class="opt" data-k="'+k+'">'+o+'</button>';});
+ h+='<div class="exp" id="exp"></div><div class="nav"><button class="btn" id="next" disabled>다음 ›</button></div></div>';
+ area.innerHTML=h;
+ area.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',pick));
+ document.getElementById('next').addEventListener('click',()=>{i++; i<QS.length?render():result();});
+}
+function pick(e){
+ const Q=QS[i], k=+e.target.dataset.k;
+ area.querySelectorAll('.opt').forEach((b,idx)=>{b.disabled=true; if(idx===Q.a)b.classList.add('correct');});
+ if(k!==Q.a){e.target.classList.add('wrong');} else {score++;}
+ const ex=document.getElementById('exp');
+ ex.innerHTML=(k===Q.a?'<b>정답!</b> ':'<b>오답.</b> ')+Q.e;
+ ex.classList.add('show');
+ document.getElementById('next').disabled=false;
+ document.getElementById('next').textContent = i<QS.length-1?'다음 ›':'결과 보기';
+}
+function result(){
+ bar.style.width='100%';
+ const pass=score>=7;
+ area.innerHTML='<div class="card result"><div class="qno">평가 결과</div>'+
+  '<div class="score '+(pass?'pass':'fail')+'">'+score+' / '+QS.length+'</div>'+
+  '<p>'+(pass?'👍 합격! 기본기를 잘 잡았습니다. 이제 실제 코드 뷰어로 넘어가세요.':'조금 더 복습이 필요합니다. 🎓 CNC 첫걸음을 다시 보고 재도전!')+'</p>'+
+  '<button class="btn" onclick="i=0;score=0;render()">다시 풀기</button> '+
+  '<a class="btn" style="text-decoration:none" href="firststep.html">🎓 첫걸음 복습</a></div>';
+}
+render();
+</script></body></html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📄 CNC 치트시트 — 인쇄용</title>
+<style>
+ *{box-sizing:border-box}
+ body{margin:0;font-family:"Pretendard","맑은 고딕",sans-serif;background:#e9edf2;color:#1a1f26;padding:18px}
+ .sheet{max-width:780px;margin:0 auto;background:#fff;border:1px solid #cdd5df;border-radius:10px;
+   padding:22px 26px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+ .top{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1a1f26;padding-bottom:8px;margin-bottom:14px}
+ h1{font-size:21px;margin:0} .top .co{font-size:12px;color:#667}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+ .box{border:1px solid #cdd5df;border-radius:8px;padding:12px 14px;break-inside:avoid}
+ .box h2{font-size:14px;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #e2e7ee}
+ .box.safe{background:#fdf0ee;border-color:#f0c4bd} .box.safe h2{color:#c0392b;border-color:#f0c4bd}
+ .box.coord{background:#eef6fd;border-color:#bcd9f0} .box.coord h2{color:#2471a3}
+ ul{margin:0;padding-left:18px} li{font-size:12.5px;margin:3px 0}
+ table{width:100%;border-collapse:collapse;font-size:12px} td,th{border:1px solid #dde3ea;padding:4px 7px;text-align:left}
+ th{background:#f1f4f8} code{font-family:"Consolas",monospace;font-weight:700;color:#7c3aed}
+ .big{font-size:15px;font-weight:800;text-align:center;background:#fff7ed;border:1px dashed #f0a868;border-radius:7px;padding:7px;margin:6px 0;color:#b9560a}
+ .full{grid-column:1 / -1}
+ .danger{grid-column:1/-1;background:#2a1818;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;text-align:center}
+ .danger b{color:#ff9b92}
+ .btn{display:inline-block;margin:14px auto 0;background:#1a1f26;color:#fff;border:none;padding:9px 18px;border-radius:8px;font-weight:700;cursor:pointer}
+ .actions{text-align:center}
+ a.back{color:#667;text-decoration:none;font-size:13px}
+ @media print{
+   body{background:#fff;padding:0} .sheet{border:none;box-shadow:none;max-width:100%;padding:6mm}
+   .actions,a.back{display:none} @page{size:A4;margin:8mm}
+ }
+</style></head><body>
+ <div style="max-width:780px;margin:0 auto 8px"><a class="back" href="index.html">← 공장집사</a></div>
+ <div class="sheet">
+   <div class="top"><h1>🔧 CNC 현장 치트시트</h1><span class="co">쏠트리 · 예시 O0400 반토막</span></div>
+
+   <div class="big">⚠️ X = 지름 (반지름 아님!) · Z = 길이 (왼쪽 척 방향이 −)</div>
+
+   <div class="grid">
+     <div class="box safe"><h2>🚨 안전 5수칙</h2>
+       <ul>
+         <li>비상정지(빨간버튼) 위치 먼저 확인</li>
+         <li>회전 중 문 안에 손·도구 금지</li>
+         <li>G00(급속)은 칼이 번개같이 이동</li>
+         <li>척·오토링크 동작 중 접근 금지</li>
+         <li>장갑·옷자락·머리카락 말림 주의</li>
+       </ul>
+     </div>
+     <div class="box coord"><h2>📐 좌표 감각</h2>
+       <ul>
+         <li><b>X</b> = 지름값 (X64.9 → 지름 64.9)</li>
+         <li><b>Z</b> = 길이, 척(왼쪽)으로 갈수록 −</li>
+         <li>면취는 지름이라 좌표에 <b>×2</b></li>
+         <li>U / W = X / Z 증분(상대) 이동</li>
+       </ul>
+     </div>
+
+     <div class="box"><h2>⌨️ 핵심 코드</h2>
+       <table>
+         <tr><td><code>G00</code></td><td>급속이동(위험)</td></tr>
+         <tr><td><code>G01</code></td><td>직선 절삭</td></tr>
+         <tr><td><code>G97</code></td><td>회전수 일정(RPM)</td></tr>
+         <tr><td><code>G98</code></td><td>분당 이송</td></tr>
+         <tr><td><code>S / F</code></td><td>회전수 / 이송속도</td></tr>
+         <tr><td><code>M03/M05</code></td><td>정회전 / 정지</td></tr>
+         <tr><td><code>M00</code></td><td>일시정지(소재장착)</td></tr>
+         <tr><td><code>M98/M99</code></td><td>서브 호출 / 복귀</td></tr>
+         <tr><td><code>T01/T02</code></td><td>1번 / 2번 공구</td></tr>
+       </table>
+     </div>
+     <div class="box"><h2>📥 O0400 입력칸</h2>
+       <table>
+         <tr><td><code>#120</code></td><td>만들 개수</td></tr>
+         <tr><td><code>#101/#102</code></td><td>원자재 외경/내경</td></tr>
+         <tr><td><code>#103/#104</code></td><td>완성 외경/내경</td></tr>
+         <tr><td><code>#105/#106</code></td><td>제품 길이/톱폭</td></tr>
+         <tr><td><code>#121</code></td><td>면취 타입(3/4)</td></tr>
+         <tr><td><code>#123</code></td><td>한 묶음 개수</td></tr>
+         <tr><td><code>#115~117</code></td><td>공구 회전수</td></tr>
+       </table>
+     </div>
+
+     <div class="box full"><h2>🔁 가공 흐름</h2>
+       <div style="font-size:13px">① <b>입력</b>(O0400) → ② <b>계산·검증</b>(O0410) → ③ <b>면→보링→면취→절단 반복</b>(O7001~4) → ④ <b>잔여 처리</b>(O7005)</div>
+     </div>
+
+     <div class="danger">🚫 <b>! DANGER !</b> 아래 · <b>PROTECTED</b> 표시 구간은 절대 수정 금지 — 작업자는 ① 입력값만 바꾼다</div>
+   </div>
+ </div>
+ <div class="actions"><button class="btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button></div>
+</body></html>
