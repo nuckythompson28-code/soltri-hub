@@ -61,7 +61,7 @@
      <div class="b"><div class="k">1개 길이 #505</div><div class="v" id="oUnit">9.84</div></div>
      <div class="b hi"><div class="k">개수 N (#602)</div><div class="v" id="oN">6</div></div>
      <div class="b hi"><div class="k">실제 척길이 #103</div><div class="v" id="oSnap">71.1</div></div>
-     <div class="b waste"><div class="k">버리는 자투리</div><div class="v" id="oWaste">3.9</div></div>
+     <div class="b waste"><div class="k">미사용(내림)</div><div class="v" id="oWaste">3.9</div></div>
    </div>
    <div class="calc" id="calc"></div>
  </div>
@@ -74,7 +74,8 @@
 
  <div class="card">
    <h2>④ 소재가 채워지는 모습</h2>
-   <svg id="stack" viewBox="0 0 720 120"></svg>
+   <svg id="stack" viewBox="0 0 720 130"></svg>
+   <p class="note" style="margin:8px 0 0">맨 왼쪽 <b style="color:#ff7b72">척투조</b>가 실제로 버려지는 부분(척이 무는 곳)입니다. 오른쪽 <b style="color:#ff8c42">Z0 끝면</b>은 버림이 아니라 절단바이트가 들러 <b>끝면을 깔끔히 정리</b>하는 자리고요. 더 많이 자르려면 처음부터 <b>소재를 더 빼서(스틱아웃) 세팅</b>합니다.</p>
  </div>
 
  <div class="card">
@@ -130,26 +131,29 @@ function drawLine(c,s,unit,snap,n){
  h+='<text x="40" y="140" fill="#8a97a6" font-size="10">0</text><text x="685" y="140" fill="#8a97a6" font-size="10">100</text>';
  $('line').innerHTML=h;
 }
-function drawStack(s,unit,n,c,snap){
- // 0~100 을 px로, 안전 + N개 + 자투리
+function drawStack(s,unit,n){
+ // 왼쪽→오른쪽: [척투조(버림)] [안전] [1..N 조각] [Z0 끝면]
+ const y=34,hh=46, gripW=66, x0=84, xr=702;
+ const total=(s+n*unit)||1, sc=(xr-x0)/total;
  let h='';
- const y=35,hh=44;
+ // 척투조 (왼쪽 = 척이 무는 부분, 실제 버림)
+ h+='<rect x="10" y="'+y+'" width="'+gripW+'" height="'+hh+'" fill="#5a2d2d" stroke="#ff7b72"/>';
+ h+='<text x="'+(10+gripW/2)+'" y="'+(y+hh/2-1)+'" fill="#ffb3ad" text-anchor="middle" font-size="10">척투조</text>';
+ h+='<text x="'+(10+gripW/2)+'" y="'+(y+hh/2+13)+'" fill="#ffb3ad" text-anchor="middle" font-size="9">(버림)</text>';
+ h+='<text x="'+(10+gripW/2)+'" y="22" fill="#8a97a6" text-anchor="middle" font-size="10">← 척</text>';
  // 안전길이
- const x0=X(0), xS=X(s);
- h+='<rect x="'+x0+'" y="'+y+'" width="'+(xS-x0)+'" height="'+hh+'" fill="#1d2a22" stroke="#7ee787" stroke-dasharray="3 3"/>';
- h+='<text x="'+((x0+xS)/2)+'" y="'+(y+hh+16)+'" fill="#7ee787" text-anchor="middle" font-size="10">안전 '+s+'</text>';
+ const xs=x0+s*sc;
+ h+='<rect x="'+x0+'" y="'+y+'" width="'+(s*sc)+'" height="'+hh+'" fill="#1d2a22" stroke="#7ee787" stroke-dasharray="3 3"/>';
+ h+='<text x="'+((x0+xs)/2)+'" y="'+(y+hh+15)+'" fill="#7ee787" text-anchor="middle" font-size="10">안전 '+s+'</text>';
  // N개 조각
- for(let i=0;i<n;i++){const a=X(s+i*unit), b=X(s+(i+1)*unit);
+ for(let i=0;i<n;i++){const a=xs+i*unit*sc, b=xs+(i+1)*unit*sc;
    h+='<rect x="'+a+'" y="'+y+'" width="'+(b-a)+'" height="'+hh+'" fill="'+(i%2?'#1e3a4e':'#234a5e')+'" stroke="#4fb6ff"/>';
-   if(b-a>14) h+='<text x="'+((a+b)/2)+'" y="'+(y+hh/2+4)+'" fill="#cfe6ff" text-anchor="middle" font-size="10">'+(i+1)+'</text>';
+   if(b-a>13) h+='<text x="'+((a+b)/2)+'" y="'+(y+hh/2+4)+'" fill="#cfe6ff" text-anchor="middle" font-size="10">'+(i+1)+'</text>';
  }
- // 자투리(버림)
- if(c>snap+0.01){const a=X(snap),b=X(c);
-   h+='<rect x="'+a+'" y="'+y+'" width="'+(b-a)+'" height="'+hh+'" fill="#5a2d2d" stroke="#ff7b72"/>';
-   h+='<text x="'+((a+b)/2)+'" y="'+(y+hh+16)+'" fill="#ff7b72" text-anchor="middle" font-size="10">자투리(버림)</text>';
- }
- h+='<text x="'+X(0)+'" y="22" fill="#8a97a6" font-size="10">← 척이 무는 끝</text>';
- h+='<text x="'+X(snap)+'" y="22" fill="#ff8c42" font-size="10" text-anchor="end">'+n+'개분까지만 사용</text>';
+ // Z0 끝면 (오른쪽 자유단 — 절단바이트 면정리)
+ const xe=x0+total*sc;
+ h+='<line x1="'+xe+'" y1="'+(y-7)+'" x2="'+xe+'" y2="'+(y+hh+7)+'" stroke="#ff8c42" stroke-width="2"/>';
+ h+='<text x="'+xe+'" y="22" fill="#ff8c42" text-anchor="end" font-size="10">Z0 끝면 정리 →</text>';
  $('stack').innerHTML=h;
 }
 function drawTable(s,unit,c){
