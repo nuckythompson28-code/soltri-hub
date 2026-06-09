@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👤 김태형 — 척길이 개수 계산기</title>
+<style>
+ :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
+   --accent:#ff8c42;--blue:#4fb6ff;--green:#7ee787;--red:#ff7b72;--purple:#d2a8ff}
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+ body{margin:0;font-family:"Pretendard","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+   line-height:1.6;padding:24px 16px 70px}
+ .wrap{max-width:760px;margin:0 auto}
+ a.back{color:var(--dim);text-decoration:none;font-size:14px}
+ h1{font-size:25px;margin:10px 0 2px} .sub{color:var(--accent);font-weight:700;margin:0 0 18px;font-size:14px}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+ .card h2{font-size:16px;margin:0 0 12px;color:var(--accent)}
+ .ctrl{margin-bottom:14px}
+ .ctrl label{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px}
+ .ctrl label b{color:var(--blue);font-family:monospace}
+ .ctrl label .val{color:var(--purple);font-weight:800;font-family:monospace}
+ input[type=range]{width:100%;accent-color:var(--accent)}
+ .params{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+ .params .p label{font-size:12px;color:var(--dim);display:block;margin-bottom:3px}
+ .params .p input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+   border-radius:8px;padding:7px;font-family:monospace;font-size:14px}
+ .res{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center}
+ .res .b{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 6px}
+ .res .b .k{font-size:11px;color:var(--dim)} .res .b .v{font-size:22px;font-weight:900;margin-top:3px;font-family:monospace}
+ .res .b.hi .v{color:var(--green)} .res .b.waste .v{color:var(--red)}
+ .calc{font-family:monospace;font-size:13.5px;background:#0c0f13;border-radius:9px;padding:12px 14px;margin-top:12px;line-height:1.9;overflow-x:auto;white-space:nowrap}
+ .calc .var2{color:var(--purple)} .calc .op{color:var(--dim)} .calc .rs{color:var(--green);font-weight:800}
+ svg{width:100%;height:auto;background:#0c0f13;border-radius:10px}
+ svg text{font-family:"Pretendard",sans-serif;font-size:12px}
+ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+ th,td{border:1px solid var(--line);padding:6px 9px;text-align:center} th{background:var(--panel2);color:var(--accent)}
+ tr.on td{background:#16301f;color:#fff;font-weight:800}
+ td.v{font-family:monospace;color:var(--purple)}
+ .note{font-size:13.5px;color:var(--dim);line-height:1.7}
+ .note b{color:var(--txt)}
+ .hl{color:var(--accent);font-weight:700}
+</style></head><body><div class="wrap">
+ <a class="back" href="index.html">← 김공장</a>
+ <h1>👤 김태형</h1>
+ <p class="sub">척길이(#103)가 “개수”로 떨어지는 원리 — 슬라이더를 직접 움직여 보세요</p>
+
+ <div class="card">
+   <h2>① 값을 움직여 보기</h2>
+   <div class="ctrl">
+     <label><span>입력 척길이 <b>#103</b></span><span class="val" id="vChuck">75</span></label>
+     <input type="range" id="chuck" min="0" max="100" step="0.5" value="75">
+   </div>
+   <div class="params">
+     <div class="p"><label>안전길이 #530</label><input id="safe" type="number" step="0.1" value="12"></div>
+     <div class="p"><label>제품길이 #113</label><input id="prod" type="number" step="0.001" value="7.823"></div>
+     <div class="p"><label>톱폭 #114</label><input id="kerf" type="number" step="0.01" value="2.02"></div>
+   </div>
+ </div>
+
+ <div class="card">
+   <h2>② 결과 (실시간)</h2>
+   <div class="res">
+     <div class="b"><div class="k">1개 길이 #505</div><div class="v" id="oUnit">9.84</div></div>
+     <div class="b hi"><div class="k">개수 N (#602)</div><div class="v" id="oN">6</div></div>
+     <div class="b hi"><div class="k">실제 척길이 #103</div><div class="v" id="oSnap">71.1</div></div>
+     <div class="b waste"><div class="k">버리는 자투리</div><div class="v" id="oWaste">3.9</div></div>
+   </div>
+   <div class="calc" id="calc"></div>
+ </div>
+
+ <div class="card">
+   <h2>③ 눈금자 — 입력은 연속, 결과는 계단</h2>
+   <svg id="line" viewBox="0 0 720 150"></svg>
+   <p class="note" style="margin:8px 0 0">▲ 빨간 핀 = 입력값 · 초록 눈금 = 실제로 가능한 척길이(개수). 입력값은 항상 <b>왼쪽(아래) 눈금으로 내림</b>됩니다.</p>
+ </div>
+
+ <div class="card">
+   <h2>④ 소재가 채워지는 모습</h2>
+   <svg id="stack" viewBox="0 0 720 120"></svg>
+ </div>
+
+ <div class="card">
+   <h2>⑤ 가능한 척길이 전체 (0~100)</h2>
+   <table id="tbl"><tr><th>개수 N</th><th>실제 척길이</th><th>입력 범위</th></tr></table>
+ </div>
+
+ <div class="card">
+   <h2>💡 한 줄 정리</h2>
+   <p class="note">아무 값이나 넣어도 <span class="hl">FIX(내림)</span>가 자투리를 잘라내서, 척길이는
+   <b>“안전길이 + 정수 개수 × 1개길이”</b> 라는 <span class="hl">정해진 칸</span> 중 하나로만 결정됩니다.
+   계란판처럼 2.5칸은 없고 2칸 아니면 3칸이죠.</p>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fix=x=>Math.trunc(x);            // FANUC FIX = 0 방향 버림
+function calc(){
+ const c=+$('chuck').value, s=+$('safe').value, p=+$('prod').value, k=+$('kerf').value;
+ const unit=p+k;
+ $('vChuck').textContent=c.toFixed(1);
+ if(!(unit>0)){return;}
+ const n=fix((c-s)/unit);
+ const snap=n*unit+s;
+ const waste=Math.max(0,c-snap);
+ $('oUnit').textContent=unit.toFixed(2);
+ $('oN').textContent=n;
+ $('oSnap').textContent=snap.toFixed(1);
+ $('oWaste').textContent=waste.toFixed(1);
+ $('calc').innerHTML=
+   '<span class="var2">#505</span> = '+p+' + '+k+' = <span class="rs">'+unit.toFixed(3)+'</span><br>'+
+   '<span class="var2">#602</span> = FIX[('+c.toFixed(1)+' <span class="op">−</span> '+s+') / '+unit.toFixed(3)+'] = FIX['+((c-s)/unit).toFixed(2)+'] = <span class="rs">'+n+'</span> 개<br>'+
+   '<span class="var2">#103</span> = '+n+' × '+unit.toFixed(3)+' + '+s+' = <span class="rs">'+snap.toFixed(3)+'</span>';
+ drawLine(c,s,unit,snap,n);
+ drawStack(s,unit,n,c,snap);
+ drawTable(s,unit,c);
+}
+function X(v){return 40+(v/100)*(720-70);}   // 0~100 -> px
+function drawLine(c,s,unit,snap,n){
+ let h='<line x1="40" y1="95" x2="690" y2="95" stroke="#5a6675"/>';
+ for(let i=0;;i++){const val=s+i*unit; if(val>100.5)break; if(val<0)continue;
+   const x=X(val);
+   h+='<line x1="'+x+'" y1="88" x2="'+x+'" y2="102" stroke="#7ee787" stroke-width="2"/>';
+   if(i%1===0) h+='<text x="'+x+'" y="120" fill="#7ee787" text-anchor="middle" font-size="10">'+i+'개</text>';
+ }
+ // 입력 핀
+ const xc=X(c), xs=X(snap);
+ h+='<line x1="'+xs+'" y1="60" x2="'+xs+'" y2="95" stroke="#ff8c42" stroke-width="2" stroke-dasharray="3 3"/>';
+ h+='<polygon points="'+xc+',45 '+(xc-7)+',31 '+(xc+7)+',31" fill="#ff7b72"/>';
+ h+='<text x="'+xc+'" y="25" fill="#ff7b72" text-anchor="middle" font-weight="700">입력 '+c.toFixed(1)+'</text>';
+ h+='<text x="'+xs+'" y="78" fill="#ff8c42" text-anchor="middle" font-weight="700">→ '+snap.toFixed(1)+'</text>';
+ h+='<text x="40" y="140" fill="#8a97a6" font-size="10">0</text><text x="685" y="140" fill="#8a97a6" font-size="10">100</text>';
+ $('line').innerHTML=h;
+}
+function drawStack(s,unit,n,c,snap){
+ // 0~100 을 px로, 안전 + N개 + 자투리
+ let h='';
+ const y=35,hh=44;
+ // 안전길이
+ const x0=X(0), xS=X(s);
+ h+='<rect x="'+x0+'" y="'+y+'" width="'+(xS-x0)+'" height="'+hh+'" fill="#1d2a22" stroke="#7ee787" stroke-dasharray="3 3"/>';
+ h+='<text x="'+((x0+xS)/2)+'" y="'+(y+hh+16)+'" fill="#7ee787" text-anchor="middle" font-size="10">안전 '+s+'</text>';
+ // N개 조각
+ for(let i=0;i<n;i++){const a=X(s+i*unit), b=X(s+(i+1)*unit);
+   h+='<rect x="'+a+'" y="'+y+'" width="'+(b-a)+'" height="'+hh+'" fill="'+(i%2?'#1e3a4e':'#234a5e')+'" stroke="#4fb6ff"/>';
+   if(b-a>14) h+='<text x="'+((a+b)/2)+'" y="'+(y+hh/2+4)+'" fill="#cfe6ff" text-anchor="middle" font-size="10">'+(i+1)+'</text>';
+ }
+ // 자투리(버림)
+ if(c>snap+0.01){const a=X(snap),b=X(c);
+   h+='<rect x="'+a+'" y="'+y+'" width="'+(b-a)+'" height="'+hh+'" fill="#5a2d2d" stroke="#ff7b72"/>';
+   h+='<text x="'+((a+b)/2)+'" y="'+(y+hh+16)+'" fill="#ff7b72" text-anchor="middle" font-size="10">자투리(버림)</text>';
+ }
+ h+='<text x="'+X(0)+'" y="22" fill="#8a97a6" font-size="10">← 척이 무는 끝</text>';
+ h+='<text x="'+X(snap)+'" y="22" fill="#ff8c42" font-size="10" text-anchor="end">'+n+'개분까지만 사용</text>';
+ $('stack').innerHTML=h;
+}
+function drawTable(s,unit,c){
+ const n=fix((c-s)/unit);
+ let h='<tr><th>개수 N</th><th>실제 척길이</th><th>입력 범위</th></tr>';
+ for(let i=0;;i++){const val=s+i*unit; if(val>100)break;
+   const lo=val, hi=s+(i+1)*unit;
+   const on=(i===n)?' class="on"':'';
+   h+='<tr'+on+'><td><b>'+i+'개</b></td><td class="v">'+val.toFixed(3)+'</td><td class="v">'+lo.toFixed(1)+' ~ '+Math.min(hi,100).toFixed(1)+'</td></tr>';
+ }
+ $('tbl').innerHTML=h;
+}
+['chuck','safe','prod','kerf'].forEach(id=>{$(id).addEventListener('input',calc);});
+calc();
+</script></body></html>
