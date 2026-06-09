@@ -75,7 +75,7 @@
  <div class="card">
    <h2>④ 소재가 채워지는 모습</h2>
    <svg id="stack" viewBox="0 0 720 130"></svg>
-   <p class="note" style="margin:8px 0 0">맨 왼쪽 <b style="color:#ff7b72">척투조</b>가 실제로 버려지는 부분(척이 무는 곳)입니다. 오른쪽 <b style="color:#ff8c42">Z0 끝면</b>은 버림이 아니라 절단바이트가 들러 <b>끝면을 깔끔히 정리</b>하는 자리고요. 더 많이 자르려면 처음부터 <b>소재를 더 빼서(스틱아웃) 세팅</b>합니다.</p>
+   <p class="note" style="margin:8px 0 0">맨 왼쪽 <b style="color:#aab4c0">척</b>이 소재를 무는 부분입니다. 바로 옆 얇은 <b style="color:#e8c84a">척투조(≈3mm)</b>는 <u>버려지는 게 아니라</u>, <b>척끝에서 척길이까지 정확히 못 재서 넣는 측정 오차여유</b>예요(그래서 3mm로 작음). 실제로 물리는 건 그 뒤(왼쪽) 척 본체고요. 오른쪽 <b style="color:#ff8c42">Z0 끝면</b>은 버림이 아니라 절단바이트가 들러 <b>끝면을 깔끔히 정리</b>하는 자리입니다. 더 많이 자르려면 처음부터 <b>소재를 더 빼서(스틱아웃) 세팅</b>합니다.</p>
  </div>
 
  <div class="card">
@@ -132,28 +132,35 @@ function drawLine(c,s,unit,snap,n){
  $('line').innerHTML=h;
 }
 function drawStack(s,unit,n){
- // 왼쪽→오른쪽: [척투조(버림)] [안전] [1..N 조각] [Z0 끝면]
- const y=34,hh=46, gripW=66, x0=84, xr=702;
- const total=(s+n*unit)||1, sc=(xr-x0)/total;
- let h='';
- // 척투조 (왼쪽 = 척이 무는 부분, 실제 버림)
- h+='<rect x="10" y="'+y+'" width="'+gripW+'" height="'+hh+'" fill="#5a2d2d" stroke="#ff7b72"/>';
- h+='<text x="'+(10+gripW/2)+'" y="'+(y+hh/2-1)+'" fill="#ffb3ad" text-anchor="middle" font-size="10">척투조</text>';
- h+='<text x="'+(10+gripW/2)+'" y="'+(y+hh/2+13)+'" fill="#ffb3ad" text-anchor="middle" font-size="9">(버림)</text>';
- h+='<text x="'+(10+gripW/2)+'" y="22" fill="#8a97a6" text-anchor="middle" font-size="10">← 척</text>';
+ // 왼쪽→오른쪽: [척 본체(물림)] [척투조≈3 오차여유] [안전] [1..N 조각] |Z0 끝면
+ const y=34,hh=46, bodyW=56, x0=70, xr=700, jaw=3;
+ const total=(jaw+s+n*unit)||1, sc=(xr-x0)/total;
+ let h='', x=x0;
+ // 척 본체 (기계 = 실제 물리는 곳)
+ h+='<rect x="8" y="'+(y-4)+'" width="'+bodyW+'" height="'+(hh+8)+'" fill="#2a3441" stroke="#5a6675"/>';
+ h+='<text x="'+(8+bodyW/2)+'" y="'+(y+hh/2-2)+'" fill="#aab4c0" text-anchor="middle" font-size="11">척</text>';
+ h+='<text x="'+(8+bodyW/2)+'" y="'+(y+hh/2+13)+'" fill="#8a97a6" text-anchor="middle" font-size="9">(물림)</text>';
+ h+='<text x="'+(8+bodyW/2)+'" y="22" fill="#8a97a6" text-anchor="middle" font-size="10">← 척끝</text>';
+ // 척투조 (얇은 오차여유 — 버림 아님)
+ const wj=jaw*sc;
+ h+='<rect x="'+x+'" y="'+y+'" width="'+wj+'" height="'+hh+'" fill="#3a3417" stroke="#e8c84a"/>';
+ h+='<line x1="'+(x+wj/2)+'" y1="'+(y+hh+3)+'" x2="'+(x+wj/2)+'" y2="'+(y+hh+10)+'" stroke="#e8c84a"/>';
+ h+='<text x="'+(x+wj/2)+'" y="'+(y+hh+24)+'" fill="#e8c84a" text-anchor="middle" font-size="9">척투조≈3 (오차여유)</text>';
+ x+=wj;
  // 안전길이
- const xs=x0+s*sc;
- h+='<rect x="'+x0+'" y="'+y+'" width="'+(s*sc)+'" height="'+hh+'" fill="#1d2a22" stroke="#7ee787" stroke-dasharray="3 3"/>';
- h+='<text x="'+((x0+xs)/2)+'" y="'+(y+hh+15)+'" fill="#7ee787" text-anchor="middle" font-size="10">안전 '+s+'</text>';
+ const ws=s*sc;
+ h+='<rect x="'+x+'" y="'+y+'" width="'+ws+'" height="'+hh+'" fill="#1d2a22" stroke="#7ee787" stroke-dasharray="3 3"/>';
+ h+='<text x="'+(x+ws/2)+'" y="'+(y+hh/2+4)+'" fill="#7ee787" text-anchor="middle" font-size="10">안전 '+s+'</text>';
+ x+=ws;
  // N개 조각
- for(let i=0;i<n;i++){const a=xs+i*unit*sc, b=xs+(i+1)*unit*sc;
-   h+='<rect x="'+a+'" y="'+y+'" width="'+(b-a)+'" height="'+hh+'" fill="'+(i%2?'#1e3a4e':'#234a5e')+'" stroke="#4fb6ff"/>';
-   if(b-a>13) h+='<text x="'+((a+b)/2)+'" y="'+(y+hh/2+4)+'" fill="#cfe6ff" text-anchor="middle" font-size="10">'+(i+1)+'</text>';
+ for(let i=0;i<n;i++){const w=unit*sc;
+   h+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+hh+'" fill="'+(i%2?'#1e3a4e':'#234a5e')+'" stroke="#4fb6ff"/>';
+   if(w>13) h+='<text x="'+(x+w/2)+'" y="'+(y+hh/2+4)+'" fill="#cfe6ff" text-anchor="middle" font-size="10">'+(i+1)+'</text>';
+   x+=w;
  }
  // Z0 끝면 (오른쪽 자유단 — 절단바이트 면정리)
- const xe=x0+total*sc;
- h+='<line x1="'+xe+'" y1="'+(y-7)+'" x2="'+xe+'" y2="'+(y+hh+7)+'" stroke="#ff8c42" stroke-width="2"/>';
- h+='<text x="'+xe+'" y="22" fill="#ff8c42" text-anchor="end" font-size="10">Z0 끝면 정리 →</text>';
+ h+='<line x1="'+x+'" y1="'+(y-7)+'" x2="'+x+'" y2="'+(y+hh+7)+'" stroke="#ff8c42" stroke-width="2"/>';
+ h+='<text x="'+x+'" y="22" fill="#ff8c42" text-anchor="end" font-size="10">Z0 끝면 정리 →</text>';
  $('stack').innerHTML=h;
 }
 function drawTable(s,unit,c){
