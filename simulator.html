@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G코드 선반 시뮬레이터 — 매크로 실행 + 한 줄씩 경로 확인</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#222b36;
+    --txt:#d7dee8; --dim:#8a97a6; --accent:#4fb6ff; --accent2:#ffb454;
+    --green:#7ee787; --red:#ff7b72; --cyan:#56d4dd; --purple:#d2a8ff;
+    --comment:#6b7785; --num:#79c0ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:var(--bg); color:var(--txt); font-size:14px; line-height:1.5;
+    height:100vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:9px 16px; background:var(--panel); border-bottom:1px solid var(--line)}
+  .brand{font-size:15px; font-weight:800; letter-spacing:.3px}
+  .brand span{color:var(--accent)}
+  .brand small{display:block; font-size:11px; color:var(--dim); font-weight:400}
+  header .grow{flex:1}
+  header select, header button, header label.file{
+    background:var(--panel2); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:7px 11px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  header button:hover, header select:hover, header label.file:hover{border-color:var(--accent)}
+  header button.primary{background:#13344a; border-color:var(--accent); color:#cfeaff}
+  header input[type=file]{display:none}
+  .app{flex:1; display:grid; grid-template-columns:400px 1fr; min-height:0}
+  .left{display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--line); background:var(--panel)}
+  .right{display:flex; flex-direction:column; min-height:0}
+  .codehead{display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid var(--line); font-size:12px; color:var(--dim)}
+  .codehead b{color:var(--txt); font-size:13px}
+  .codehead .sw{margin-left:auto; cursor:pointer; color:var(--accent)}
+  #editor{display:none; flex:1; width:100%; resize:none; border:0; outline:0; background:var(--bg); color:var(--txt);
+    padding:12px 14px; font-family:"D2Coding","Consolas","Courier New",monospace; font-size:13px; line-height:1.55}
+  #lineList{flex:1; overflow-y:auto; padding:6px 0; font-family:"D2Coding","Consolas","Courier New",monospace; font-size:12.5px}
+  .ln{display:flex; padding:1px 10px 1px 0; white-space:pre; cursor:pointer; border-left:3px solid transparent}
+  .ln:hover{background:#1b2330}
+  .ln .gut{width:46px; flex:none; color:#46505c; text-align:right; padding-right:12px; user-select:none}
+  .ln .src{flex:1; color:var(--txt); overflow:hidden; text-overflow:ellipsis}
+  .ln.cur{background:#13344a; border-left-color:var(--accent)}
+  .ln.cur .src{color:#fff; font-weight:600}
+  .ln.cmt .src{color:var(--comment)}
+  .ln.exec .src{color:#aebccd}
+  .stage{flex:1; position:relative; min-height:0; background:radial-gradient(circle at 50% 40%, #131922, #0c0f14)}
+  #cv{display:block; width:100%; height:100%}
+  .hud{position:absolute; top:10px; left:10px; right:10px; display:flex; gap:8px; flex-wrap:wrap; pointer-events:none}
+  .chip{background:rgba(22,27,34,.85); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-size:12px; backdrop-filter:blur(3px)}
+  .chip .k{color:var(--dim); margin-right:6px}
+  .chip .v{font-family:"D2Coding","Consolas",monospace; font-weight:700}
+  .chip.x .v{color:var(--accent2)} .chip.z .v{color:var(--accent)}
+  .legend{position:absolute; bottom:10px; right:12px; font-size:11px; color:var(--dim); background:rgba(22,27,34,.7); border:1px solid var(--line); border-radius:8px; padding:6px 10px}
+  .legend .row{display:flex; align-items:center; gap:7px; margin:2px 0}
+  .legend .ln-s{width:18px; height:0; border-top:2px solid; flex:none}
+  /* 변수 패널 */
+  .varbar{background:var(--panel); border-top:1px solid var(--line); padding:8px 14px; max-height:150px; overflow-y:auto}
+  .varbar .act{font-size:13px; margin-bottom:6px; font-family:"D2Coding","Consolas",monospace}
+  .varbar .act .lbl{display:inline-block; font-size:10px; padding:1px 7px; border-radius:5px; margin-right:8px; vertical-align:middle}
+  .varbar .vchips{display:flex; gap:6px; flex-wrap:wrap}
+  .vchip{background:var(--panel2); border:1px solid var(--line); border-radius:6px; padding:2px 8px; font-size:11.5px; font-family:"D2Coding","Consolas",monospace}
+  .vchip .vk{color:var(--dim)} .vchip .vv{color:var(--cyan); font-weight:700; margin-left:4px}
+  .vchip.hot{border-color:var(--accent2)} .vchip.hot .vv{color:var(--accent2)}
+  .controls{display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--panel); border-top:1px solid var(--line); flex-wrap:wrap}
+  .controls button{background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:9px; height:36px; min-width:40px; padding:0 9px; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center}
+  .controls button:hover{border-color:var(--accent)}
+  .controls button.play{min-width:52px; background:#13344a; border-color:var(--accent); color:#cfeaff; font-size:17px}
+  .controls .spacer{flex:1}
+  .controls label{font-size:12px; color:var(--dim); display:flex; align-items:center; gap:6px}
+  .controls input[type=range]{width:120px; accent-color:var(--accent)}
+  .controls input[type=number]{width:64px; background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:4px 6px; font-family:inherit}
+  .progress{font-family:"D2Coding",monospace; font-size:13px; color:var(--accent); min-width:90px; text-align:center}
+  @media(max-width:860px){ .app{grid-template-columns:1fr; grid-template-rows:auto 1fr} .left{max-height:30vh} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">G코드 <span>선반 시뮬레이터</span><small>매크로 실행 + 한 줄씩 공구 경로 · Soltri</small></div>
+  <div class="grow"></div>
+  <select id="sampleSel" title="예제/매크로 불러오기">
+    <option value="">예제 선택…</option>
+    <option value="O0852">★ O0852 매크로 (실제 실행)</option>
+    <option value="basic">① 기본 외경 (페이스·면취·테이퍼·R)</option>
+    <option value="idod">② 외경+내경 보링 (U/W 증분)</option>
+    <option value="step">③ 단차 황삭 + G28 복귀</option>
+  </select>
+  <label class="file" title="O0852.txt 등 파일 열기">📂 파일 열기<input type="file" id="fileIn" accept=".txt,.nc,.NC,.min,.MIN,.cnc"></label>
+  <button id="loadBtn" class="primary" title="편집한 코드 다시 실행">↻ 실행</button>
+</header>
+
+<div class="app">
+  <div class="left">
+    <div class="codehead">
+      <b>NC 프로그램</b><span id="cntInfo"></span>
+      <span class="sw" id="editToggle">✎ 편집</span>
+    </div>
+    <textarea id="editor" spellcheck="false"></textarea>
+    <div id="lineList"></div>
+  </div>
+
+  <div class="right">
+    <div class="stage">
+      <canvas id="cv"></canvas>
+      <div class="hud">
+        <div class="chip move"><span class="k">동작</span><span class="v" id="hMove">대기</span></div>
+        <div class="chip x"><span class="k">X(직경)</span><span class="v" id="hX">—</span></div>
+        <div class="chip z"><span class="k">Z</span><span class="v" id="hZ">—</span></div>
+        <div class="chip"><span class="k">반경</span><span class="v" id="hR">—</span></div>
+        <div class="chip"><span class="k">F</span><span class="v" id="hF">—</span></div>
+        <div class="chip"><span class="k">주축</span><span class="v" id="hS">—</span></div>
+        <div class="chip"><span class="k">공구</span><span class="v" id="hT">—</span></div>
+        <div class="chip"><span class="k">소재잔량</span><span class="v" id="hStock">—</span></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="varbar">
+      <div class="act" id="actLine">프로그램을 불러오세요.</div>
+      <div class="vchips" id="vchips"></div>
+    </div>
+    <div class="controls">
+      <button id="btnReset" title="처음으로">⏮</button>
+      <button id="btnPrev" title="한 줄 뒤로 (←)">◀</button>
+      <button id="btnPlay" class="play" title="재생/일시정지 (Space)">▶</button>
+      <button id="btnNext" title="한 줄 앞으로 (→)">▶❘</button>
+      <button id="btnNextMove" title="다음 이동까지 건너뛰기 (M)">⏭이동</button>
+      <button id="btnNextPull" title="다음 오토링크 인출 장면으로" style="min-width:auto;padding:0 10px">⟶인출</button>
+      <span class="progress" id="prog">0 / 0</span>
+      <span class="spacer"></span>
+      <button id="btnCoord" title="공작물 뷰 ⇄ 공구 3개(갱) 뷰" style="min-width:120px;font-size:13px">🔧 공작물 뷰</button>
+      <label title="이 횟수까지만 실행(폭주 방지). O0852 전체는 약 837회">최대이동 <input type="number" id="maxMoves" value="2000" min="10" max="50000" step="50"></label>
+      <label>속도 <input type="range" id="speed" min="1" max="10" value="6"></label>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   선반 G코드 시뮬레이터 + FANUC 매크로 인터프리터
+   - 변수(#)·산술([ ]·FIX/ROUND/ABS)·비교(EQ/NE/GT/LT/GE/LE)·AND/OR
+   - 흐름제어: GOTO Nxxx / IF[cond]GOTO / M98 Pxxxx 호출 / M99 복귀 / M30 종료
+   - 모션: G00급속 / G01직선 / G02·G03원호(R·I·K) / G98·G99 / G96·G97
+   - G10 L2 좌표설정 · G30/G53 복귀(미표시) · G04 정지 · M[#] 클램프/브레이크
+   - X=직경, U/W=증분. 실행 트레이스를 한 단계씩 따라가며 경로를 그림.
+   ========================================================================= */
+
+/* ---------- O0852 원본 (빌드 시 자동 주입) ---------- */
+const O0852_SRC = "%\r\nO0852(JOB_SETUP);\r\nGOTO 9000;\r\nN10(INPUT_DATA_START);\r\n#101=43 (MAT LEN OO 0~99);\r\n#102=500 (MAT LEN OOO 100~500);\r\n#103=75 (CHUCK LENGTH);\r\n#104=1 (INIT FACE CUT);\r\n#105=1 (MAT TYPE 1:CN 2:RS 3:CM);\r\n#106=3 (PROC: 3=CHAM 4=CHAM);\r\n#107=0 (ROUGH: 1=ON);\r\n#108=1 (SINGLE: 1=ON);\r\n(B. DIMENSIONS [109-118]);\r\n#109=70 (RAW OD);\r\n#110=56 (RAW ID);\r\n#111=64.90 (FIN OD);\r\n#112=58.30 (FIN ID);\r\n#113=7.823 (FIN LENGTH);\r\n#114=2.02 (TIP WIDTH);\r\n#115=0.34 (ID-R: ID RADIUS);\r\n#116=0.36 (OD-R: OD RADIUS);\r\n#117=0.37 (ID-L: ID CHAMFER);\r\n#118=0.60 (OD-L: OD CHAMFER);\r\n#119=0 (LEN>40 CONFIRM 1=OK);\r\n(C. CUTTING COND [120-128]);\r\n#120=1700 (T01 RPM);\r\n#121=1700 (T02 RPM);\r\n#122=1 (PULL DIST);\r\n#123=0.2 (MARGIN VALUE);\r\n;\r\n(D. FEED RATE CONFIG);\r\nIF [#105 EQ 1] GOTO 6010 (CN10);\r\nIF [#105 EQ 2] GOTO 6020 (RS40);\r\nIF [#105 EQ 3] GOTO 6030 (CM20);\r\nGOTO 6040 (DEFAULT);\r\n;\r\nN6010 (CASE 1: CN);\r\n#124=0.15 (T01 ROUGH FEED);\r\n#125=0.12 (T01 STEP FEED);\r\n#126=0.15 (T01 CHAMFER FEED);\r\n#127=0.09 (T02 CUT FEED);\r\nGOTO 6090;\r\n;\r\nN6020 (CASE 2: RS);\r\n#124=0.13;\r\n#125=0.08;\r\n#126=0.05;\r\n#127=0.08;\r\nGOTO 6090;\r\n;\r\nN6030 (CASE 3: CM);\r\n#124=0.13;\r\n#125=0.09;\r\n#126=0.09;\r\n#127=0.09;\r\nGOTO 6090;\r\n;\r\nN6040 (CASE 4: OTHERS);\r\n#124=0.15;\r\n#125=0.10;\r\n#126=0.10;\r\n#127=0.10;\r\n;\r\nN6090 (FEED SET DONE);\r\n;\r\n;\r\n;\r\n(=== ADVANCED SETTINGS ===);\r\n(#500 SERIES: SYSTEM VARS);\r\n#530=12 (SAFETY LENGTH);\r\n#531=15 (CHUCK LEFT LIMIT);\r\n#532=1.03 (CHUCK2JAW);\r\n#506=55 (Z ROUGH MAX DEPTH);\r\n#507=1 (Z ROUGH FREE DEPTH);\r\n#508=0.2 (T01 TIP NOSE R);\r\n#509=0.4 (ROUGH INT);\r\n#510=1 (CHAMFER INT);\r\n;\r\n(****************************);\r\n(! DANGER: STOP EDITING !);\r\n(! SYSTEM AUTO CONFIG !);\r\n(****************************);\r\n;\r\n(0. MACHINE SELECT);\r\n#130=10 (NO:1,4,5,7,8,9,10,13,14);\r\n;\r\n([2.5] SAFETY OVERRIDE);\r\n#129=0 (RESET RESIDUAL);\r\n(CHECK RS40 OR SMALL DIA);\r\nIF [#105 EQ 2] GOTO 2900 (RS40 SAFETY);\r\nIF [#109 LT 30] GOTO 2900 (DIA SAFETY);\r\nGOTO 2901;\r\nN2900 #129=15 (FORCE SAFE RES 15);\r\nN2901;\r\n([3] VERIFY: CHECK EMPTY);\r\n(CHECK MISSING INPUTS);\r\n(SETTINGS #101-108);\r\nIF [#101 EQ -9999] GOTO 3101;\r\nIF [#102 EQ -9999] GOTO 3102;\r\nIF [#103 EQ -9999] GOTO 3103;\r\nIF [#104 EQ -9999] GOTO 3104;\r\nIF [#105 EQ -9999] GOTO 3105;\r\nIF [#106 EQ -9999] GOTO 3106;\r\nIF [#107 EQ -9999] GOTO 3107;\r\nIF [#108 EQ -9999] GOTO 3108;\r\n(DIMS #109-118);\r\nIF [#109 EQ -9999] GOTO 3109;\r\nIF [#110 EQ -9999] GOTO 3110;\r\nIF [#111 EQ -9999] GOTO 3111;\r\nIF [#112 EQ -9999] GOTO 3112;\r\nIF [#113 EQ -9999] GOTO 3113;\r\nIF [#114 EQ -9999] GOTO 3114;\r\nIF [#115 EQ -9999] GOTO 3115;\r\nIF [#116 EQ -9999] GOTO 3116;\r\nIF [#117 EQ -9999] GOTO 3117;\r\nIF [#118 EQ -9999] GOTO 3118;\r\n(CONDS #120-123);\r\nIF [#120 EQ -9999] GOTO 3120;\r\nIF [#121 EQ -9999] GOTO 3121;\r\nIF [#122 EQ -9999] GOTO 3122;\r\nIF [#123 EQ -9999] GOTO 3123;\r\n(MACHINE);\r\nIF [#130 EQ -9999] GOTO 3130;\r\n;\r\n(CHECK LONG PART SAFETY);\r\nIF [#113 LE 40] GOTO 31190 (SKIP IF SHORT);\r\nIF [#119 NE 1] GOTO 3119 (ALARM IF NOT 1);\r\nN31190;\r\n;\r\n(CHECK SYS VAR INTEGRITY);\r\nIF [#530 EQ -9999] GOTO 3530;\r\nIF [#531 EQ -9999] GOTO 3531;\r\nIF [#532 EQ -9999] GOTO 3532;\r\nIF [#506 EQ -9999] GOTO 3506;\r\nIF [#507 EQ -9999] GOTO 3507;\r\nIF [#508 EQ -9999] GOTO 3508;\r\nIF [#509 EQ -9999] GOTO 3509;\r\nIF [#510 EQ -9999] GOTO 3510;\r\n;\r\n([4] SETUP: MACHINE SET);\r\nIF [#130 EQ 1] GOTO 8001;\r\nIF [#130 EQ 4] GOTO 8004;\r\nIF [#130 EQ 5] GOTO 8005;\r\nIF [#130 EQ 7] GOTO 8007;\r\nIF [#130 EQ 8] GOTO 8008;\r\nIF [#130 EQ 9] GOTO 8009;\r\nIF [#130 EQ 10] GOTO 8010;\r\nIF [#130 EQ 13] GOTO 8013;\r\nIF [#130 EQ 14] GOTO 8014;\r\n#3000=99 (MACHINE NO ERROR);\r\n([5] RUN: START MACHINING);\r\nN20 (RUN MAIN LOGIC);\r\n;\r\nM98 P9001;\r\nM30;\r\n([6] WARNING: ERROR MSG);\r\n(SETTINGS ERRORS);\r\nN3101 #3000=101(NO #101 MAT OO);\r\nN3102 #3000=102(NO #102 MAT OOO);\r\nN3103 #3000=103(NO #103 CHUCK);\r\nN3104 #3000=104(NO #104 FACE CUT);\r\nN3105 #3000=105(NO #105 MAT TYPE);\r\nN3106 #3000=106(NO #106 PROC);\r\nN3107 #3000=107(NO #107 ROUGH);\r\nN3108 #3000=108(NO #108 SINGLE);\r\n(DIM ERRORS);\r\nN3109 #3000=109(NO #109 RAW OD);\r\nN3110 #3000=110(NO #110 RAW ID);\r\nN3111 #3000=111(NO #111 FIN OD);\r\nN3112 #3000=112(NO #112 FIN ID);\r\nN3113 #3000=113(NO #113 FIN LEN);\r\nN3114 #3000=114(NO #114 TIP WID);\r\nN3115 #3000=115(NO #115 ID-R);\r\nN3116 #3000=116(NO #116 OD-R);\r\nN3117 #3000=117(NO #117 ID-L);\r\nN3118 #3000=118(NO #118 OD-L);\r\nN3119 #3000=119(LEN>40! SET #119=1);\r\n(COND ERRORS);\r\nN3120 #3000=120(NO #120 T01 RPM);\r\nN3121 #3000=121(NO #121 T02 RPM);\r\nN3122 #3000=122(NO #122 PULL);\r\nN3123 #3000=123(NO #123 MARGIN);\r\nN3130 #3000=130(NO #130 MAC NO);\r\n(SYSTEM VAR ERRORS);\r\nN3530 #3000=530 (ERR #530 MISSING);\r\nN3531 #3000=531 (ERR #531 MISSING);\r\nN3532 #3000=532 (ERR #532 MISSING);\r\nN3506 #3000=506 (ERR #506 MISSING);\r\nN3507 #3000=507 (ERR #507 MISSING);\r\nN3508 #3000=508 (ERR #508 MISSING);\r\nN3509 #3000=509 (ERR #509 MISSING);\r\nN3510 #3000=510 (ERR #510 MISSING);\r\n;\r\n([7] CLEANUP: RESET VARS);\r\nN9000;\r\n(SETTINGS);\r\n#101=-9999;\r\n#102=-9999;\r\n#103=-9999;\r\n#104=-9999;\r\n#105=-9999;\r\n#106=-9999;\r\n#107=-9999;\r\n#108=-9999;\r\n(DIMENSIONS);\r\n#109=-9999;\r\n#110=-9999;\r\n#111=-9999;\r\n#112=-9999;\r\n#113=-9999;\r\n#114=-9999;\r\n#115=-9999;\r\n#116=-9999;\r\n#117=-9999;\r\n#118=-9999;\r\n#119=-9999;\r\n(CONDITIONS);\r\n#120=-9999;\r\n#121=-9999;\r\n#122=-9999;\r\n#123=-9999;\r\n(MACHINE);\r\n#130=-9999;\r\n(SYS CHECKS);\r\n#530=-9999;\r\n#531=-9999;\r\n#532=-9999;\r\n#506=-9999;\r\n#507=-9999;\r\n#508=-9999;\r\n#509=-9999;\r\n#510=-9999;\r\nGOTO 10;\r\n([8] MACHINE CONFIG STORE);\r\nN8001 (UNIT 1 AL-1);\r\n#131=56 (AL OPEN);\r\n#132=55 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\nN8004 (UNIT 4 HA-4);\r\n#131=52 (AL OPEN);\r\n#132=51 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\nN8005 (UNIT 5 AL-5);\r\n#131=171 (AL OPEN);\r\n#132=170 (AL CLOSE);\r\n#133=53 (BR UP);\r\n#134=54 (BR DOWN);\r\nGOTO 20;\r\nN8007 (UNIT 7 AL-7);\r\n#131=64 (AL OPEN);\r\n#132=63 (AL CLOSE);\r\n#133=53 (BR UP);\r\n#134=54 (BR DOWN);\r\nGOTO 20;\r\nN8008 (UNIT 8 AL-8);\r\n#131=64 (AL OPEN);\r\n#132=63 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\nN8009 (UNIT 9 AL-9);\r\n#131=63 (AL OPEN);\r\n#132=64 (AL CLOSE);\r\n#133=53 (BR UP);\r\n#134=54 (BR DOWN);\r\nGOTO 20;\r\nN8010 (UNIT 10 AL-10);\r\n#131=64 (AL OPEN);\r\n#132=63 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\nN8013 (UNIT 13 HA-S3);\r\n#131=56 (AL OPEN);\r\n#132=55 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\nN8014 (UNIT 14 HA-S4);\r\n#131=56 (AL OPEN);\r\n#132=55 (AL CLOSE);\r\n#133=54 (BR UP);\r\n#134=53 (BR DOWN);\r\nGOTO 20;\r\n%\r\n%\r\nO9001(MAIN LOGIC - PROTECTED);\r\n;\r\n(CALCULATE TOTAL LENGTH);\r\n(#140 IS INTERNAL CALC VAR);\r\n(#129 IS SAFE RESIDUAL);\r\n#140=#101+#102-#129 (TOTAL LEN);\r\n;\r\n(FEED RATES INHERITED FROM O0852);\r\n;\r\nN90 (FEED SET COMPLETE);\r\n;\r\n(OPTIMIZATION PARAMS);\r\n#505 = #113 + #114 (TOTAL UNIT LEN);\r\n(#530 IS SAFETY LEN FROM O0852);\r\n(#103 IS CHUCK LEN);\r\n#602 = FIX[[#103 - #530] / #505];\r\n#103 = [#602 * #505] + #530;\r\n;\r\nN999 (FINAL CALCULATION);\r\n#500 = #103 - #530 (EFF LEN);\r\n#517 = FIX[#500 / #505] (NUM PCS);\r\n#518 = #517 * #505 (TOT MACH LEN);\r\n;\r\n;\r\n(ALARM CHECKS);\r\nN900;\r\n(1. EXISTING CHECKS);\r\nIF [#140 GT 580] GOTO 901;\r\nIF [#140 LE #103] GOTO 907 (LEN SHORT);\r\nIF [#109 LT #111] GOTO 902 (OD ERR);\r\nIF [#110 GT #112] GOTO 903 (ID ERR);\r\nIF [#125 GE 0.14] GOTO 904;\r\n;\r\n(2. MAT UNIT CHECK);\r\nIF [[#102 NE 0] AND [#102 NE 100] AND [#102 NE 200] AND [#102 NE 300] AND [#102 NE 400] AND [#102 NE 500]] GOTO 905;\r\nIF [#101 GT 99] GOTO 906;\r\n;\r\n(3. PARAMETER LIMITS);\r\nIF [#104 GT 40] GOTO 910;\r\nIF [#129 GT 30] GOTO 911;\r\nIF [#123 LT 0] OR [#123 GT 3] GOTO 912;\r\nIF [[#106 NE 3] AND [#106 NE 4]] GOTO 913;\r\n;\r\n(4. SAFETY CHECKS);\r\n(CHECK 2: OD VS ID);\r\nIF [#109 LE #110] GOTO 3203 (OD<=ID);\r\nIF [#111 LE #112] GOTO 3204 (FIN OD<=ID);\r\n;\r\n(CHECK 3: INVALID VALS);\r\nIF [#109 LE 0] GOTO 3205 (OD INVALID);\r\nIF [#120 LE 0] GOTO 3206 (T01 RPM ERR);\r\nIF [#121 LE 0] GOTO 3207 (T02 RPM ERR);\r\n;\r\n(CHECK 4: TIP WIDTH);\r\nIF [#114 GE #113] GOTO 3208 (TIP > FIN LEN);\r\n;\r\nGOTO 9999 (ALL CHECKS OK);\r\n;\r\n;\r\n(ALARM MESSAGES);\r\nN901 #3000 = 1 (ERR: LEN > 580);\r\nN902 #3000 = 2 (ERR: OD < WORK OD);\r\nN903 #3000 = 3 (ERR: ID > WORK ID);\r\nN904 #3000 = 4 (ALM: T01 FEED > 0.14);\r\nN905 #3000 = 5 (ERR: CHECK #102);\r\nN906 #3000 = 6 (ERR: CHECK #101);\r\nN907 #3000 = 7 (ERR: LEN < REQ LEN);\r\nN910 #3000 = 10 (ERR: INIT CUT > 40);\r\nN911 #3000 = 11 (ERR: RES > 70);\r\nN912 #3000 = 12 (ERR: BAD MAT TYPE);\r\nN913 #3000 = 13 (ERR: #106 NOT 3/4);\r\n;\r\n(NEW LOGIC ALARMS 32xx);\r\nN3203 #3000=203 (ERR: OD <= ID);\r\nN3204 #3000=204 (ERR: FIN OD <= ID);\r\nN3205 #3000=205 (ERR: BAD DIM);\r\nN3206 #3000=206 (ERR: T01 RPM);\r\nN3207 #3000=207 (ERR: T02 RPM);\r\nN3208 #3000=208 (WARN: TIP > LEN);\r\n;\r\nN9999 (START PROCESS);\r\n;\r\n(SIZE2);\r\n;\r\nM[#131] (VAR CLAMP OPEN);\r\n;\r\nM98 P9002;\r\n;\r\nN22(CLOSING);\r\nM05;\r\nG53 G00 X[-310.] Z0.;\r\nM99;\r\n%\r\n%\r\nO9002(MAIN MACHINING - PROTECTED);\r\n#500 = #103 - #530;\r\n#501 = #109 + 4.;\r\n#502 = #110 - 3.5;\r\n#503 = #111 + 4.;\r\n#504 = #112 - 5.;\r\n#505 = #113 + #114;\r\nN10 (BORINGBAR & CHUCK);\r\n#517=FIX[#500/#505];\r\n#518=#517*#505;\r\n#519=FIX[[#140-#531-#532-#530-#518-#114-#104]/[#518+#114+#123]];\r\n#525=0;\r\nN30(0POINT);\r\nG10 L2 P0 Z[#103];\r\nG30 U0 W0;\r\nN80 (TOMAK OPTION);\r\nIF[#519 GT 1] GOTO 90;\r\nG00 X+[#109+20] T02;\r\nZ0;\r\nM00;\r\nGOTO 100;\r\nN90 (MATERIAL INSTALL);\r\nG00 X[#501-60] T02;\r\nZ[#114+#104];\r\nM00;\r\n;\r\nN100(FACE CUTTING);\r\nG00 W3. T02;\r\nX[#501];\r\nZ0.;\r\nG97 M03 S#121;\r\nG98 G01 X[#502] F[#121*#127];\r\nG00 X[#111] T01;\r\n;\r\n;\r\nN110 (VALUE DEF);\r\n#515=FIX[[#506-#507]/#505];\r\nIF [#108 EQ 1] GOTO 11;\r\nGOTO 12;\r\nN11;\r\n#515=1;\r\nN12;\r\n#516=#515*#505;\r\n#521=0;\r\n#522=#521*#505;\r\nN120 (CALCULATION);\r\nIF[#515 LE #517] GOTO 130;\r\n#515=#517;\r\n#516=#515*#505;\r\n;\r\nN130 (STEP CUTTING);\r\n#520=0;\r\nIF[#107 EQ 0] GOTO 1302;\r\nN1301 (ROUGH);\r\nG00 X[#111+#509] M[#134] T01 (DOWN);\r\nG97 G00 Z[-#522+5.] S#120 M03;\r\nG98 G01 Z-[#522+#516] F[#120*#124];\r\nG00 W[#516+20.];\r\nN1302 (STEP CUTTING2);\r\nIF[#106 EQ 4] GOTO 1303;\r\nG00 X#111 M[#133] T01 (UP);\r\nG97 G00 Z[-#522+3] S#120 M03;\r\nG98 G01 Z-[#522+#516] F[#120*#125];\r\nM[#134] (DOWN);\r\nG4X.1;\r\nU0.2;\r\nG00 Z[-#522+3];\r\nM[#133] (UP);\r\nN1303 (END STEP CUT);\r\n;\r\nN160 (CHAMFER CUT);\r\nIF[#106 EQ 4] GOTO 1601;\r\n(TYPE 3 CHAMFER);\r\nG97 S#120 M03 T01;\r\nG00 X#111;\r\nG00 Z[-#522+3];\r\nG98 G01 Z[-#522+#510] F[#120*0.15];\r\nF[#120*#126];\r\nX[#111-[[#510+#116]*2.]];\r\nX[#111+[[#510+#115]*2.]];\r\nIF [#105 NE 2] GOTO 1603;\r\nG4 X0.5;\r\nGOTO 1603;\r\nN1601 (TYPE 4 CHAMFER);\r\nG00 X#111 M[#133] T01(UP);\r\nG97 G00 Z[-#522+3];\r\nS#120 M03;\r\nG98 G01 Z[-#522+#510] F[#120*0.15];\r\nF[#120*#126];\r\nG01 X[#111-[[#510+#116]*2.]];\r\nG01 X[#111+[[#510+#115]*2.]];\r\nIF [#105 NE 2] GOTO 1602;\r\nG4 X0.5;\r\nN1602;\r\nG01 X #111;\r\nG98 G01 Z-[#522+#113] F[#120*#125];\r\nF[#120*#126];\r\nG01 X[#111- [#118*2.]]; \r\nG01 X[#111+[#117*2.]];\r\nG00 X#111;\r\nM[#134] (DOWN);\r\nG4 X.1;\r\nU0.2;\r\nN1603 (END CHAMFER);\r\n;\r\nN170 (COUNT);\r\n#520=#520+1;\r\n#521=#521+1;\r\n#522=#522+#505;\r\n;\r\nN180 (CUTTING);\r\nIF [#106 EQ 4] GOTO 1801;\r\nG00 Z[#118-#522] T02;\r\nG97 G00 X[#111+1] S#121 M03;\r\nG98 G01 X[#111] F[#121*#127];\r\nU-[#118*2] W-[#118];\r\nX[#504];\r\nGOTO 1802;\r\nN1801 (4_CHAMFER);\r\nG00 Z-[#522] T02;\r\nG97 G00 X[#503] S#121 M03;\r\nG98 G01 X[#111] F[#121*#127];\r\nX[#504];\r\nN1802(CUTTING END);\r\nM12;\r\n;\r\nN190 (IF OR ELSE);\r\nIF [#520 LT #515] GOTO 160;\r\nIF [[#521+#515] GT #517] GOTO 200;\r\nGOTO 130;\r\nN200 (LAST CUTTING);\r\nG00 X[#111] T01;\r\n#515=FIX[[#500-#522]/#505];\r\n#516=#515*#505;\r\nIF [#515 GE 1] GOTO 130;\r\nIF [#525 EQ #519] GOTO 230;\r\n;\r\nN210 (AUTOLINK);\r\nM05;\r\nG00 T03;\r\nX0 Z[-#522+50];\r\nG98 Z[-#522+#122] F200;\r\nM[#132] (AL CLOSE);\r\nG04 P500;\r\nM69;\r\nG04 P2500;\r\nW[#518+#114+#123];\r\nG04 P500;\r\nM68;\r\nG04 P2500;\r\nM[#131] (AL OPEN);\r\nG04 P500;\r\nG00 Z100.;\r\n;\r\n#525=#525+1.;\r\nIF [#525 EQ #519] GOTO 220;\r\nGOTO 221;\r\nN220 (AL STOP);\r\n#528=[#518+#114+#104]+#519*[#518+#114+#123];\r\n#538=[#140-#528]-[#531+#532+#530]-[#114+#123];\r\n#539=FIX[#538/#505];\r\nIF [#539 GT 0] GOTO 221;\r\nN221 (JUST GO);\r\nGOTO 100;\r\nN230 (PULL REMAIN);\r\n#528=[#518+#114+#104]+#519*[#518+#114+#123];\r\n#538=[#140-#528]-[#531+#532+#530]-[#114+#123];\r\n#539=FIX[#538/#505];\r\n#540=#539*#505;\r\n#541=#500-#518;\r\n#542=#140-#528-#114-#540-#541-#530-#531-#532;\r\nIF [#539 EQ 0] GOTO 250;\r\nN240(SUB4014);\r\nM98 P9003;\r\nN250 (WORK RETRACT);\r\nM[#134] (DOWN);\r\nM05;\r\nG53 G00 X[-310.] Z0.;\r\nM99;\r\n%\r\n%\r\nO9003(60G PULL REMAIN - PROTECTED);\r\nN90 (PULL REMAIN);\r\nM05;\r\nG00 X0 Z[-#522+50] T03;\r\nG98 Z[-#522+#122] F200;\r\nM[#132] (AL CLOSE);\r\nG04 P500;\r\nM69;\r\nG04 P2500;\r\nW[#540+#114-#541+#123];\r\nG04 P500;\r\nM68;\r\nG04 P2500;\r\nM[#131] (AL OPEN);\r\nG04 P500;\r\nG00 Z100.;\r\n(RE-SIZE);\r\n#103=#530+#540;\r\n#500=#103-#530;\r\nN20 (BORINGBAR ADJ);\r\n#515=FIX[[#506-#507]/#505];\r\nIF [#108 EQ 1] GOTO 21;\r\nGOTO 22;\r\nN21;\r\n#515=1;\r\nN22;\r\n#516=#515*#505;\r\n#517=FIX[#500/#505];\r\n#518=#517*#505;\r\nIF [#515 LE #517] GOTO 95;\r\n#515=#517;\r\n#516=#518;\r\nN95 (0POINT);\r\nG10 L2 P0 Z[#103];\r\n;\r\nN100 (FACE CUTTING);\r\nG00 W3. T02;\r\nX[#501];\r\nZ0.;\r\nG97 M03 S#121;\r\nG98 G01 X[#502] F[#121*#127];\r\nG00 X[#111] T01;\r\n#521=0;\r\n#522=#521*#505;\r\n;\r\nN130 (STEP CUTTING);\r\n#520=0;\r\nIF[#107 EQ 0] GOTO 1302;\r\nN1301 (ROUGH);\r\nG00 X[#111+#509] M[#134] T01 (DOWN);\r\nG97 G00 Z[-#522+5.] S#120 M03;\r\nG98 G01 Z-[#522+#516] F[#120*#124];\r\nG00 W[#516+20.];\r\nN1302 (STEP CUTTING2);\r\nIF[#106 EQ 4] GOTO 1303;\r\nG00 X#111 M[#133] T01 (UP);\r\nG97 G00 Z[-#522+3] S#120 M03;\r\nG98 G01 Z-[#522+#516] F[#120*#125];\r\nM[#134] (DOWN);\r\nG4X.1;\r\nU0.2;\r\nG00 Z[-#522+3];\r\nM[#133] (UP);\r\nN1303 (END STEP CUT);\r\n;\r\nN160 (CHAMFER CUT);\r\nIF[#106 EQ 4] GOTO 1601;\r\n(TYPE 3 CHAMFER);\r\nG97 S#120 M03 T01;\r\nG00 X#111;\r\nG00 Z[-#522+3];\r\nG98 G01 Z[-#522+#510] F[#120*0.15];\r\nF[#120*#126];\r\nX[#111-[[#510+#116]*2.]];\r\nX[#111+[[#510+#115]*2.]];\r\nIF [#105 NE 2] GOTO 1603;\r\nG4 X0.5;\r\nGOTO 1603;\r\nN1601 (TYPE 4 CHAMFER);\r\nG00 X#111 M[#133] T01(UP);\r\nG97 G00 Z[-#522+3];\r\nS#120 M03;\r\nG98 G01 Z[-#522+#510] F[#120*0.15];\r\nF[#120*#126];\r\nG01 X[#111-[[#510+#116]*2.]];\r\nG01 X[#111+[[#510+#115]*2.]];\r\nIF [#105 NE 2] GOTO 1602;\r\nG4 X0.5;\r\nN1602;\r\nG01 X #111;\r\nG98 G01 Z-[#522+#113] F[#120*#125];\r\nF[#120*#126];\r\nG01 X[#111- [#118*2.]];\r\nG01 X[#111+[#117*2.]];\r\nG00 X#111;\r\nM[#134] (DOWN);\r\nG4 X.1;\r\nU0.2;\r\nN1603 (END CHAMFER);\r\n;\r\nN170 (COUNT);\r\n#520=#520+1;\r\n#521=#521+1;\r\n#522=#522+#505;\r\n;\r\nN180 (CUTTING);\r\nIF [#106 EQ 4] GOTO 1801;\r\nG00 Z[#118-#522] T02;\r\nG97 G00 X[#111+1] S#121 M03;\r\nG98 G01 X[#111] F[#121*#127];\r\nU-[#118*2] W-[#118];\r\nX[#504];\r\nGOTO 1802;\r\nN1801 (4_CHAMFER);\r\nG00 Z-[#522] T02;\r\nG97 G00 X[#503] S#121 M03;\r\nG98 G01 X[#111] F[#121*#127];\r\nX[#504];\r\nN1802(CUTTING END);\r\nM12;\r\n;\r\nN190 (IF OR ELSE);\r\nIF [#520 LT #515] GOTO 160;\r\nIF [[#521+#515] GT #517] GOTO 200;\r\nGOTO 130;\r\nN200 (LAST CUTTING);\r\nG00 X[#111] T01;\r\n#515=FIX[[#500-#522]/#505];\r\n#516=#515*#505;\r\nIF [#515 GE 1] GOTO 130;\r\nN250 (WORK RETRACT);\r\nM99;\r\n%";
+
+const SAMPLES = {
+basic:
+`O1000 (BASIC OD TURNING)
+G28 U0 W0
+T0101
+G50 S2500
+G96 S180 M03
+G00 X72. Z2.
+G00 X52.
+G01 Z0 F0.2
+G01 X56. Z-2. (CHAMFER 45)
+G01 Z-30.
+G02 X62. Z-33. R3. (CORNER R3)
+G01 X66.
+G01 X70. Z-35. (TAPER)
+G00 X100. Z50.
+M05
+M30`,
+idod:
+`O2000 (OD + ID BORING)
+G28 U0 W0
+T0303 (OD TOOL)
+G96 S200 M03
+G00 X64. Z2.
+G01 Z0 F0.18
+G01 X60. Z-2.
+G01 Z-25.
+G01 X70.
+G00 X120. Z80.
+T0505 (ID BORING BAR)
+G00 X40. Z2.
+G01 Z0 F0.12
+G01 U-6. W-3. (CHAMFER, INCREMENTAL)
+G01 Z-22.
+G01 U6.
+G00 Z5.
+G00 X120. Z120.
+M05
+M30`,
+step:
+`O3000 (STEP ROUGHING)
+G28 U0 W0
+T0101
+G96 S160 M03
+G00 X82. Z2.
+G01 Z0 F0.25
+G01 X78. Z-2.
+G01 Z-20.
+G01 X70.
+G01 Z-40.
+G01 X60.
+G01 Z-60.
+G01 X86.
+G00 X150.
+G28 U0 W0 (RETURN HOME)
+M05
+M30`,
+O0852: O0852_SRC
+};
+
+/* =========================================================================
+   1) 식 평가기
+   ========================================================================= */
+function lex(s){
+  const toks=[]; let i=0;
+  const isd=c=>c>='0'&&c<='9', isa=c=>(c>='A'&&c<='Z')||(c>='a'&&c<='z');
+  while(i<s.length){
+    const c=s[i];
+    if(c===' '||c==='\t'){i++;continue;}
+    if(c==='#'){toks.push({t:'#'});i++;continue;}
+    if(c==='['||c===']'){toks.push({t:c});i++;continue;}
+    if(c==='+'||c==='-'||c==='*'||c==='/'){toks.push({t:c});i++;continue;}
+    if(isd(c)||(c==='.'&&isd(s[i+1]))){ let j=i; while(j<s.length&&(isd(s[j])||s[j]==='.'))j++; toks.push({t:'num',v:parseFloat(s.slice(i,j))}); i=j; continue; }
+    if(isa(c)){ let j=i; while(j<s.length&&isa(s[j]))j++; toks.push({t:'w',v:s.slice(i,j).toUpperCase()}); i=j; continue; }
+    i++;
+  }
+  return toks;
+}
+function evalExpr(str, getV){
+  const T=lex(str); let p=0;
+  const peek=()=>T[p], next=()=>T[p++];
+  function primary(){
+    const tk=peek(); if(!tk) return 0;
+    if(tk.t==='num'){next(); return tk.v;}
+    if(tk.t==='#'){next(); const n=next(); return getV(n&&n.v!=null? n.v:0);}
+    if(tk.t==='['){next(); const v=orE(); if(peek()&&peek().t===']')next(); return v;}
+    if(tk.t==='+'||tk.t==='-'){return unary();}
+    if(tk.t==='w'){
+      const w=tk.v; next();
+      if(w==='FIX'||w==='FUP'||w==='ROUND'||w==='ABS'){
+        let a=0; if(peek()&&peek().t==='['){next(); a=orE(); if(peek()&&peek().t===']')next();}
+        if(w==='FIX')return Math.trunc(a + (a>0?1e-6:a<0?-1e-6:0)); // 이진 부동소수점 오차 보정
+        if(w==='FUP')return a<0?Math.floor(a):Math.ceil(a);
+        if(w==='ROUND')return Math.round(a);
+        return Math.abs(a);
+      }
+      return 0;
+    }
+    next(); return 0;
+  }
+  function unary(){ const tk=peek(); if(tk&&(tk.t==='+'||tk.t==='-')){next(); const v=unary(); return tk.t==='-'?-v:v;} return primary(); }
+  function mul(){ let v=unary(); while(peek()&&(peek().t==='*'||peek().t==='/')){const op=next().t; const r=unary(); v=op==='*'?v*r:v/r;} return v; }
+  function add(){ let v=mul(); while(peek()&&(peek().t==='+'||peek().t==='-')){const op=next().t; const r=mul(); v=op==='+'?v+r:v-r;} return v; }
+  function cmp(){ let v=add(); const tk=peek(); if(tk&&tk.t==='w'&&['EQ','NE','GT','LT','GE','LE'].includes(tk.v)){next(); const r=add(); const eps=1e-9;
+      switch(tk.v){case'EQ':return Math.abs(v-r)<eps?1:0;case'NE':return Math.abs(v-r)>=eps?1:0;case'GT':return v>r?1:0;case'LT':return v<r?1:0;case'GE':return v>=r-eps?1:0;case'LE':return v<=r+eps?1:0;} } return v; }
+  function andE(){ let v=cmp(); while(peek()&&peek().t==='w'&&peek().v==='AND'){next(); const r=cmp(); v=(v!==0&&r!==0)?1:0;} return v; }
+  function orE(){ let v=andE(); while(peek()&&peek().t==='w'&&peek().v==='OR'){next(); const r=andE(); v=(v!==0||r!==0)?1:0;} return v; }
+  return orE();
+}
+
+/* 모션 블록(주소+값) 파서 */
+function parseBlock(line, getV){
+  const G=[], Mc=[], w={}; let i=0; const s=line;
+  const isa=c=>(c>='A'&&c<='Z')||(c>='a'&&c<='z');
+  while(i<s.length){
+    const c=s[i];
+    if(!isa(c)){ i++; continue; }
+    const addr=c.toUpperCase(); i++;
+    let depth=0, j=i, buf='';
+    while(j<s.length){ const d=s[j]; if(d==='[')depth++; else if(d===']')depth--; if(depth===0&&isa(d))break; buf+=d; j++; }
+    i=j;
+    const val = buf.trim()===''? null : evalExpr(buf,getV);
+    if(addr==='G')G.push(val); else if(addr==='M')Mc.push(val); else w[addr]=val;
+  }
+  return {G,Mc,w};
+}
+
+/* =========================================================================
+   2) 인터프리터
+   ========================================================================= */
+const KEYVARS=[109,110,111,112,113,114,118, 120,121,124,125,126,127, 103,530,531,532,140,505,515,517,518,519,520,521,522,525];
+const VARLBL={109:'소재OD',110:'소재ID',111:'완성OD',112:'완성ID',113:'길이',114:'팁폭',118:'OD면취',
+  120:'T01rpm',121:'T02rpm',124:'황삭F',125:'스텝F',126:'면취F',127:'절단F',
+  103:'척길이',530:'안전거리',531:'척좌한계',532:'척투조',140:'총길이',505:'단위장',515:'스텝수',517:'토막수',518:'가공장',519:'바리필',
+  520:'스텝카운트',521:'피스',522:'누적Z',525:'리필카운트'};
+
+function parsePrograms(text){
+  const lines=text.split(/\r?\n/);
+  const programs={}, programLines=[]; let curp=null, mainKey=null;
+  for(let i=0;i<lines.length;i++){
+    const raw=lines[i];
+    const t=raw.replace(/\([^)]*\)/g,'').trim();
+    const om=t.match(/^O\s*(\d+)/i);
+    if(om){ const k=(om[1].replace(/^0+/,'')||'0'); curp=k; programs[k]={lines:[],labels:{}}; if(mainKey===null)mainKey=k; }
+    programLines.push({idx:i, prog:curp, raw});
+    if(curp){
+      const pIdx=programs[curp].lines.length; programs[curp].lines.push(i);
+      const lm=t.match(/^N\s*(\d+)/i);
+      if(lm){ const ln=(lm[1].replace(/^0+/,'')||'0'); if(programs[curp].labels[ln]===undefined) programs[curp].labels[ln]=pIdx; }
+    }
+  }
+  return {programs, programLines, mainKey};
+}
+
+function gname(t){ return t===0?'G00 급속이송':t===1?'G01 직선절삭':t===2?'G02 원호(CW)':t===3?'G03 원호(CCW)':'이동'; }
+function fmt(v){ if(v==null||!isFinite(v))return'—'; if(Math.abs(v)<1e-9)return'0'; return (+v.toFixed(3)).toString(); }
+
+function runProgram(text, maxMoves){
+  const {programs, programLines, mainKey}=parsePrograms(text);
+  const vars={}; const getV=n=>vars[n]!==undefined?vars[n]:0;
+  let pc={prog:mainKey, ptr:0}; const stack=[]; const trace=[];
+  let X=0,Z=0,motion=0,feed=0,rpm=0,sMode='',fmode='',tool='',toolNo=0,spin='정지',penReset=true,zOff=0,brakeUp=false,alClamp='open',mainChuck='closed';
+  let moves=0, guard=0, ended=false, endReason='', alarm=null;
+  const GUARD=400000;
+
+  function snapKV(){ const o={}; for(const n of KEYVARS) o[n]=vars[n]; return o; }
+  function push(o){
+    o.state={X,Z,feed,rpm,sMode,fmode,tool,toolNo,spin,brakeUp,alClamp,mainChuck};
+    o.kv=snapKV();
+    trace.push(o);
+  }
+
+  while(!ended){
+    if(guard++>GUARD){ endReason='안전한도 초과(무한루프 방지)'; break; }
+    const pr=programs[pc.prog];
+    if(!pr){ endReason='프로그램 없음'; break; }
+    if(pc.ptr>=pr.lines.length){ if(stack.length){ pc=stack.pop(); continue; } endReason='종료(끝)'; break; }
+    const gIdx=pr.lines[pc.ptr];
+    const raw=programLines[gIdx].raw;
+    const cm=(raw.match(/\(([^)]*)\)/)||[])[1]||'';
+    let line=raw.replace(/\([^)]*\)/g,' ').replace(/;/g,' ').trim();
+    line=line.replace(/^N\s*\d+\s*/i,'').trim();
+    const here=gIdx, hprog=pc.prog;
+    pc.ptr++;
+    if(line===''||line==='%'||/^O\s*\d/i.test(line)) continue;
+    const U=line.toUpperCase();
+
+    // ── 흐름 제어 ──────────────────────────────────────────
+    if(/^M\s*30\b|^M\s*02\b/.test(U)){ push({lineIdx:here,prog:hprog,act:'end',desc:'M30 프로그램 종료',cm}); endReason='M30'; break; }
+    if(/^M\s*99\b/.test(U)){
+      push({lineIdx:here,prog:hprog,act:'return',desc:'M99 복귀',cm});
+      if(stack.length){ pc=stack.pop(); } else { endReason='M99(최상위)'; break; } continue;
+    }
+    let mm=U.match(/M\s*98\s*P\s*(\d+)/);
+    if(mm){
+      const key=(mm[1].replace(/^0+/,'')||'0');
+      push({lineIdx:here,prog:hprog,act:'call',desc:`M98 P${mm[1]} 호출`,cm});
+      if(programs[key]){ stack.push({prog:pc.prog,ptr:pc.ptr}); pc={prog:key,ptr:0}; }
+      continue;
+    }
+    let ifm=line.match(/^IF\b(.*)\bGOTO\s*(\d+)/i);
+    if(ifm){
+      const res=evalExpr(ifm[1],getV); const tgt=(ifm[2].replace(/^0+/,'')||'0');
+      push({lineIdx:here,prog:hprog,act:'if',desc:`IF[${ifm[1].trim()}] → ${res?'참':'거짓'}${res?', GOTO '+ifm[2]:''}`,cm});
+      if(res){ const lp=pr.labels[tgt]; if(lp!==undefined)pc.ptr=lp; }
+      continue;
+    }
+    let gm=line.match(/^GOTO\s*(\d+)/i);
+    if(gm){
+      const tgt=(gm[1].replace(/^0+/,'')||'0');
+      push({lineIdx:here,prog:hprog,act:'goto',desc:`GOTO ${gm[1]}`,cm});
+      const lp=pr.labels[tgt]; if(lp!==undefined)pc.ptr=lp;
+      continue;
+    }
+    // ── 변수 대입 ─────────────────────────────────────────
+    let am=line.match(/^#\s*(\d+)\s*=\s*(.+)$/);
+    if(am){
+      const tn=parseInt(am[1],10); const val=evalExpr(am[2],getV);
+      if(tn===3000){ alarm=cm||('알람 '+val); push({lineIdx:here,prog:hprog,act:'alarm',desc:`⚠ 알람 #3000=${val}: ${cm}`,cm}); endReason='알람'; break; }
+      vars[tn]=val;
+      push({lineIdx:here,prog:hprog,act:'assign',desc:`#${tn} = ${fmt(val)}`,changed:{n:tn,v:val},cm});
+      continue;
+    }
+    // ── G/M/좌표 블록 ─────────────────────────────────────
+    const {G,Mc,w}=parseBlock(line,getV);
+    const has=n=>G.includes(n);
+    // 모드 갱신
+    if(has(96))sMode='G96 정속'; if(has(97))sMode='G97 정회전';
+    if(has(98))fmode='mm/min'; if(has(99))fmode='mm/rev';
+    if(w.S!=null)rpm=w.S; if(w.F!=null)feed=w.F;
+    if(w.T!=null){ const tv=Math.round(w.T); toolNo = tv>=100?Math.floor(tv/100):tv; tool='T'+String(tv).padStart(4,'0'); }
+    for(const c of Mc){ if(c===3||c===4)spin='회전'; else if(c===5)spin='정지';
+      if(vars[133]>0&&c===vars[133])brakeUp=true; if(vars[134]>0&&c===vars[134])brakeUp=false; // 보링바 업/다운
+      if(vars[131]>0&&c===vars[131])alClamp='open'; if(vars[132]>0&&c===vars[132])alClamp='closed'; // 오토링크 클램프
+      if(c===69)mainChuck='open'; if(c===68)mainChuck='closed'; } // 메인척 개폐
+
+    // G04 정지
+    if(has(4)){ const tt=w.P!=null?(w.P+'ms'):(w.X!=null?(w.X+'s'):''); push({lineIdx:here,prog:hprog,act:'dwell',desc:`G04 일시정지 ${tt}`,cm}); continue; }
+    // G10 좌표설정
+    if(has(10)){ if(w.Z!=null)zOff=w.Z; push({lineIdx:here,prog:hprog,act:'offset',desc:`G10 좌표설정 Z=${fmt(w.Z)}`,cm}); continue; }
+
+    // 모션 모달
+    let mG=null; for(const g of G){ if(g===0||g===1||g===2||g===3)mG=g; } if(mG!=null)motion=mG;
+    const ref=has(53)||has(30);
+    const hasCoord=(w.X!=null||w.Z!=null||w.U!=null||w.W!=null);
+
+    if(hasCoord){
+      const nx=w.X!=null?w.X:(w.U!=null?X+w.U:X);
+      const nz=w.Z!=null?w.Z:(w.W!=null?Z+w.W:Z);
+      if(ref||penReset){
+        X=nx; Z=nz; penReset=ref?true:false;
+        push({lineIdx:here,prog:hprog,act:'park',desc:`${ref?'기계복귀':'위치설정'} X${fmt(nx)} Z${fmt(nz)}`,cm});
+      } else {
+        const seg={type:motion,x0:X,z0:Z,x1:nx,z1:nz,R:w.R,I:w.I,K:w.K,tool:toolNo};
+        // 오토링크 인출: 클램프 닫힘 + 메인척 열림 상태의 Z이동 = 바를 끌어냄
+        const pull=(toolNo===3 && alClamp==='closed' && mainChuck==='open')? (nz-Z) : 0;
+        X=nx; Z=nz;
+        const label=motion===0?'rapid':motion===1?'feed':'arc';
+        push({lineIdx:here,prog:hprog,act:'motion',seg,label,pull,desc:`${gname(motion)} → X${fmt(nx)} Z${fmt(nz)}${pull?' ⟶인출':''}${w.T!=null?' '+tool:''}`,cm});
+        moves++;
+        if(moves>=maxMoves){ push({lineIdx:here,prog:hprog,act:'cap',desc:`⏸ 최대이동 ${maxMoves}회 도달 — 이후 생략 (하단 '최대이동' 값을 늘리면 계속)`,cm}); endReason='이동제한'; break; }
+      }
+      continue;
+    }
+    // 비모션 (주축/공구/이송/M코드/기타)
+    let act='misc', desc='';
+    if(Mc.length){ act='mcode'; desc='M'+Mc.map(c=>Math.round(c)).join(' M')+(cm?` (${cm})`:''); }
+    else if(w.S!=null||has(96)||has(97)){ act='spindle'; desc=`주축 ${sMode} S${fmt(rpm)}`; }
+    else if(w.T!=null){ act='tool'; desc=`공구교환 ${tool}`; }
+    else if(w.F!=null){ act='feed'; desc=`이송 F${fmt(feed)} (${fmode})`; }
+    else { act='misc'; desc=line+(cm?` (${cm})`:''); }
+    push({lineIdx:here,prog:hprog,act,desc,cm});
+  }
+  return {programs, programLines, trace, info:{moves, endReason, alarm, steps:trace.length}};
+}
+
+/* =========================================================================
+   3) 기하 (원호 샘플) — plot: a=Z(가로), b=반경=X/2(세로)
+   ========================================================================= */
+function segPlotPts(seg){
+  const a0=seg.z0,b0=seg.x0/2,a1=seg.z1,b1=seg.x1/2;
+  if(seg.type!==2&&seg.type!==3) return [[a0,b0],[a1,b1]];
+  let ca,cb;
+  if(seg.I!=null||seg.K!=null){ ca=a0+(seg.K||0); cb=b0+(seg.I||0); }
+  else if(seg.R!=null){
+    const r=Math.abs(seg.R), mx=(a0+a1)/2,my=(b0+b1)/2, dx=a1-a0,dy=b1-b0,d=Math.hypot(dx,dy);
+    if(d<1e-9||d>2*r)return[[a0,b0],[a1,b1]];
+    const h=Math.sqrt(Math.max(0,r*r-(d/2)*(d/2))), ux=-dy/d,uy=dx/d;
+    let sign=(seg.type===2?-1:1); if(seg.R<0)sign=-sign;
+    ca=mx+sign*h*ux; cb=my+sign*h*uy;
+  } else return[[a0,b0],[a1,b1]];
+  const r=Math.hypot(a0-ca,b0-cb); let a=Math.atan2(b0-cb,a0-ca),e=Math.atan2(b1-cb,a1-ca);
+  if(seg.type===2){ if(e>a)e-=2*Math.PI; } else { if(e<a)e+=2*Math.PI; }
+  const N=Math.max(8,Math.ceil(Math.abs(e-a)/0.12)), pts=[];
+  for(let k=0;k<=N;k++){ const t=a+(e-a)*k/N; pts.push([ca+r*Math.cos(t),cb+r*Math.sin(t)]); }
+  return pts;
+}
+
+/* =========================================================================
+   4) 상태 + 렌더
+   ========================================================================= */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let DPR=window.devicePixelRatio||1;
+let programLines=[], trace=[], cur=-1, playing=false, animT=0, rafId=null;
+let view={minA:0,maxA:1,minB:0,maxB:1};
+let CW=0,CH=0,SC=1,OAX=0,OBY=0;
+
+/* 공구 정의 — 기계좌표(맨오른쪽 끝=0,0)에서 공작물 0점에 닿는 위치. X는 직경기준. */
+const TOOLS={
+  1:{name:'보링바',   x:-521.900, z:-487.350, col:'#56d4dd'},
+  2:{name:'절단바이트', x:-591.250, z:-436.450, col:'#ffb454'},
+  3:{name:'오토링크',  x:-872.101, z:-454.000, col:'#d2a8ff'}
+};
+let coordMode='work'; // 'work' | 'machine'
+function toolOff(t){ return TOOLS[t]||{x:0,z:0,name:'',col:'#7ee787'}; }
+
+/* 절삭 경로는 항상 공작물 프레임(part at origin)에서 그린다. */
+function plotPts(seg){ return segPlotPts(seg); }
+/* 갱(gang) 공구단: 활성공구 a의 팁이 공작물점(X직경,Z)에 있을 때 세 공구 팁의 plot좌표.
+   세 공구는 같은 슬라이드라 오프셋 차이만큼 떨어져 함께 움직인다. */
+function gangTips(activeTool, X, Z){
+  const Ga=toolOff(activeTool);
+  return [1,2,3].map(j=>{ const Gj=toolOff(j); return {tool:j, a:Z+(Ga.z-Gj.z), b:(X+(Ga.x-Gj.x))/2}; });
+}
+
+function recompute(text){
+  const max=Math.max(10,Math.min(50000, +document.getElementById('maxMoves').value||2000));
+  const r=runProgram(text,max);
+  programLines=r.programLines; trace=r.trace;
+  cur=-1; playing=false; animT=0; fallingPiece=null;
+  buildStockInfo(); computeBounds(); renderLineList();
+  document.getElementById('cntInfo').textContent=`· ${programLines.length}줄 · 실행 ${trace.length}스텝 · 이동 ${r.info.moves}`;
+  updateAll(); resize();
+}
+function computeBounds(){
+  let minA=Infinity,maxA=-Infinity,minB=Infinity,maxB=-Infinity,any=false;
+  const inc=(a,b)=>{ minA=Math.min(minA,a);maxA=Math.max(maxA,a);minB=Math.min(minB,b);maxB=Math.max(maxB,b); };
+  for(const s of trace){ if(!s.seg)continue; any=true; for(const[a,b]of plotPts(s.seg))inc(a,b); }
+  if(coordMode==='machine'){
+    // 세 공구 팁이 프로그램 전체에서 차지하는 범위를 모두 포함 → 항상 세 공구가 보임
+    for(const s of trace){ if(!s.seg)continue; for(const pt of [[s.seg.x0,s.seg.z0],[s.seg.x1,s.seg.z1]])
+      for(const t of gangTips(s.seg.tool,pt[0],pt[1])) inc(t.a,t.b); }
+  }
+  if(!any){ minA=0;maxA=100;minB=0;maxB=50; }
+  if(stockInfo){ minA=Math.min(minA, stockInfo.chuckFaceZ-Math.max(26,stockInfo.rawO*0.4)); maxB=Math.max(maxB, stockInfo.rawO/2*1.55); } // 척 포함
+  minB=Math.min(minB,0); // 중심선(0) 포함
+  const pa=(maxA-minA)*0.08+4, pb=(maxB-minB)*0.1+4;
+  view={minA:minA-pa,maxA:maxA+pa,minB:minB-pb,maxB:maxB+pb};
+}
+function resize(){
+  DPR=window.devicePixelRatio||1;
+  const r=cv.parentElement.getBoundingClientRect(); CW=r.width;CH=r.height;
+  cv.width=CW*DPR; cv.height=CH*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+  const padL=50,padR=18,padT=22,padB=38;
+  const wA=view.maxA-view.minA, availW=CW-padL-padR, availH=CH-padT-padB;
+  let bSpan;
+  if(coordMode==='machine') bSpan=view.maxB-view.minB;           // 미러 없음
+  else bSpan=(view.maxB-Math.min(view.minB,0))+Math.max(view.maxB,0)*0.9; // 반경 위 + 미러 아래
+  SC=Math.min(availW/wA, availH/Math.max(bSpan,1e-6));
+  OAX=padL-view.minA*SC;
+  OBY=coordMode==='machine'? padT+view.maxB*SC : Math.min(padT+view.maxB*SC, CH-padB);
+  draw();
+}
+const sx=a=>OAX+a*SC, sy=b=>OBY-b*SC, syM=b=>OBY+b*SC;
+
+function updateLegend(){
+  const el=document.getElementById('legend'); if(!el)return;
+  if(coordMode==='machine'){
+    el.innerHTML=[1,2,3].map(t=>`<div class="row"><span class="ln-s" style="border-color:${TOOLS[t].col}"></span> T0${t} ${TOOLS[t].name}</div>`).join('')
+      +`<div class="row" style="color:#5a6675;margin-top:3px">--- 점선=급속</div>`;
+  } else {
+    el.innerHTML=`<div class="row"><span class="ln-s" style="border-color:var(--red);border-style:dashed"></span> G00 급속</div>`
+      +`<div class="row"><span class="ln-s" style="border-color:var(--green)"></span> G01 절삭</div>`
+      +`<div class="row"><span class="ln-s" style="border-color:var(--cyan)"></span> G02/03 원호</div>`;
+  }
+}
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  pullDx = (cur>=0 && trace[cur] && trace[cur].pull) ? trace[cur].pull*(playing?animT:1) : 0;  // 인출 슬라이드
+  drawGrid();
+  drawStock(); drawChuck();                    // 소재 재료제거 + 척(조) — 두 뷰 모두
+  drawGhost();                                // 전체 경로 흐리게(항상 표시)
+  if(coordMode==='work') drawSegments(true);  // 미러 프로파일(공작물뷰만)
+  drawSegments(false);
+  drawTool();
+  drawFalling();                               // 절단되어 떨어지는 피스
+  drawSpinInset();                             // 회전 표시(엔드뷰)
+  if(pullDx>0.5){                              // 인출 안내 배너
+    ctx.fillStyle='rgba(126,231,135,0.14)'; ctx.fillRect(0,30,CW,24);
+    ctx.fillStyle='#7ee787'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('🔧 오토링크 인출 중 — 새 소재 '+fmt((stockInfo&&stockInfo.unitLen)||0)+'mm 공급', CW/2, 47);
+    ctx.textAlign='start';
+  }
+}
+function segColor(seg){ return coordMode==='machine'? toolOff(seg.tool).col : (seg.type===0?'#ff7b72':seg.type===1?'#7ee787':'#56d4dd'); }
+function drawGhost(){
+  ctx.setLineDash([]); ctx.lineWidth=1.3;
+  for(const s of trace){ const seg=s.seg; if(!seg)continue;
+    const pts=plotPts(seg); ctx.strokeStyle=hexA(segColor(seg),0.13);
+    ctx.beginPath(); ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));
+    for(let i=1;i<pts.length;i++)ctx.lineTo(sx(pts[i][0]),sy(pts[i][1]));
+    ctx.stroke();
+  }
+}
+/* ===== 소재(스톡) 재료제거 + 척 + 회전 + 절단낙하 ===== */
+let stockInfo=null, dropZByStep={}, fallingPiece=null, pullDx=0;
+const sxb=z=>sx(z+pullDx);   // 바(소재) 좌표 — 인출 중 +Z 슬라이드 반영
+function buildStockInfo(){
+  stockInfo=null;
+  let z0=Infinity,z1=-Infinity,had=false;
+  for(const s of trace){ if(s.seg&&s.label==='feed'){ had=true; z0=Math.min(z0,s.seg.z0,s.seg.z1); z1=Math.max(z1,s.seg.z0,s.seg.z1); } }
+  if(!had)return;
+  let rawO=0,rawI=0,finO=0,finI=0,tip=0,finLen=0,safety=0,chuckLen=0,c2j=0;
+  // 입력블록이 모두 채워진 스텝(완성ID #112까지 설정)에서 치수 채택
+  for(const s of trace){ if(s.kv&&s.kv[109]>0&&s.kv[114]>0){ rawO=s.kv[109]; rawI=Math.max(0,s.kv[110]||0); finO=Math.max(0,s.kv[111]||0); finI=Math.max(0,s.kv[112]||0); tip=Math.max(0,s.kv[114]||0); finLen=Math.max(0,s.kv[113]||0); break; } }
+  for(const s of trace){ if(s.kv&&s.kv[530]>0&&s.kv[532]>0){ safety=s.kv[530]; chuckLen=Math.max(0,s.kv[103]||0); c2j=Math.max(0,s.kv[532]||0); break; } }
+  if(!rawO){ for(const s of trace){ if(s.kv&&s.kv[109]>0){ rawO=s.kv[109]; rawI=Math.max(0,s.kv[110]||0); break; } } }
+  if(!rawO){ let mx=0; for(const s of trace){ if(s.seg) mx=Math.max(mx,s.seg.x0,s.seg.x1); } rawO=mx; rawI=0; }
+  if(!finLen){ finLen=Math.max(3,(z1-z0)/8); }
+  const chuckFaceZ = z0 - (safety||0) - (c2j||0);   // 척(죠)면 = 절삭한계 - 안전거리(#530) - 척투조보정(#532)
+  let unitLen=0; for(const s of trace){ if(s.kv&&s.kv[505]>0){ unitLen=s.kv[505]; break; } } if(!unitLen)unitLen=finLen;
+  stockInfo={z0,z1,rawO,rawI,finO,finI,tip,finLen,safety,chuckLen,c2j,chuckFaceZ,unitLen};
+  // 절단(파팅) 스텝 맵: T02가 '이미 가공된 OD'에서 보어 아래로 플런지 → 그 자리 피스가 떨어짐
+  dropZByStep={};
+  for(let k=0;k<trace.length;k++){ const s=trace[k]; if(!s.seg||s.label!=='feed')continue;
+    if(s.seg.tool===2 && rawI>0 && Math.min(s.seg.x0,s.seg.x1)/2 < rawI/2-0.1 && s.seg.x0/2 < rawO/2-1)
+      dropZByStep[k]=(s.seg.z0+s.seg.z1)/2;
+  }
+}
+function computeStockField(){
+  if(!stockInfo) return null;
+  const {z0,z1,rawO,rawI}=stockInfo; const span=z1-z0; if(span<=1e-6) return null;
+  const nz=Math.max(60,Math.min(800,Math.round(span/0.4))), dz=span/nz;
+  const outO=new Float64Array(nz+1).fill(rawO/2);
+  const outI=new Float64Array(nz+1).fill(rawI/2);
+  const cut=new Uint8Array(nz+1);
+  const innerR=rawI/2, finI=stockInfo.finI, finO=stockInfo.finO, finLen=stockInfo.finLen||0;
+  const midRef=(finO>0&&finI>0)?(finO/2+finI/2)/2:(rawO/2+rawI/2)/2;
+  const partR = rawI>0 ? innerR-0.1 : (finO>0?finO/4:-1);   // 보어보다 깊은 플런지 = 절단
+  const kerf = Math.max(dz, (stockInfo.tip||1.5)/2);          // 절단 커프(공구폭)
+  function apply(tool,za,ra,zb,rb,frac){
+    let B=zb,RB=rb; if(frac<1){ B=za+(zb-za)*frac; RB=ra+(rb-ra)*frac; }
+    const lo=Math.min(za,B),hi=Math.max(za,B);
+    if(partR>0 && Math.min(ra,RB) < partR){    // 보어 관통 플런지(페이싱·파팅 모두 바를 절단)
+      const cz=(za+B)/2;
+      // 절단면보다 +Z(자유단)쪽은 척과 분리되므로 자유단까지 전부 제거(끝면 자투리·완성피스 모두 떨어져나감)
+      let j0=Math.max(0,Math.floor((cz-kerf-z0)/dz));
+      for(let j=j0;j<=nz;j++) cut[j]=1; return;
+    }
+    let i0=Math.max(0,Math.floor((lo-z0)/dz)), i1=Math.min(nz,Math.ceil((hi-z0)/dz));
+    for(let i=i0;i<=i1;i++){ const z=z0+i*dz;
+      let t=Math.abs(B-za)<1e-9?1:(z-za)/(B-za); t=Math.max(0,Math.min(1,t)); const r=ra+(RB-ra)*t;
+      if(tool===1){ // 내외경 폼바이트(T01): OD는 공구 따라, 보어(ID)는 완성내경까지 동시 가공
+        if(r<outO[i]) outO[i]=Math.max(r, finI>0?finI/2:innerR);
+        if(finI>0 && finI/2>outI[i]) outI[i]=Math.min(finI/2, outO[i]);
+      } else {
+        if(r>=midRef){ if(r<outO[i]) outO[i]=Math.max(r,innerR); }  // OD 선삭
+        else { if(r>outI[i]) outI[i]=Math.min(r,outO[i]); }         // ID 보링
+      }
+    }
+  }
+  // 인출(=새 소재 공급/좌표 재설정)마다 카브 리셋 → 인출 후엔 새 raw 바로 다시 시작
+  let carveStart=-1; for(let k=0;k<cur;k++){ if(trace[k]&&trace[k].pull) carveStart=k; }
+  for(let k=carveStart+1;k<=cur;k++){ const s=trace[k]; if(!s.seg||s.label!=='feed')continue;
+    apply(s.seg.tool,s.seg.z0,s.seg.x0/2,s.seg.z1,s.seg.x1/2,(k===cur&&playing)?animT:1); }
+  return {nz,dz,z0,outO,outI,cut};
+}
+function drawStock(){
+  if(!stockInfo) return;
+  const f=computeStockField(); if(!f) return;
+  const {nz,dz,z0,outO,outI,cut}=f;
+  // 원소재 외형(가공 전 크기) 흐리게
+  ctx.fillStyle='rgba(90,102,115,0.10)';
+  ctx.fillRect(sxb(z0), sy(stockInfo.rawO/2), sxb(z0+nz*dz)-sxb(z0), sy(-stockInfo.rawO/2)-sy(stockInfo.rawO/2));
+  // 현재 재료(절삭 후) — 컬럼별 상/하 링
+  ctx.fillStyle='#6b7888'; ctx.beginPath();
+  for(let i=0;i<nz;i++){ if(cut[i])continue;
+    const x=sxb(z0+i*dz), w=Math.max(0.8, sxb(z0+(i+1)*dz)-x);
+    const oR=outO[i], iR=outI[i];
+    ctx.rect(x, sy(oR), w, sy(iR)-sy(oR));        // 위쪽 벽
+    ctx.rect(x, sy(-iR), w, sy(-oR)-sy(-iR));      // 아래쪽(미러) 벽
+  }
+  ctx.fill();
+  // 절단면(경계)만 얇은 빨간선으로 — 제거영역은 빈 갭으로 둔다
+  ctx.strokeStyle='#ff7b72'; ctx.lineWidth=1.5;
+  for(let i=1;i<=nz;i++){ if((cut[i]?1:0)!==(cut[i-1]?1:0)){ const x=sxb(z0+i*dz);
+    ctx.beginPath(); ctx.moveTo(x, sy(stockInfo.rawO/2)); ctx.lineTo(x, sy(-stockInfo.rawO/2)); ctx.stroke(); } }
+}
+function drawChuck(){
+  if(!stockInfo) return;
+  const R=stockInfo.rawO/2, ri=stockInfo.rawI/2, cf=stockInfo.chuckFaceZ, z0=stockInfo.z0, safety=stockInfo.safety||0, c2j=stockInfo.c2j||0;
+  const chuckR=R*1.55, bodyLen=Math.max(26,R*0.7);
+  const safeZ0=z0-safety;          // 안전구역 시작(척쪽)
+  const chuckOpen = cur>=0 && trace[cur] && trace[cur].state && trace[cur].state.mainChuck==='open';
+  const gripR = chuckOpen? R*1.22 : R;   // 메인척 열림(인출 중)이면 죠가 바에서 떨어짐
+  // 1) raw 바: 왼쪽(척)은 고정, 오른쪽(가공시작점)은 인출만큼 +Z 슬라이드 → 척 뒤에서 새 소재가 채워져 길어짐
+  ctx.fillStyle='#56616e';
+  const xL=sx(cf-bodyLen), xR=sxb(z0), wB=xR-xL;
+  if(ri>0){ ctx.fillRect(xL, sy(R), wB, sy(ri)-sy(R)); ctx.fillRect(xL, sy(-ri), wB, sy(-R)-sy(-ri)); }
+  else { ctx.fillRect(xL, sy(R), wB, sy(-R)-sy(R)); }
+  if(pullDx>0.5){ ctx.strokeStyle='rgba(126,231,135,0.6)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); // 새 소재 진입 경계
+    ctx.beginPath(); ctx.moveTo(sx(z0),sy(R*1.1)); ctx.lineTo(sx(z0),sy(-R*1.1)); ctx.stroke(); ctx.setLineDash([]);
+    tlabel(sx(z0)+3, sy(-R*1.1)+12, '새 소재 ▶', '#7ee787'); }
+  // 2) 척 본체(고정) + 죠
+  const bx=sx(cf-bodyLen), bw=sx(cf)-bx, byT=sy(chuckR), byB=sy(-chuckR);
+  ctx.fillStyle='#262d37'; ctx.strokeStyle='#3a4756'; ctx.lineWidth=1.5;
+  ctx.fillRect(bx,byT,bw,byB-byT); ctx.strokeRect(bx,byT,bw,byB-byT);
+  ctx.strokeStyle='#46505c'; ctx.lineWidth=1;
+  for(let yy=byT;yy<byB;yy+=8){ ctx.beginPath(); ctx.moveTo(bx,yy); ctx.lineTo(bx+11,yy-8); ctx.stroke(); }
+  ctx.fillStyle=chuckOpen?'#4a3a3a':'#3a4654'; ctx.strokeStyle='#5a6675'; ctx.lineWidth=1.5; // 죠(열림시 색 변화)
+  for(const s of [1,-1]){ const yA=sy(gripR*s), yB=sy(chuckR*s);
+    ctx.fillRect(bx+bw*0.5, Math.min(yA,yB), bw*0.5, Math.abs(yB-yA)); ctx.strokeRect(bx+bw*0.5, Math.min(yA,yB), bw*0.5, Math.abs(yB-yA)); }
+  // 3) 척투조(#532) 밴드 — 안전거리 옆 축방향 보정거리 (호박색)
+  const yT=sy(R*1.18), yB=sy(-R*1.18), bh=yB-yT;
+  if(c2j>0){ const a0=sx(cf), a1=sx(safeZ0);
+    ctx.save(); ctx.beginPath(); ctx.rect(Math.min(a0,a1),yT,Math.abs(a1-a0),bh); ctx.clip();
+    ctx.fillStyle='rgba(255,180,84,0.14)'; ctx.fillRect(Math.min(a0,a1),yT,Math.abs(a1-a0),bh);
+    ctx.strokeStyle='rgba(255,180,84,0.5)'; ctx.lineWidth=1;
+    for(let xx=Math.min(a0,a1)-bh; xx<Math.max(a0,a1); xx+=6){ ctx.beginPath(); ctx.moveTo(xx,yB); ctx.lineTo(xx+bh,yT); ctx.stroke(); }
+    ctx.restore();
+    ctx.fillStyle='#ffb454'; ctx.font='10px sans-serif'; ctx.fillText('척투조 '+fmt(c2j), Math.min(a0,a1)-2, yB+12);
+  }
+  // 4) 안전구역(#530) [safeZ0, z0] — 빨강 경고 해치 + 라벨 + 절삭한계선
+  if(safety>0){ const s0=sx(safeZ0), s1=sx(z0);
+    ctx.save(); ctx.beginPath(); ctx.rect(Math.min(s0,s1),yT,Math.abs(s1-s0),bh); ctx.clip();
+    ctx.fillStyle='rgba(255,123,114,0.10)'; ctx.fillRect(Math.min(s0,s1),yT,Math.abs(s1-s0),bh);
+    ctx.strokeStyle='rgba(255,123,114,0.45)'; ctx.lineWidth=1;
+    for(let xx=Math.min(s0,s1)-bh; xx<Math.max(s0,s1); xx+=7){ ctx.beginPath(); ctx.moveTo(xx,yB); ctx.lineTo(xx+bh,yT); ctx.stroke(); }
+    ctx.restore();
+    ctx.fillStyle='#ff9f97'; ctx.font='10px sans-serif'; ctx.fillText('⚠안전거리 '+fmt(safety), Math.min(s0,s1)+1, yT-3);
+  }
+  ctx.strokeStyle='#ff7b72'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);  // 절삭한계선(z0)
+  ctx.beginPath(); ctx.moveTo(sx(z0),yT); ctx.lineTo(sx(z0),yB); ctx.stroke(); ctx.setLineDash([]);
+  // 5) 라벨
+  ctx.fillStyle='#9aa7b6'; ctx.font='11px sans-serif'; ctx.fillText('척(죠)', bx+4, byT-4);
+}
+function drawFalling(){
+  if(!fallingPiece||!stockInfo||coordMode!=='work')return;
+  const el=performance.now()-fallingPiece.t0; if(el>900){ fallingPiece=null; return; }
+  const p=el/900, oR=stockInfo.finO/2, iR=stockInfo.finI/2;
+  const z=fallingPiece.z, zR=z+(stockInfo.finLen||7);
+  const yoff=p*p*220, dx=p*30;            // 중력 낙하 + 약간 +Z 드리프트
+  const x=sx(z)+dx, w=Math.max(2,sx(zR)-sx(z));
+  ctx.globalAlpha=Math.max(0,1-p*0.9); ctx.fillStyle='#7e8b9a'; ctx.strokeStyle='#0c0f14'; ctx.lineWidth=1;
+  // 회전하며 떨어지는 느낌: 약간 기울임
+  ctx.save(); ctx.translate(x+w/2, sy(0)+yoff); ctx.rotate(p*0.5);
+  ctx.fillRect(-w/2, sy(oR)-sy(0), w, sy(iR)-sy(oR));
+  ctx.fillRect(-w/2, sy(-iR)-sy(0), w, sy(-oR)-sy(-iR));
+  ctx.strokeRect(-w/2, sy(oR)-sy(0), w, sy(iR)-sy(oR));
+  ctx.strokeRect(-w/2, sy(-iR)-sy(0), w, sy(-oR)-sy(-iR));
+  ctx.restore(); ctx.globalAlpha=1;
+  if(p<0.5){ ctx.fillStyle='#ff7b72'; ctx.font='bold 12px sans-serif'; ctx.fillText('✂ 절단', sx(z), sy(oR)-8); }
+}
+function ensureFallingAnim(){ if(fallingPiece&&!playing){ draw(); if(performance.now()-(fallingPiece?fallingPiece.t0:0)<900) requestAnimationFrame(ensureFallingAnim); } }
+function drawSpinInset(){
+  if(!stockInfo) return;
+  const s=cur>=0?trace[cur]:null; const on = s&&s.state&&s.state.spin==='회전';
+  const rpm = s&&s.state?s.state.rpm:0;
+  const cx=CW-52, cy=64, R=30;
+  ctx.fillStyle='rgba(15,18,22,0.8)'; ctx.strokeStyle='#222b36'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,R+6,0,7); ctx.fill(); ctx.stroke();
+  // 단면 링
+  const ro=R*0.8, ri=stockInfo.rawO>0? R*0.8*(stockInfo.rawI/stockInfo.rawO):0;
+  ctx.strokeStyle=on?'#7ee787':'#5a6675'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,ro,0,7); ctx.stroke();
+  if(ri>2){ ctx.beginPath(); ctx.arc(cx,cy,ri,0,7); ctx.stroke(); }
+  // 회전 스포크
+  let ang=0; if(on&&rpm>0) ang=(performance.now()/1000)*(rpm/60)*2*Math.PI;
+  ctx.strokeStyle=on?'#7ee787':'#46505c'; ctx.lineWidth=2.5;
+  for(let k=0;k<3;k++){ const a=ang+k*2*Math.PI/3; ctx.beginPath(); ctx.moveTo(cx+ri*Math.cos(a),cy+ri*Math.sin(a)); ctx.lineTo(cx+ro*Math.cos(a),cy+ro*Math.sin(a)); ctx.stroke(); }
+  ctx.fillStyle=on?'#7ee787':'#8a97a6'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(on?('▷ S'+(rpm||0)):'정지', cx, cy+R+18); ctx.textAlign='start';
+}
+function niceStep(range){ const raw=range/8,p=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/p; let s; if(n<1.5)s=1;else if(n<3)s=2;else if(n<7)s=5;else s=10; return Math.max(s*p,1); }
+function drawGrid(){
+  ctx.font='11px Consolas,monospace';
+  const step=niceStep(view.maxA-view.minA);
+  for(let a=Math.ceil(view.minA/step)*step;a<=view.maxA;a+=step){ const x=sx(a);
+    ctx.strokeStyle='#1b2330'; ctx.beginPath(); ctx.moveTo(x,22); ctx.lineTo(x,CH-38); ctx.stroke();
+    ctx.fillStyle='#5a6675'; ctx.fillText(a.toFixed(0),x-6,CH-22); }
+  const bstep=niceStep(view.maxB-Math.min(view.minB,0));
+  for(let b=0;b<=view.maxB;b+=bstep){ const y=sy(b);
+    ctx.strokeStyle='#161e29'; ctx.beginPath(); ctx.moveTo(42,y); ctx.lineTo(CW-18,y); ctx.stroke();
+    ctx.fillStyle='#5a6675'; ctx.fillText('R'+b.toFixed(0),4,y+4); }
+  ctx.strokeStyle='#3a4756'; ctx.lineWidth=1; ctx.setLineDash([6,5]);
+  ctx.beginPath(); ctx.moveTo(sx(view.minA),sy(0)); ctx.lineTo(sx(view.maxA),sy(0)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#7a899a'; ctx.font='12px sans-serif';
+  ctx.fillText('Z →',CW-42,sy(0)-8); ctx.fillText('↑ X(반경)',6,16);
+  ctx.fillText('중심선 X0',sx(view.minA)+4,sy(0)+15);
+}
+function drawSegments(mir){
+  for(let k=0;k<=cur;k++){ const s=trace[k]; if(!s||!s.seg)continue;
+    if(mir&&s.seg.type===0)continue;
+    drawOneSeg(s.seg,(k===cur&&playing)?animT:1,mir); }
+}
+function hexA(h,a){h=h.replace('#','');return `rgba(${parseInt(h.substr(0,2),16)},${parseInt(h.substr(2,2),16)},${parseInt(h.substr(4,2),16)},${a})`;}
+function drawOneSeg(seg,frac,mir){
+  const pts=plotPts(seg);
+  const col=segColor(seg);
+  ctx.lineWidth=mir?1.3:2.2; ctx.strokeStyle=mir?hexA(col,0.25):col; ctx.setLineDash(seg.type===0?[7,5]:[]);
+  const Y=mir?syM:sy;
+  let total=0; const L=[]; for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);L.push(d);total+=d;}
+  const want=total*frac; let acc=0;
+  ctx.beginPath(); ctx.moveTo(sx(pts[0][0]),Y(pts[0][1]));
+  for(let i=1;i<pts.length;i++){ const d=L[i-1];
+    if(acc+d<=want||frac>=1){ ctx.lineTo(sx(pts[i][0]),Y(pts[i][1])); acc+=d; }
+    else { const t=(want-acc)/d; ctx.lineTo(sx(pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t),Y(pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t)); break; } }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function currentToolPlot(){
+  if(cur<0)return null;
+  // 현재 스텝의 위치(있으면 보간), 없으면 직전 상태
+  for(let k=cur;k>=0;k--){
+    const s=trace[k];
+    if(s.seg){
+      const pts=plotPts(s.seg);
+      if(k===cur){ let total=0,L=[]; for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);L.push(d);total+=d;}
+        const frac=playing?animT:1; if(total<1e-9)return pts[pts.length-1]; const want=total*frac; let acc=0;
+        for(let i=1;i<pts.length;i++){ if(acc+L[i-1]>=want){const t=(want-acc)/L[i-1]; return[pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t];} acc+=L[i-1]; }
+        return pts[pts.length-1];
+      }
+      return pts[pts.length-1];
+    }
+    if(s.state){ return [s.state.Z, s.state.X/2]; }
+  }
+  return null;
+}
+function tlabel(x,y,t,col){ ctx.fillStyle=col; ctx.font='bold 10px sans-serif'; ctx.fillText(t,x,y); }
+/* 선삭 인서트(마름모)+홀더. shankUp=true: 위(외경)에서 진입, false: 아래(내경/보어)에서 진입 */
+function drawInsert(x,y,shankUp,col){
+  const d=shankUp?-1:1;
+  ctx.strokeStyle='#0c0f14'; ctx.lineWidth=1.2;
+  ctx.fillStyle=hexA(col,0.9);
+  const sh=shankUp? y-34 : y+10;
+  ctx.fillRect(x-3.5, sh, 7, 24); ctx.strokeRect(x-3.5, sh, 7, 24);   // 홀더 섕크
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-7,y+d*9); ctx.lineTo(x,y+d*18); ctx.lineTo(x+7,y+d*9); ctx.closePath();
+  ctx.fillStyle='#e8eef5'; ctx.fill(); ctx.stroke();                  // 인서트(마름모)
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,2.6,0,7); ctx.fill(); // 절삭날
+}
+/* 절단바이트: 얇고 긴 블레이드, 외경에서 진입 */
+function drawPartingTool(x,y){
+  ctx.strokeStyle='#0c0f14'; ctx.lineWidth=1.2; ctx.fillStyle=hexA('#ffb454',0.92);
+  ctx.beginPath(); ctx.moveTo(x-2.5,y); ctx.lineTo(x-3.5,y-40); ctx.lineTo(x+3.5,y-40); ctx.lineTo(x+2.5,y); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.fillRect(x-2.5,y-2,5,2.5);   // 날끝
+  tlabel(x+6,y-30,'T02 절단','#ffb454');
+}
+/* 오토링크: 안전거리 부분의 가공전 외경(±gripPx)을 물어쥐고 다음 토막만큼 인출 */
+function drawPullerTool(x,yc,gripPx,pullPx){
+  const g=Math.max(gripPx,10), jaw=10;
+  ctx.strokeStyle='#0c0f14'; ctx.lineWidth=1.4; ctx.fillStyle=hexA('#d2a8ff',0.92);
+  ctx.fillRect(x+34, yc-g-jaw, 12, 2*(g+jaw)); ctx.strokeRect(x+34, yc-g-jaw, 12, 2*(g+jaw));  // 몸통
+  for(const s of [1,-1]){ const yO=yc-s*g;                       // 위/아래 집게: 외경 표면을 물어쥠
+    ctx.beginPath();
+    ctx.moveTo(x+46, yc-s*(g+jaw)); ctx.lineTo(x+34, yc-s*(g+jaw));
+    ctx.lineTo(x-14, yO-s*jaw); ctx.lineTo(x-22, yO); ctx.lineTo(x-14, yO+s*2);
+    ctx.lineTo(x+34, yc-s*g*0.2); ctx.lineTo(x+46, yc-s*g*0.2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.strokeStyle=hexA('#d2a8ff',0.4); ctx.setLineDash([3,3]); ctx.lineWidth=1;  // 물림 외경선
+  ctx.beginPath(); ctx.moveTo(x-22,yc-g); ctx.lineTo(x+46,yc-g); ctx.moveTo(x-22,yc+g); ctx.lineTo(x+46,yc+g); ctx.stroke(); ctx.setLineDash([]);
+  if(pullPx>2){                                                  // 인출 방향/양 화살표(→ 다음 토막)
+    const ay=yc; ctx.strokeStyle='#d2a8ff'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x, ay); ctx.lineTo(x+pullPx, ay); ctx.lineTo(x+pullPx-7, ay-5); ctx.moveTo(x+pullPx, ay); ctx.lineTo(x+pullPx-7, ay+5); ctx.stroke();
+    tlabel(x+4, ay-7, '인출(다음 토막)', '#d2a8ff');
+  }
+  tlabel(x-22, yc-g-10, 'T03 오토링크(안전거리 외경 물림)', '#d2a8ff');
+}
+function drawToolMarker(x,y,col,active,label){
+  ctx.setLineDash([]); ctx.lineWidth=1.5; ctx.strokeStyle='#0c0f14';
+  const s=active?1:0.78; ctx.fillStyle=active?col:hexA(col,0.55);
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-9*s,y-16*s); ctx.lineTo(x+9*s,y-16*s); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(active){ ctx.beginPath(); ctx.arc(x,y,3.2,0,7); ctx.fillStyle='#fff'; ctx.fill(); }
+  if(label){ ctx.fillStyle=col; ctx.font=(active?'bold ':'')+'10px sans-serif'; ctx.fillText(label,x+8,y-15*s); }
+}
+function drawTool(){
+  if(cur<0)return;
+  let hasSeg=false; for(let k=cur;k>=0;k--){ if(trace[k]&&trace[k].seg){hasSeg=true;break;} }
+  if(!hasSeg)return;
+  const p=currentToolPlot(); if(!p)return;
+  if(coordMode==='machine'){
+    // 갱(gang) 공구단: 세 공구를 모두 표시, 함께 이동, 활성 공구만 강조
+    const active=(trace[cur].state&&trace[cur].state.toolNo)||1;
+    const tips=gangTips(active, 2*p[1], p[0]);
+    ctx.strokeStyle='#46505c'; ctx.lineWidth=2; ctx.setLineDash([]); // 슬라이드(갱 바) 연결선
+    ctx.beginPath(); tips.forEach((t,i)=>{ const x=sx(t.a),y=sy(t.b); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+    for(const t of tips) drawToolMarker(sx(t.a),sy(t.b),toolOff(t.tool).col,t.tool===active,'T0'+t.tool+' '+toolOff(t.tool).name);
+  } else {
+    const st=trace[cur].state||{}, active=st.toolNo||0;
+    const x=sx(p[0]), odR=p[1], y=sy(odR);
+    // 현재 Z 십자선
+    ctx.strokeStyle='rgba(255,255,255,.16)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(x,22); ctx.lineTo(x,CH-38); ctx.stroke(); ctx.setLineDash([]);
+    if(active===2){ drawPartingTool(x,y); }
+    else if(active===3){ // 오토링크: 안전거리 부분을 물고 인출 (절삭점 X0 대신 안전거리 위치에 표시)
+      const gz=stockInfo? (stockInfo.z0-(stockInfo.safety||0)/2) : p[0];
+      const pullPx=(stockInfo&&!pullDx)? (stockInfo.unitLen||stockInfo.finLen||0)*SC : 0; // 인출 시작 전엔 화살표, 인출 중엔 실제 슬라이드
+      drawPullerTool(sxb(gz), sy(0), (stockInfo?stockInfo.rawO/2:10)*SC, pullPx);
+    }
+    else if(active===1){ // 내외경 폼바이트: 외경/내경 인서트가 고정 벽두께로 함께 이동
+      const wall=(stockInfo&&stockInfo.finO>0&&stockInfo.finI>0)? (stockInfo.finO/2-stockInfo.finI/2) : odR*0.12;
+      let idR=odR-wall;                                   // 내경 인서트는 외경과 동시 이동(단 낼 때 같이 움직임)
+      if(!st.brakeUp) idR-=1.6;                           // 보링바 다운이면 아래 인서트 내려감(정삭후 복귀 전 하강), 업이면 올라옴
+      drawInsert(x, y, true, '#56d4dd');                  // 외경 (위에서)
+      drawInsert(x, sy(Math.max(idR,0)), false, st.brakeUp?'#56d4dd':'#3f8a90');  // 내경/보어 (아래에서)
+      tlabel(x+9, y-22, 'T01 내외경'+(st.brakeUp?' ▲업':' ▽다운'), '#56d4dd');
+    } else { drawToolMarker(x,y,'#ffd479',true,''); }
+  }
+}
+
+/* ---------- 좌측 라인 리스트 ---------- */
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderLineList(){
+  const box=document.getElementById('lineList'); box.innerHTML='';
+  const frag=document.createDocumentFragment();
+  programLines.forEach((pl)=>{
+    const d=document.createElement('div');
+    const isCmt=/^\s*\(/.test(pl.raw)||pl.raw.trim()===''||pl.raw.trim()==='%';
+    d.className='ln'+(isCmt?' cmt':'');
+    d.dataset.line=pl.idx;
+    d.innerHTML=`<span class="gut">${pl.idx+1}</span><span class="src">${esc(pl.raw)||' '}</span>`;
+    d.onclick=()=>{ const ti=trace.findIndex(s=>s.lineIdx===pl.idx); if(ti>=0)gotoStep(ti); };
+    frag.appendChild(d);
+  });
+  box.appendChild(frag);
+}
+const ACTLBL={motion:['이동','#1d2a22','#7ee787'],rapid:['급속','#3a1d1d','#ff7b72'],assign:['대입','#1c2733','#79c0ff'],
+  if:['조건','#2a2417','#ffb454'],goto:['점프','#2a2417','#ffb454'],call:['호출','#241c33','#d2a8ff'],return:['복귀','#241c33','#d2a8ff'],
+  mcode:['M코드','#2a1d1d','#ff7b72'],dwell:['정지','#22262b','#8a97a6'],offset:['좌표','#16323a','#56d4dd'],
+  spindle:['주축','#16323a','#56d4dd'],tool:['공구','#16323a','#56d4dd'],feed:['이송','#1d2a22','#7ee787'],
+  park:['복귀','#22262b','#8a97a6'],alarm:['알람','#3a1414','#ff7b72'],end:['종료','#22262b','#8a97a6'],cap:['제한','#2a2417','#ffb454'],misc:['',' #1c232d','#8a97a6']};
+
+function updateAll(){
+  document.querySelectorAll('.ln').forEach(el=>el.classList.remove('cur','exec'));
+  const s=cur>=0?trace[cur]:null;
+  if(s){ const el=document.querySelector(`.ln[data-line="${s.lineIdx}"]`); if(el){ el.classList.add('cur'); el.scrollIntoView({block:'nearest'}); } }
+  document.getElementById('prog').textContent=`${cur+1} / ${trace.length}`;
+  const st=s?s.state:{X:0,Z:0,feed:0,rpm:0,sMode:'',tool:'',spin:''};
+  // 동작 표시
+  let key=s?(s.act==='motion'?(s.label==='rapid'?'rapid':s.label==='arc'?'motion':'motion'):s.act):'';
+  const lbl=ACTLBL[s?s.act:'']||['','#1c232d','#8a97a6'];
+  const hm=document.getElementById('hMove');
+  hm.textContent=s?(s.act==='motion'?gname(s.seg.type):lbl[0]||'—'):'대기';
+  hm.style.color=s&&s.label==='rapid'?'#ff7b72':s&&s.label==='feed'?'#7ee787':s&&s.label==='arc'?'#56d4dd':'#d7dee8';
+  const o=toolOff(st.toolNo);
+  if(coordMode==='machine'){
+    document.getElementById('hX').textContent=fmt(st.X+o.x);
+    document.getElementById('hZ').textContent=fmt(st.Z+o.z);
+  } else {
+    document.getElementById('hX').textContent=fmt(st.X);
+    document.getElementById('hZ').textContent=fmt(st.Z);
+  }
+  document.getElementById('hR').textContent=fmt(st.X/2);
+  document.getElementById('hF').textContent=st.feed?fmt(st.feed):'—';
+  document.getElementById('hS').textContent=(st.rpm?('S'+fmt(st.rpm)):'—')+(st.sMode?(' '+st.sMode):'');
+  document.getElementById('hT').textContent=(st.tool||'—')+(o.name?(' '+o.name):'');
+  // 소재 잔량: 완성 토막 수 + 남은 바 길이
+  const hStock=document.getElementById('hStock');
+  if(stockInfo && s && s.kv && s.kv[140]>0){
+    const total=s.kv[140], unit=stockInfo.unitLen||stockInfo.finLen||1;
+    const parted=Object.keys(dropZByStep).reduce((n,k)=>n+(+k<=cur?1:0),0);
+    const remain=Math.max(0,total-parted*unit), pct=Math.round(remain/total*100);
+    hStock.textContent=parted+'토막 · ~'+Math.round(remain)+'mm('+pct+'%)';
+    hStock.style.color = pct<15?'#ff7b72':pct<35?'#ffb454':'#7ee787';
+  } else hStock.textContent='—';
+  // 변수 패널
+  const act=document.getElementById('actLine');
+  if(s){ const L=ACTLBL[s.act]||['','#1c232d','#8a97a6'];
+    act.innerHTML=`<span class="lbl" style="background:${L[1]};color:${L[2]}">${L[0]||s.act}</span>${esc(s.desc)}`+(s.cm&&s.act!=='misc'?` <span style="color:var(--comment)">(${esc(s.cm)})</span>`:'');
+  } else act.textContent='프로그램을 불러오세요.';
+  const vc=document.getElementById('vchips');
+  if(s&&s.kv){ vc.innerHTML=KEYVARS.map(n=>{ const v=s.kv[n]; if(v===undefined||v===-9999)return''; const hot=s.changed&&s.changed.n===n;
+      return `<span class="vchip${hot?' hot':''}"><span class="vk">${VARLBL[n]||('#'+n)}</span><span class="vv">${fmt(v)}</span></span>`; }).join(''); }
+  else vc.innerHTML='';
+  if(cur>=0 && dropZByStep[cur]!=null){ fallingPiece={z:dropZByStep[cur], t0:performance.now()}; if(!playing) requestAnimationFrame(ensureFallingAnim); }
+  draw();
+}
+
+/* ---------- 스텝 제어 ---------- */
+function gotoStep(i){ pause(); cur=Math.max(-1,Math.min(trace.length-1,i)); animT=1; updateAll(); }
+function next(){ if(cur>=trace.length-1){pause();return false;} cur++; animT=1; updateAll(); return true; }
+function prev(){ if(cur<0)return; cur--; animT=1; updateAll(); }
+function reset(){ pause(); cur=-1; animT=0; fallingPiece=null; updateAll(); }
+function nextMove(){ pause(); while(cur<trace.length-1){ cur++; if(trace[cur].seg){break;} } animT=1; updateAll(); }
+
+function play(){ if(playing)return; if(cur>=trace.length-1)cur=-1; playing=true; document.getElementById('btnPlay').textContent='⏸'; stepAnim(true); }
+function pause(){ playing=false; document.getElementById('btnPlay').textContent='▶'; if(rafId)cancelAnimationFrame(rafId); rafId=null; }
+function togglePlay(){ playing?pause():play(); }
+function segLen(seg){ const p=segPlotPts(seg); let t=0; for(let i=1;i<p.length;i++)t+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]); return t; }
+const STOPACT={end:1,alarm:1,cap:1};
+function stepAnim(adv){
+  if(adv){
+    if(cur>=trace.length-1){updateAll();pause();return;}
+    cur++;
+    // 자동재생: 비이동(셋업·대입·점프·M코드) 구간은 즉시 건너뛰고 실제 이동만 애니메이션
+    while(cur<trace.length-1 && !trace[cur].seg && !STOPACT[trace[cur].act]) cur++;
+    updateAll();
+  }
+  const s=trace[cur]; if(STOPACT[s.act]){ pause(); return; }
+  const hasMo=s&&s.seg&&segLen(s.seg)>1e-6;
+  const spd=+document.getElementById('speed').value;
+  let dur = !hasMo ? 40/spd : (s.seg.type===0?260:560)/spd*3;
+  if(s.pull) dur = Math.max(1800, 1300/spd*3);   // 인출은 충분히 천천히(놓치지 않게)
+  animT=hasMo?0:1;
+  const t0=performance.now();
+  function frame(now){ if(!playing)return; const k=Math.min(1,(now-t0)/dur); animT=hasMo?k:1; draw();
+    if(k<1)rafId=requestAnimationFrame(frame); else rafId=requestAnimationFrame(()=>stepAnim(true)); }
+  rafId=requestAnimationFrame(frame);
+}
+
+/* ---------- 이벤트 ---------- */
+document.getElementById('btnNext').onclick=()=>{pause();next();};
+document.getElementById('btnPrev').onclick=()=>{pause();prev();};
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('btnPlay').onclick=togglePlay;
+document.getElementById('btnNextMove').onclick=nextMove;
+document.getElementById('btnNextPull').onclick=()=>{   // 다음 인출 장면으로 점프 후 천천히 재생
+  let i=trace.findIndex((s,k)=>k>cur && s.pull);
+  if(i<0) i=trace.findIndex(s=>s.pull);   // 없으면 처음부터
+  if(i<0) return;
+  pause(); cur=Math.max(-1,i-2); animT=1; updateAll(); play();
+};
+document.getElementById('btnCoord').onclick=()=>{
+  coordMode=coordMode==='machine'?'work':'machine';
+  document.getElementById('btnCoord').textContent=coordMode==='machine'?'🔧 공구 3개 뷰':'🔧 공작물 뷰';
+  updateLegend(); computeBounds(); resize(); updateAll();
+};
+document.getElementById('loadBtn').onclick=()=>recompute(document.getElementById('editor').value);
+document.getElementById('maxMoves').onchange=()=>recompute(document.getElementById('editor').value);
+document.getElementById('sampleSel').onchange=e=>{ const k=e.target.value; if(!k)return; document.getElementById('editor').value=SAMPLES[k]; recompute(SAMPLES[k]); };
+document.getElementById('fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f)return; const fr=new FileReader(); fr.onload=()=>{ document.getElementById('editor').value=fr.result; recompute(fr.result); }; fr.readAsText(f,'utf-8'); };
+const ed=document.getElementById('editor'),lst=document.getElementById('lineList'),tgl=document.getElementById('editToggle');
+tgl.onclick=()=>{ const editing=ed.style.display!=='block'; ed.style.display=editing?'block':'none'; lst.style.display=editing?'none':'block'; tgl.textContent=editing?'▶ 보기/실행':'✎ 편집'; if(!editing)recompute(ed.value); };
+document.addEventListener('keydown',e=>{ if(e.target.tagName==='TEXTAREA')return;
+  if(e.key==='ArrowRight'){pause();next();e.preventDefault();}
+  else if(e.key==='ArrowLeft'){pause();prev();e.preventDefault();}
+  else if(e.code==='Space'){togglePlay();e.preventDefault();}
+  else if(e.key.toLowerCase()==='m'){nextMove();}
+  else if(e.key==='Home'){reset();} });
+window.addEventListener('resize',resize);
+
+/* ---------- 초기화 ---------- */
+updateLegend();
+ed.value=SAMPLES.basic; recompute(SAMPLES.basic); document.getElementById('sampleSel').value='basic';
+</script>
+</body>
+</html>
