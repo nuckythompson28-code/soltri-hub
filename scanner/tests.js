@@ -53,6 +53,19 @@
   eq('fbKey: 금지문자 치환', core.fbKey('A.B#C$D[E]F/G'), 'A_B_C_D_E_F_G');
   eq('fbKey: 영숫자 그대로', core.fbKey('B1KA58001400'), 'B1KA58001400');
 
+  // ===== specNumset / stockLookup =====
+  eq('specNumset 정렬+제로', core.specNumset('34.93*38.10*25.40'), '25.4,34.93,38.1');
+  eq('specNumset 변형접미사→null', core.specNumset('60*65*10A'), null);
+  const STK = { '12.7*15.88*19.05|M/NW': 7, '34.93*38.1*25.4|M/NW': 3,
+    '60*65*10A|CN10': 99, '55*60*10|CN10': 585 };
+  eq('stockLookup 정확키', core.stockLookup(STK, '55*60*10', 'CN10'), 585);
+  eq('stockLookup 치수 순서무관', core.stockLookup(STK, '15.88*19.05*12.7', 'M/NW'), 7);
+  eq('stockLookup 트레일링 제로', core.stockLookup(STK, '34.93*38.10*25.40', 'M/NW'), 3);
+  eq('stockLookup 변형품 병합금지', core.stockLookup(STK, '60*65*10', 'CN10'), 0);
+  eq('stockLookup 미등재 사양=0', core.stockLookup(STK, '9*9*9', 'RS40'), 0);
+  eq('stockLookup 재질 다르면 0', core.stockLookup(STK, '55*60*10', 'CN20'), 0);
+  eq('stockLookup 재고목록 자체가 없음=null', core.stockLookup({}, '9*9*9', 'RS40'), null);
+
   // ===== test_service_scan.py 포팅 =====
   const svc = isNode ? require('./service.js') : root.ScannerService;
   const DATA = {
@@ -79,11 +92,14 @@
   eq('scan HIGH: work_qty=정수량(6회<12)', r.work_qty, 50);
   eq('scan HIGH: preprod_eligible', r.preprod_eligible, false);
   eq('scan HIGH: preprod_qty', r.preprod_qty, 500);
+  eq('scan HIGH: stock_covers(재고100≥발주50)', r.stock_covers, true);
 
   r = svc.scanResult(DATA, 'ONCE0000');
   eq('scan 이력없음: grade NONE', r.grade, 'NONE');
   eq('scan 이력없음: work_qty', r.work_qty, 30);
   eq('scan 이력없음: preprod 0', r.preprod_qty, 0);
+  eq('scan 이력없음: 미등재 재고=0', r.stock, 0);
+  eq('scan 이력없음: stock_covers false', r.stock_covers, false);
 
   r = svc.scanResult(DATA, 'ZZZZ9999');
   eq('scan 미발견: found', r.found, false);
@@ -106,6 +122,14 @@
   r = svc.scanResult(Object.assign({}, DATA, { stock: {} }), 'B1KA58001400');
   eq('재고미확인: grade 유지', r.grade, 'HIGH');
   eq('재고미확인: preprod null', r.preprod_qty, null);
+  eq('재고미확인: stock null', r.stock, null);
+  eq('재고미확인: stock_covers false', r.stock_covers, false);
+
+  // 재고 폴백 — 치수 순서 다른 재고키 매칭
+  r = svc.scanResult(Object.assign({}, DATA, {
+    stock: { '20*182*190|CN10': 60 } }), 'B1KA58001400');
+  eq('재고 순서폴백: stock 60', r.stock, 60);
+  eq('재고 순서폴백: stock_covers(60≥50)', r.stock_covers, true);
 
   // ===== coverage (NAS service.coverage 동치) =====
   let cov = svc.coverage(DATA, new Set());

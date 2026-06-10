@@ -35,10 +35,7 @@
     const fk = core.freqKey(spec, material);
     const hist = lh[fk] || lh[core.freqKey(spec, core.baseMat(material))] || null;
     const g = hist ? hist.grade : 'NONE';
-    const stk = data.stock || {};
-    let stock = stk[fk];
-    if (stock === undefined || stock === null) stock = stk[core.freqKey(spec, core.baseMat(material))];
-    const stockVal = (stock === undefined) ? null : stock;
+    const stockVal = core.stockLookup(data.stock || {}, spec, material);
     const qtySum = hist ? hist.qty_sum : 0;
     const orders = hist ? hist.orders : 0;
     const specQueue = (data.spec_queue || {})[fk] || 0;
@@ -53,6 +50,7 @@
       preprod_eligible: core.preprodEligible(oq, orders),
       preprod_qty: core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
+      stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
       by: 'spec', hist: hist,
     };
   }
@@ -68,8 +66,7 @@
     const fk = core.freqKey(info.spec || '', info.material || '');
     const hist = (data.label_history || {})[fk] || null;
     const g = hist ? hist.grade : 'NONE';
-    const stock = (data.stock || {})[fk];
-    const stockVal = (stock === undefined) ? null : stock;
+    const stockVal = core.stockLookup(data.stock || {}, info.spec || '', info.material || '');
     const qtySum = hist ? hist.qty_sum : 0;
     const orders = hist ? hist.orders : 0;
     const oq = info.order_qty || 0;
@@ -87,6 +84,7 @@
       preprod_eligible: core.preprodEligible(oq, orders),
       preprod_qty: core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
+      stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
       hist: hist,
     };
   }
