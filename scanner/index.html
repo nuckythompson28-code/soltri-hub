@@ -149,6 +149,18 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
 .split-right .result{margin:0}
 .result-empty{padding:70px 20px;text-align:center;color:#9ca3af;font-size:16px;border:2px dashed #e5e7eb;border-radius:14px;line-height:1.6}
 @media(max-width:900px){.main-split{flex-direction:column}.split-left{flex:1 1 auto;max-width:none}.split-left .scan-area{position:static}}
+
+/* 모바일 전체화면 결과 팝업 */
+.result-modal{position:fixed;inset:0;background:#f4f6fa;display:none;z-index:9500;flex-direction:column}
+.result-modal.open{display:flex}
+.result-modal-bar{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;background:#15803d;color:#fff;font-weight:800;font-size:17px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.result-modal-bar button{width:48px;height:48px;border:none;border-radius:12px;
+  background:rgba(255,255,255,.2);color:#fff;font-size:24px;font-weight:800;cursor:pointer;line-height:1}
+.result-modal-bar button:active{background:rgba(255,255,255,.35)}
+.result-modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;overscroll-behavior:contain}
+.result-modal-body .result{margin:0}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -178,7 +190,7 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
 <div class="scan-area">
   <div class="scan-input-wrap">
     <div class="scan-label">⬇ 바코드 스캔 또는 발주상세NO 입력 ⬇</div>
-    <input id="barcode" type="text" placeholder="B1KA________" autofocus autocomplete="off" spellcheck="false">
+    <input id="barcode" type="text" placeholder="B1KA________" autocomplete="off" spellcheck="false">
     <div class="scan-hint"><span class="pulse"></span>스캔 대기 중 · 입력 후 Enter 또는 자동 처리 (700ms)</div>
     <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #e5e7eb">
       <div style="font-size:13px;color:#5b6472;font-weight:700;margin-bottom:8px">또는 치수·소재로 직접 조회</div>
@@ -238,6 +250,15 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
 </div><!-- /split-right -->
 </div><!-- /main-split -->
 
+<!-- 모바일 전체화면 결과 팝업 (#result를 이 안으로 옮겨서 표시) -->
+<div class="result-modal" id="result-modal">
+  <div class="result-modal-bar">
+    <span>📋 스캔 결과</span>
+    <button id="result-modal-close" type="button" aria-label="닫기">✕</button>
+  </div>
+  <div class="result-modal-body" id="result-modal-body"></div>
+</div>
+
 <div class="recent-scans">
   <h4>최근 스캔 (10건)</h4>
   <div id="recent"></div>
@@ -272,6 +293,35 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
 <script>
 let DATA = {detail_index:{}, pending:[], label_history:{}, stock:{}, label_days:100, generated:''};
 const $ = id => document.getElementById(id);
+
+// 모바일(좁은 화면) 판정 — 모바일에선 입력칸 자동 포커스 금지(키보드 안 뜨게) + 결과는 전체화면 팝업
+function isMobile(){ return window.matchMedia('(max-width:900px)').matches; }
+
+// === 모바일 전체화면 결과 팝업 — #result 엘리먼트를 팝업 안으로 옮겨서 표시 ===
+function openResultModal(){
+  const modal = $('result-modal'), body = $('result-modal-body'), el = $('result');
+  if(!modal || !el) return;
+  body.appendChild(el);
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';   // 뒷배경 스크롤 잠금
+  body.scrollTop = 0;
+  try { document.activeElement && document.activeElement.blur(); } catch(e){}  // 키보드 내리기
+}
+function closeResultModal(){
+  const modal = $('result-modal'), el = $('result');
+  if(!modal) return;
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  // 결과 엘리먼트를 원래 자리(우측 패널)로 복귀
+  const host = document.querySelector('.split-right');
+  const empty = $('result-empty');
+  if(host && el) host.insertBefore(el, empty);
+  if(el) el.classList.remove('show');
+  if(empty) empty.style.display = '';
+  const b = $('barcode');
+  if(b){ b.value = ''; if(!isMobile()) b.focus(); }   // 모바일에선 포커스 안 줌 → 키보드 안 뜸
+}
+$('result-modal-close').addEventListener('click', closeResultModal);
 
 // 이 PC(브라우저) 기기 이름 — 스캔 기록 device 칸에 저장. PC마다 한 번 설정하면 유지됨.
 // 회의실 PC는 "회의실PC", 사장/관리자 조회용 PC는 본인 이름 등으로 바꿔두면 admin에서 구분됨.
@@ -496,7 +546,7 @@ function render(barcode){
     clearTimeout(window._clearTimer);
     window._clearTimer = setTimeout(()=>{
       $('barcode').value = '';
-      $('barcode').focus();
+      if(!isMobile()) $('barcode').focus();
     }, 5000);
   } else {
     $('barcode').select();
@@ -637,8 +687,10 @@ bc.addEventListener('keydown', e=>{
     bc.focus();
   }
 });
-// 포커스 유지
+// 포커스 유지 (PC 전용 — 모바일에선 탭할 때마다 키보드가 떠서 제외)
 document.addEventListener('click', e=>{
+  if(isMobile()) return;
+  if($('result-modal') && $('result-modal').classList.contains('open')) return;
   if(!e.target.matches('input,button,label,select,textarea,a,.item,.item *')){
     bc.focus();
   }
@@ -685,7 +737,7 @@ $('opt-bigfont').addEventListener('change', e=>{
 });
 
 renderRecent();
-bc.focus();
+if(!isMobile()) bc.focus();
 
 // === Web Serial — USB 시리얼 스캐너 (Honeywell/Zebra USB Serial 모드) ===
 let serialPort = null;
@@ -710,10 +762,10 @@ function processScannedCode(code){
       scanViaServer(codes[0]);
     } else {
       renderCandidates(code);
-      bc.focus();
+      if(!isMobile()) bc.focus();
     }
   } else {
-    bc.focus();
+    if(!isMobile()) bc.focus();
   }
 }
 
@@ -870,10 +922,10 @@ function onQrDetected(decoded){
       scanViaServer(codes[0]);
     } else {
       renderCandidates(code);
-      bc.focus();
+      if(!isMobile()) bc.focus();
     }
   } else {
-    bc.focus();
+    if(!isMobile()) bc.focus();
   }
 }
 
@@ -906,7 +958,7 @@ function stopQrScan(){
     qrScanner = null;
   }
   qrModal.classList.remove('open');
-  bc.focus();
+  if(!isMobile()) bc.focus();
 }
 
 $('qr-open').addEventListener('click', ()=>{
@@ -1180,10 +1232,11 @@ function manualSearch(){
 function scanViaServer(code){
   bc.value = '';            // 다음 스캔 대비 즉시 비움 (중복 누적 방지)
   clearTimeout(typingTimer);
-  bc.focus();
+  if(!isMobile()) bc.focus();   // 모바일은 포커스 금지 — 키보드 대신 결과 팝업
   if (!DATA || !DATA.detail_index || !Object.keys(DATA.detail_index).length) return;
   const r = ScannerService.scanResult(DATA, code);
   renderServerResult(code, r);
+  if(isMobile()) openResultModal();   // 모바일: 전체화면 팝업으로 표시 (X로 닫기)
   const entry = {
     ts: nowTs(), code: code,
     detail_no: r.detail_no || code, found: r.found ? 1 : 0,
