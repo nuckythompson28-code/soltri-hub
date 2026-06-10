@@ -11,11 +11,7 @@
 
   function fmtNum(v) {
     if (v === null || v === undefined) return '';
-    if (typeof v === 'number') {
-      // JS는 10.0 → '10' 자동으로 처리됨 (Number의 toString())
-      if (Number.isInteger(v)) return String(v);
-      return String(v);
-    }
+    if (typeof v === 'number') return String(v);  // JS는 10.0 → '10' 자동
     let s = String(v).trim();
     if (s.endsWith('.0')) s = s.slice(0, -2);
     return s;

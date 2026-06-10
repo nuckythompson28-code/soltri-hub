@@ -53,6 +53,67 @@
   eq('fbKey: 금지문자 치환', core.fbKey('A.B#C$D[E]F/G'), 'A_B_C_D_E_F_G');
   eq('fbKey: 영숫자 그대로', core.fbKey('B1KA58001400'), 'B1KA58001400');
 
+  // ===== test_service_scan.py 포팅 =====
+  const svc = isNode ? require('./service.js') : root.ScannerService;
+  const DATA = {
+    label_days: 100,
+    detail_index: {
+      'B1KA58001400': { detail_no: 'B1KA58001400', company: '유창',
+        po_num: '유창 260508', part_no: '', spec: '182*190*20',
+        material: 'CN10', product: 'W/R', order_qty: 50 },
+      'ONCE0000': { detail_no: 'ONCE0000', company: 'A', po_num: '',
+        part_no: '', spec: '9*9*9', material: 'RS40', order_qty: 30 },
+    },
+    label_history: {
+      '182*190*20|CN10': { orders: 6, companies: 2, qty_sum: 800,
+        last: '2026-05-30', grade: 'HIGH', rows: [] },
+    },
+    stock: { '182*190*20|CN10': 100 },
+    pending: ['B1KA58001400'],
+  };
+
+  let r = svc.scanResult(DATA, 'b1ka58001400');
+  eq('scan HIGH: found', r.found, true);
+  eq('scan HIGH: grade', r.grade, 'HIGH');
+  eq('scan HIGH: order_qty', r.order_qty, 50);
+  eq('scan HIGH: work_qty=정수량(6회<12)', r.work_qty, 50);
+  eq('scan HIGH: preprod_eligible', r.preprod_eligible, false);
+  eq('scan HIGH: preprod_qty', r.preprod_qty, 500);
+
+  r = svc.scanResult(DATA, 'ONCE0000');
+  eq('scan 이력없음: grade NONE', r.grade, 'NONE');
+  eq('scan 이력없음: work_qty', r.work_qty, 30);
+  eq('scan 이력없음: preprod 0', r.preprod_qty, 0);
+
+  r = svc.scanResult(DATA, 'ZZZZ9999');
+  eq('scan 미발견: found', r.found, false);
+  eq('scan 미발견: grade unknown', r.grade, 'unknown');
+
+  r = svc.scanResult(DATA, '182*190*20/CN10/30');
+  eq('사양바코드: found', r.found, true);
+  eq('사양바코드: by spec', r.by, 'spec');
+  eq('사양바코드: spec', r.spec, '182*190*20');
+  eq('사양바코드: material', r.material, 'CN10');
+  eq('사양바코드: order_qty', r.order_qty, 30);
+  eq('사양바코드: grade HIGH(이력적중)', r.grade, 'HIGH');
+
+  r = svc.scanResult({ label_history: {}, stock: {}, detail_index: {} }, '10*20*30/M/P/5');
+  eq('사양바코드 M/P: found+spec', r.found === true && r.by === 'spec', true);
+  eq('사양바코드 M/P: material', r.material, 'M/P');
+  eq('사양바코드 M/P: qty', r.order_qty, 5);
+  eq('사양바코드 M/P: spec', r.spec, '10*20*30');
+
+  r = svc.scanResult(Object.assign({}, DATA, { stock: {} }), 'B1KA58001400');
+  eq('재고미확인: grade 유지', r.grade, 'HIGH');
+  eq('재고미확인: preprod null', r.preprod_qty, null);
+
+  // ===== coverage (NAS service.coverage 동치) =====
+  let cov = svc.coverage(DATA, new Set());
+  eq('coverage 미스캔1', [cov.total, cov.scanned_count, cov.missing_count], [1, 0, 1]);
+  eq('coverage 미스캔 상세', cov.missing[0].detail_no, 'B1KA58001400');
+  cov = svc.coverage(DATA, new Set([core.fbKey('B1KA58001400')]));
+  eq('coverage 전부스캔', [cov.total, cov.scanned_count, cov.missing_count], [1, 1, 0]);
+
   // ===== 보고 =====
   const fails = results.filter(r => !r.ok);
   if (isNode) {
