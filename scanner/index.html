@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📷 작업지시 바코드 스캐너</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%2315803d'/><text x='50%25' y='62%25' font-size='38' font-family='Segoe UI,sans-serif' font-weight='700' text-anchor='middle' fill='white'>📷</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;color:#1f2937;min-height:100vh}
+.header{background:linear-gradient(135deg,#dcfce7,#fff);padding:16px 24px;border-bottom:3px solid #15803d;
+  display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;color:#14532d;font-weight:700}
+.header .sub{font-size:12px;color:#5b6472;margin-top:4px}
+.header .gen{font-size:11px;color:#5b6472}
+
+.scan-area{background:#fff;padding:30px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:center}
+.scan-input-wrap{max-width:720px;width:100%;text-align:center}
+.scan-label{font-size:13px;color:#5b6472;font-weight:600;margin-bottom:10px;letter-spacing:.5px;text-transform:uppercase}
+#barcode{width:100%;padding:18px 22px;font-size:28px;font-family:'Consolas',monospace;
+  border:3px solid #15803d;border-radius:14px;text-align:center;letter-spacing:2px;
+  background:#f0fdf4;color:#1f2937;font-weight:700;outline:none;
+  box-shadow:0 0 0 4px #dcfce7}
+#barcode:focus{box-shadow:0 0 0 6px #86efac}
+#barcode::placeholder{color:#4ade80;font-weight:400;letter-spacing:1px}
+.scan-hint{margin-top:10px;font-size:12px;color:#5b6472}
+.scan-hint .pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:#10b981;margin-right:6px;animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:1}80%,100%{transform:scale(2.5);opacity:0}}
+
+/* 결과 박스 */
+.result{display:none;margin:24px;padding:30px;border-radius:18px;border:3px solid;
+  box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.result.show{display:block;animation:slideIn .25s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.result.verdict-NONE,.result.verdict-LOW{background:linear-gradient(135deg,#fee2e2,#fff);border-color:#dc2626}
+.result.verdict-MID{background:linear-gradient(135deg,#fef3c7,#fff);border-color:#f59e0b}
+.result.verdict-HIGH{background:linear-gradient(135deg,#d1fae5,#fff);border-color:#16a34a}
+.result.verdict-unknown{background:linear-gradient(135deg,#f1f5f9,#fff);border-color:#64748b}
+
+.r-banner{display:flex;align-items:center;gap:18px;padding-bottom:18px;border-bottom:2px dashed rgba(0,0,0,.1);margin-bottom:18px}
+.r-icon{font-size:64px;line-height:1}
+.r-text-main{flex:1}
+.r-title{font-size:36px;font-weight:800;line-height:1.1}
+.verdict-NONE .r-title,.verdict-LOW .r-title{color:#991b1b}
+.verdict-MID .r-title{color:#92400e}
+.verdict-HIGH .r-title{color:#065f46}
+.verdict-unknown .r-title{color:#334155}
+.r-subtitle{font-size:16px;color:#5b6472;margin-top:6px;font-weight:500}
+
+.r-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+.r-card{background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:14px}
+.r-card .k{font-size:11px;color:#5b6472;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.r-card .v{font-size:18px;color:#1f2937;font-weight:700;margin-top:4px;font-family:'Consolas',monospace}
+.r-card .v.big{font-size:32px;font-weight:800}
+
+.r-rec{background:rgba(255,255,255,.8);border:2px dashed rgba(0,0,0,.15);border-radius:12px;padding:18px;text-align:center;margin-bottom:18px}
+.r-rec-label{font-size:13px;color:#5b6472;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.r-rec-qty{font-size:54px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.verdict-NONE .r-rec-qty,.verdict-LOW .r-rec-qty{color:#991b1b}
+.verdict-MID .r-rec-qty{color:#92400e}
+.verdict-HIGH .r-rec-qty{color:#065f46}
+.r-rec-note{font-size:14px;color:#5b6472;margin-top:8px;font-weight:500}
+
+/* 단종예정 경고 배너 */
+.disc-banner{background:#dc2626;color:#fff;padding:16px 22px;border-radius:14px;margin-bottom:18px;
+  font-size:24px;font-weight:800;text-align:center;box-shadow:0 6px 18px rgba(220,38,38,.4);
+  animation:discPulse 1.1s ease-in-out infinite}
+.disc-banner .disc-sub{font-size:15px;font-weight:600;margin-top:7px;opacity:.95}
+@keyframes discPulse{0%,100%{box-shadow:0 6px 18px rgba(220,38,38,.4)}50%{box-shadow:0 6px 26px rgba(220,38,38,.75)}}
+.result.is-discontinue{border-color:#dc2626 !important}
+
+.r-history{margin-top:14px}
+.r-history h4{font-size:13px;color:#1f2937;font-weight:700;margin-bottom:8px}
+.r-history table{width:100%;font-size:12px;border-collapse:collapse;background:rgba(255,255,255,.6);border-radius:8px;overflow:hidden}
+.r-history th{background:rgba(0,0,0,.06);color:#5b6472;padding:7px 9px;text-align:left;font-weight:700;font-size:11px}
+.r-history td{padding:6px 9px;border-top:1px solid rgba(0,0,0,.05)}
+
+/* 끝자리 검색 후보 */
+.candidates{max-width:920px;margin:14px auto 0;padding:0 24px}
+.candidates.hidden{display:none}
+.candidates .ch{font-size:12px;color:#5b6472;font-weight:600;margin-bottom:8px;text-align:center}
+.candidates .ch b{color:#15803d}
+.cand-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;
+  background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px}
+.cand-item{padding:10px 14px;border-radius:8px;cursor:pointer;display:grid;
+  grid-template-columns:160px 1fr 110px 90px 70px;gap:10px;align-items:center;
+  border:1px solid transparent;transition:all .1s}
+.cand-item:hover{background:#f0fdf4;border-color:#86efac}
+.cand-item .c-code{font-family:Consolas,monospace;font-weight:700;font-size:13px;color:#1f2937}
+.cand-item .c-code mark{background:#fef08a;color:#78350f;padding:0 2px;border-radius:3px}
+.cand-item .c-info{font-size:12px;color:#5b6472}
+.cand-item .c-info b{color:#1f2937}
+.cand-item .c-spec{font-family:Consolas,monospace;font-size:12px;color:#15803d;font-weight:600}
+.cand-item .c-qty{font-size:13px;font-weight:700;color:#1f2937;text-align:right;font-variant-numeric:tabular-nums}
+.cand-item .c-grade{font-size:10px;font-weight:700;text-align:center;padding:3px 8px;border-radius:8px}
+.cand-item .c-grade.g-NONE,.cand-item .c-grade.g-LOW{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.cand-item .c-grade.g-MID{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.cand-item .c-grade.g-HIGH{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.cand-empty{padding:20px;text-align:center;color:#9ca3af;font-size:12px}
+
+/* QR 스캔 버튼 + 모달 */
+.qr-btn{margin-top:14px;padding:14px 28px;background:#15803d;color:#fff;border:none;border-radius:10px;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 4px 12px rgba(124,58,237,.3)}
+.qr-btn:hover{background:#166534}
+.qr-btn:active{transform:translateY(1px)}
+.qr-btn .ic{font-size:20px}
+.qr-modal{position:fixed;inset:0;background:rgba(15,23,42,.85);display:none;
+  align-items:center;justify-content:center;z-index:10000;padding:14px}
+.qr-modal.open{display:flex}
+.qr-modal-inner{background:#fff;border-radius:18px;padding:18px;max-width:560px;width:100%;
+  box-shadow:0 18px 60px rgba(0,0,0,.5)}
+.qr-modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.qr-modal-hdr h3{font-size:17px;color:#14532d;font-weight:700}
+.qr-modal-close{padding:6px 14px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit}
+.qr-modal-close:hover{background:#e2e8f0}
+#qr-reader{width:100%;min-height:280px;background:#000;border-radius:12px;overflow:hidden;position:relative}
+#qr-reader video{width:100%;height:auto;display:block}
+.qr-status{margin-top:10px;font-size:13px;color:#5b6472;text-align:center;font-weight:500}
+.qr-status.error{color:#dc2626;font-weight:600}
+.qr-fallback{margin-top:10px;padding:10px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:11px;color:#92400e;line-height:1.5}
+.qr-fallback b{color:#78350f}
+.qr-file-input{margin-top:10px;display:block;width:100%;padding:10px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;text-align:center;color:#1f2937}
+
+.recent-scans{padding:14px 24px;border-top:1px solid #e5e7eb;background:#fff;font-size:11px;color:#5b6472}
+.recent-scans h4{font-size:11px;font-weight:700;color:#5b6472;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.recent-scans .item{display:inline-block;padding:4px 10px;border-radius:14px;background:#f1f5f9;
+  border:1px solid #e2e8f0;margin-right:6px;margin-bottom:5px;font-family:Consolas,monospace;cursor:pointer}
+.recent-scans .item:hover{background:#e0e7ff;border-color:#15803d}
+.recent-scans .item.v-NONE,.recent-scans .item.v-LOW{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+.recent-scans .item.v-MID{background:#fef3c7;border-color:#fde68a;color:#92400e}
+.recent-scans .item.v-HIGH{background:#d1fae5;border-color:#a7f3d0;color:#065f46}
+
+.toggle-area{padding:14px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.toggle-area label{font-size:12px;color:#5b6472;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500}
+.toggle-area input{cursor:pointer}
+.footer{padding:14px 18px;font-size:11px;color:#5b6472;border-top:1px solid #e5e7eb;text-align:center;background:#fff}
+
+.mat-chip{display:inline-block;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:700;
+  font-family:'Consolas',monospace;letter-spacing:.2px}
+.pp-item:hover{background:#ecfdf5}
+/* 가로 2분할: 좌 입력 / 우 결과 */
+.main-split{display:flex;gap:16px;padding:16px 24px;align-items:flex-start}
+.split-left{flex:0 0 440px;max-width:480px}
+.split-right{flex:1;min-width:0}
+.split-left .scan-area{border-bottom:none;border:1px solid #e5e7eb;border-radius:14px;padding:22px 18px;position:sticky;top:12px}
+.split-left .scan-input-wrap{max-width:none}
+.split-right .result{margin:0}
+.result-empty{padding:70px 20px;text-align:center;color:#9ca3af;font-size:16px;border:2px dashed #e5e7eb;border-radius:14px;line-height:1.6}
+@media(max-width:900px){.main-split{flex-direction:column}.split-left{flex:1 1 auto;max-width:none}.split-left .scan-area{position:static}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="core.js"></script>
+<script src="service.js"></script>
+<script>firebase.initializeApp({ databaseURL: 'https://kimkongjang-c8b9c-default-rtdb.asia-southeast1.firebasedatabase.app' });</script>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>📷 작업지시 바코드 스캐너</h1>
+    <div class="sub">발주상세NO 스캔 → 최근 100일 라벨 이력 → 과생산 위험 자동 판정</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="gen" id="genInfo">데이터 생성시각: 로딩…</div>
+    <a href="admin.html" style="padding:8px 16px;background:#14532d;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap">🔒 관리자</a>
+  </div>
+</div>
+
+<div id="https-banner" style="display:none;background:linear-gradient(90deg,#fef3c7,#fff);border-bottom:2px solid #f59e0b;padding:14px 22px;text-align:center;font-size:14px;color:#92400e;font-weight:600">
+  📱 카메라/QR 스캔을 사용하시려면 HTTPS 주소로 접속하세요 →
+  <a href="#" id="https-link" style="background:#15803d;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700;margin-left:8px">🔒 HTTPS로 이동</a>
+  <span style="display:block;font-size:11px;color:#5b6472;margin-top:4px;font-weight:400">처음 접속 시 "보안 경고 → 고급 → 계속" 한 번만 누르세요</span>
+</div>
+
+<div class="main-split">
+<div class="split-left">
+<div class="scan-area">
+  <div class="scan-input-wrap">
+    <div class="scan-label">⬇ 바코드 스캔 또는 발주상세NO 입력 ⬇</div>
+    <input id="barcode" type="text" placeholder="B1KA________" autofocus autocomplete="off" spellcheck="false">
+    <div class="scan-hint"><span class="pulse"></span>스캔 대기 중 · 입력 후 Enter 또는 자동 처리 (700ms)</div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #e5e7eb">
+      <div style="font-size:13px;color:#5b6472;font-weight:700;margin-bottom:8px">또는 치수·소재로 직접 조회</div>
+      <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;align-items:center">
+        <input id="mIn" placeholder="내경" inputmode="decimal" style="width:88px;padding:11px;border:2px solid #cbd5e1;border-radius:8px;font-size:17px;text-align:center" onkeydown="if(event.key==='Enter')manualSearch()">
+        <span style="color:#94a3b8;font-weight:700">*</span>
+        <input id="mOut" placeholder="외경" inputmode="decimal" style="width:88px;padding:11px;border:2px solid #cbd5e1;border-radius:8px;font-size:17px;text-align:center" onkeydown="if(event.key==='Enter')manualSearch()">
+        <span style="color:#94a3b8;font-weight:700">*</span>
+        <input id="mH" placeholder="폭(선택)" inputmode="decimal" style="width:88px;padding:11px;border:2px solid #cbd5e1;border-radius:8px;font-size:17px;text-align:center" onkeydown="if(event.key==='Enter')manualSearch()">
+        <select id="mMat" style="padding:11px;border:2px solid #cbd5e1;border-radius:8px;font-size:17px;background:#fff">
+          <option value="">소재</option>
+          <option>CN10</option><option>CN20</option><option>CM20</option><option>RS40</option><option>RS20</option><option>CG72</option><option>M/P</option><option>M/T</option><option>M/NW</option><option>Tube</option>
+        </select>
+        <button onclick="manualSearch()" style="padding:11px 22px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer">🔍 조회</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+      <button class="qr-btn" id="qr-open"><span class="ic">📱</span> 카메라로 QR 스캔</button>
+      <button class="qr-btn" id="serial-btn" style="background:#0891b2">
+        <span id="serial-led" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#9ca3af"></span>
+        <span id="serial-btn-text">🔌 USB 시리얼 스캐너 연결</span>
+      </button>
+    </div>
+    <div id="serial-info" style="margin-top:8px;font-size:11px;color:#5b6472"></div>
+  </div>
+</div>
+</div><!-- /split-left -->
+<div class="split-right">
+
+<div class="qr-modal" id="qr-modal">
+  <div class="qr-modal-inner">
+    <div class="qr-modal-hdr">
+      <h3>📱 QR / 바코드 카메라 스캔</h3>
+      <button class="qr-modal-close" id="qr-close">닫기 ✕</button>
+    </div>
+    <div id="qr-reader"></div>
+    <div class="qr-status" id="qr-status">카메라 시작 중...</div>
+    <label class="qr-file-input" for="qr-file">📸 또는 사진 파일에서 QR 인식 (HTTPS 미지원 환경용)</label>
+    <input type="file" id="qr-file" accept="image/*" capture="environment" style="display:none">
+    <div class="qr-fallback" id="qr-fallback" style="display:none">
+      <b>⚠️ 카메라 접근 실패</b><br>
+      iPhone/안드로이드에서 카메라가 안 열린다면:<br>
+      1) Chrome/Safari에서 페이지를 다시 여세요<br>
+      2) HTTP(192.168.0.60)에서는 일부 브라우저가 카메라를 차단합니다<br>
+      3) 위 "사진 파일에서 인식"을 사용하세요 (카메라 앱으로 찍은 후 선택)
+    </div>
+  </div>
+</div>
+
+<div class="candidates hidden" id="candidates">
+  <div class="ch">짧게 입력하셨네요 — <b id="cand-q"></b> 로 끝나는 후보입니다. 클릭하면 그 발주로 판정합니다.</div>
+  <div class="cand-list" id="cand-list"></div>
+</div>
+
+<div class="result" id="result"></div>
+<div id="result-empty" class="result-empty">📷 바코드를 스캔하거나<br>왼쪽에서 치수·소재로 조회하세요</div>
+</div><!-- /split-right -->
+</div><!-- /main-split -->
+
+<div class="recent-scans">
+  <h4>최근 스캔 (10건)</h4>
+  <div id="recent"></div>
+</div>
+
+<div class="toggle-area">
+  <label><input type="checkbox" id="opt-sound" checked> 🔊 음성 안내</label>
+  <label><input type="checkbox" id="opt-autoclear" checked> ⏲ 5초 후 자동 초기화</label>
+  <label><input type="checkbox" id="opt-bigfont"> 🔍 더 큰 글씨</label>
+  <label>🖥 이 PC 이름: <input id="opt-device" type="text" placeholder="회의실PC"
+    style="width:130px;padding:5px 9px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;font-family:inherit"
+    title="스캔 기록에 남는 기기 이름. 회의실 PC는 그대로, 조회용 PC는 본인 이름 등으로 바꾸세요."></label>
+  <span style="margin-left:auto;font-size:11px;color:#5b6472">단축키: ESC = 초기화</span>
+</div>
+
+<div id="coverage" style="margin:16px 24px;padding:14px 16px;border-radius:14px;background:#fff;border:2px solid #e5e7eb">
+  <div onclick="toggleCoverage()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+    <div id="cov-summary" style="font-size:15px;font-weight:700;color:#1f2937">미스캔 현황 로딩…</div>
+    <button id="cov-toggle" type="button" style="padding:6px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#1f2937">▼ 미스캔 목록 펼치기</button>
+  </div>
+  <div id="cov-missing" style="display:none;flex-wrap:wrap;gap:6px;max-height:300px;overflow:auto;margin-top:12px"></div>
+</div>
+<div id="preprod" style="margin:0 24px 16px;padding:14px 16px;border-radius:14px;background:#fff;border:2px solid #bbf7d0">
+  <div onclick="togglePreprod()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+    <div id="pp-summary" style="font-size:15px;font-weight:700;color:#166534">🟢 선생산 대상 로딩…</div>
+    <button id="pp-toggle" type="button" style="padding:6px 14px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#166534">▼ 목록 펼치기</button>
+  </div>
+  <div id="pp-list" style="display:none;max-height:340px;overflow:auto;margin-top:12px"></div>
+</div>
+<div class="footer">바코드 스캐너 · 쏠트리 · 100일 라벨 이력 기반 자동 판정</div>
+
+<script>
+let DATA = {detail_index:{}, pending:[], label_history:{}, stock:{}, label_days:100, generated:''};
+const $ = id => document.getElementById(id);
+
+// 이 PC(브라우저) 기기 이름 — 스캔 기록 device 칸에 저장. PC마다 한 번 설정하면 유지됨.
+// 회의실 PC는 "회의실PC", 사장/관리자 조회용 PC는 본인 이름 등으로 바꿔두면 admin에서 구분됨.
+let DEVICE = localStorage.getItem('scanner_device') || '회의실PC';
+(function(){
+  var di = document.getElementById('opt-device');
+  if(di){
+    di.value = DEVICE;
+    di.addEventListener('change', function(){
+      DEVICE = (di.value || '').trim() || '회의실PC';
+      di.value = DEVICE;
+      localStorage.setItem('scanner_device', DEVICE);
+    });
+  }
+})();
+
+// 재질 색상
+const MAT_DEFS = {
+  "CN10":{"bg":"#facc15","border":"#fcd34d","text":"#78350f"},
+  "CN20":{"bg":"#374151","border":"#1f2937","text":"#ffffff"},
+  "RS40":{"bg":"#7dd3e8","border":"#5bb8cc","text":"#1a3a4a"},
+  "RS20":{"bg":"#9ca3af","border":"#6b7280","text":"#ffffff"},
+  "CM20":{"bg":"#d1d5db","border":"#b0b5bc","text":"#374151"},
+  "M/NW":{"bg":"#fecaca","border":"#ef4444","text":"#7f1d1d"},
+  "M/NWP":{"bg":"#fdba74","border":"#f97316","text":"#7c2d12"},
+  "M/NWG":{"bg":"#bef264","border":"#65a30d","text":"#365314"},
+  "M/NWI":{"bg":"#86efac","border":"#16a34a","text":"#14532d"},
+  "M/P":{"bg":"#d8b4fe","border":"#9333ea","text":"#581c87"},
+  "M/T":{"bg":"#f0abfc","border":"#c026d3","text":"#581c87"},
+  "CG72":{"bg":"#fbcfe8","border":"#db2777","text":"#831843"},
+  "Tube":{"bg":"#bae6fd","border":"#0284c7","text":"#0c4a6e"}
+};
+function matBase(n){ return (n||'').split(/[(\s]/)[0]; }
+function matChip(m){
+  if(!m) return '-';
+  const d = MAT_DEFS[m] || MAT_DEFS[matBase(m)] || {bg:'#e5e7eb',border:'#9ca3af',text:'#374151'};
+  return `<span class="mat-chip" style="background:${d.bg};border:1px solid ${d.border};color:${d.text}">${m}</span>`;
+}
+
+const VERDICTS = {
+  NONE: {icon:'🚫', title:'과생산 금지!', sub:'최근 ' + DATA.label_days + '일간 동일 사양 라벨 이력이 전혀 없습니다',
+         msg:'발주수량만 정확히 가공하세요. 여분은 그대로 적체 재고가 됩니다.',
+         rec_label:'추천 생산량 (여분 0개)', extra_pct:0, sound:'과생산 금지. 발주수량만 정확히 가공하세요.'},
+  LOW:  {icon:'⚠️', title:'주의 — 일회성!', sub:'최근 ' + DATA.label_days + '일간 동일 사양 발주 1건뿐',
+         msg:'여분 금지. 발주수량만 정확히 가공하세요.',
+         rec_label:'추천 생산량 (여분 0개)', extra_pct:0, sound:'주의. 일회성 제품입니다. 여분 금지.'},
+  MID:  {icon:'🟡', title:'가끔 발주 — 소량 여분',
+         sub:'최근 ' + DATA.label_days + '일간 2~4건 발주됨',
+         msg:'발주수량 + 2% 정도 여분 가능 (최대 30개).',
+         rec_label:'추천 생산량', extra_pct:0.02, sound:'가끔 발주 제품입니다. 소량 여분 가능.'},
+  HIGH: {icon:'✅', title:'자주 발주 — 정상 여분 가능',
+         sub:'최근 ' + DATA.label_days + '일간 5건+ 발주됨',
+         msg:'CNC 여분 생산 관행에 따른 적정 여분 가능 (5% 또는 +10).',
+         rec_label:'추천 생산량', extra_pct:0.05, sound:'자주 발주 제품. 정상 여분 허용.'},
+  unknown: {icon:'❓', title:'알 수 없는 바코드',
+            sub:'발주상세NO를 ERP에서 찾을 수 없습니다',
+            msg:'바코드를 다시 확인하거나 직접 입력하세요.',
+            rec_label:'-', extra_pct:0, sound:'알 수 없는 바코드입니다.'},
+};
+
+// ───────────────────────────────────────────────────────────────
+// 단종예정 품목 — 작업지시서를 찍었을 때 '해당 거래처 발주'면
+// "정수량만 생산(여분·선생산 금지)" 경고를 띄운다.
+// 디와이파워가 단종 통보한 7개. 같은 사양이라도 다른 거래처(수출 등)
+// 발주면 단종 아님 → customer로 게이팅한다.
+// 치수 표기순서가 데이터마다 달라서 '치수 숫자집합 + 재질'로 매칭(순서 무관).
+// ★ 목록/거래처 수정은 여기만 고치면 됨 (새로고침하면 바로 반영).
+// ───────────────────────────────────────────────────────────────
+const DISCONTINUE = [
+  {code:'H70059900', size:'WEAR RING_PW D75D70W15',   material:'CN10', customer:'디와이파워'},  // 70×75×15
+  {code:'H72430800', size:'WEAR RING_PW D65D60W6',    material:'CN10', customer:'디와이파워'},  // 60×65×6
+  {code:'H72430600', size:'WEAR RING_PW D55D50W6',    material:'CN10', customer:'디와이파워'},  // 50×55×6
+  {code:'H70711100', size:'WEAR RING_RW D40D45W14.8', material:'RS40', customer:'디와이파워'},  // 40×45×14.8
+  {code:'H71550900', size:'WEAR RING_APW D75D80W20',  material:'CM20', customer:'디와이파워'},  // 75×80×20
+  {code:'H72037200', size:'WEAR RING_RW D165D157W15', material:'RS40', customer:'디와이파워'},  // 157×165×15
+  {code:'H71549900', size:'WEAR RING_APW D90D84W25',  material:'CM20', customer:'디와이파워'},  // 84×90×25
+];
+function _numset(s){
+  if(!s) return '';
+  s = String(s);
+  let vals = [];
+  if(/[Dd]\d/.test(s) && /[Ww]\d/.test(s)){                 // D..D..W.. 표기
+    vals = [...s.matchAll(/[Dd](\d+(?:\.\d+)?)/g)].map(m=>+m[1])
+      .concat([...s.matchAll(/[Ww](\d+(?:\.\d+)?)/g)].map(m=>+m[1]));
+  }
+  if(!vals.length) vals = (s.match(/\d+(?:\.\d+)?/g)||[]).map(Number);  // a*b*c 등
+  return vals.sort((a,b)=>a-b).join(',');
+}
+function _matBaseU(m){ return (m||'').toString().split(/[(\s]/)[0].trim().toUpperCase(); }
+const _DISC_KEYS = DISCONTINUE.map(d=>({...d, ns:_numset(d.size), mb:_matBaseU(d.material)}));
+function findDiscontinue(spec, material, company){
+  const ns = _numset(spec), mb = _matBaseU(material);
+  if(!ns) return null;
+  const co = (company||'').toString();
+  // 작업지시 스캔이면 거래처가 있음 → 거래처 일치 요구.
+  // 치수 수동조회는 거래처 미상(사양 직접조회) → 사양만으로 매칭(안내용).
+  const knownCo = co && co.indexOf('사양 직접조회') < 0;
+  return _DISC_KEYS.find(d => d.ns===ns && d.mb===mb
+      && (!d.customer || !knownCo || co.includes(d.customer))) || null;
+}
+
+function calcRec(order_qty, grade){
+  if(order_qty <= 0) return order_qty;
+  const v = VERDICTS[grade];
+  if(grade === 'HIGH'){
+    return order_qty + Math.max(10, Math.min(100, Math.round(order_qty * 0.05)));
+  } else if(grade === 'MID'){
+    return order_qty + Math.max(3, Math.min(30, Math.round(order_qty * 0.02)));
+  }
+  return order_qty;
+}
+
+function lookup(barcode){
+  const code = barcode.trim().toUpperCase();
+  // 1) 발주상세NO 직접 매칭
+  let info = DATA.detail_index[code];
+  let matchedBy = 'detail';
+  // 2) (업체|품번)이 입력된 경우 (예: "WIPRO|BRW20P022200")
+  if(!info && code.includes('|') && DATA.job_by_part){
+    info = DATA.job_by_part[code];
+    matchedBy = 'part';
+  }
+  // 3) 품번만 입력 — fallback (느림이지만 5천건 정도 OK)
+  if(!info){
+    for(const k in DATA.detail_index){
+      const v = DATA.detail_index[k];
+      if((v.part_no||'').toUpperCase() === code){ info = v; matchedBy='partno'; break; }
+    }
+  }
+  if(!info) return {info:null, hist:null, grade:'unknown', matchedBy:null};
+  const fk = info.spec ? (info.spec.replace(/\s+/g,'').toUpperCase().replace(/[X×]/g,'*') + '|' + (info.material||'')) : '';
+  const hist = DATA.label_history[fk] || null;
+  const grade = hist ? hist.grade : 'NONE';
+  return {info, hist, grade, matchedBy};
+}
+
+const recent = [];
+const MAX_RECENT = 10;
+
+function render(barcode){
+  const {info, hist, grade, matchedBy} = lookup(barcode);
+  const r = $('result');
+  const v = VERDICTS[grade];
+  const disc = info ? findDiscontinue(info.spec, info.material, info.company) : null;
+
+  r.className = 'result show verdict-' + grade + (disc ? ' is-discontinue' : '');
+  if(!info){
+    r.innerHTML = `
+      <div class="r-banner">
+        <div class="r-icon">${v.icon}</div>
+        <div class="r-text-main">
+          <div class="r-title">${v.title}</div>
+          <div class="r-subtitle">${v.sub}</div>
+        </div>
+      </div>
+      <div class="r-info">
+        <div class="r-card"><div class="k">스캔 입력</div><div class="v">${barcode}</div></div>
+      </div>
+      <div style="text-align:center;font-size:15px;color:#5b6472;font-weight:500">${v.msg}</div>`;
+  } else {
+    let rec = calcRec(info.order_qty, grade);
+    if(disc) rec = info.order_qty;            // 단종예정 → 여분 0, 정수량만
+    const extra = rec - info.order_qty;
+    const histRows = (hist && hist.rows && hist.rows.length)
+      ? hist.rows.slice(0, 8).map(rw=>`<tr>
+          <td>${rw.date||'-'}</td>
+          <td><b>${rw.company||'-'}</b></td>
+          <td>${rw.po_num||'-'}</td>
+          <td style="text-align:right;font-weight:700">${(rw.qty||0).toLocaleString()}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4" style="padding:14px;text-align:center;color:#5b6472">최근 ${DATA.label_days}일 라벨 이력 없음</td></tr>`;
+    r.innerHTML = `
+      ${disc ? `<div class="disc-banner">🚫 ${disc.customer||''} 단종예정 — <b>정수량만 생산</b> (여분·선생산 금지)
+        <div class="disc-sub">발주수량 ${info.order_qty.toLocaleString()}개만 정확히 가공하세요${disc.code?` · ${disc.code}`:''}</div>
+      </div>` : ''}
+      <div class="r-banner">
+        <div class="r-icon">${disc ? '🚫' : v.icon}</div>
+        <div class="r-text-main">
+          <div class="r-title">${v.title}</div>
+          <div class="r-subtitle">${v.sub}</div>
+        </div>
+      </div>
+      <div class="r-info">
+        <div class="r-card"><div class="k">업체</div><div class="v">${info.company||'-'}</div></div>
+        <div class="r-card"><div class="k">치수</div><div class="v">${info.spec||'-'}</div></div>
+        <div class="r-card"><div class="k">재질</div><div class="v">${matChip(info.material)}</div></div>
+        <div class="r-card"><div class="k">업체품번</div><div class="v">${info.part_no||'-'}</div></div>
+        <div class="r-card"><div class="k">발주수량</div><div class="v big">${info.order_qty.toLocaleString()}</div></div>
+        <div class="r-card"><div class="k">${DATA.label_days}일간 라벨</div><div class="v">${hist ? hist.orders : 0}건 / ${hist ? hist.companies : 0}개 업체</div></div>
+      </div>
+      <div class="r-rec">
+        <div class="r-rec-label">${disc ? '생산 수량 (정수량)' : v.rec_label}</div>
+        <div class="r-rec-qty">${rec.toLocaleString()}</div>
+        <div class="r-rec-note">${disc ? '단종예정 — 발주수량만, 여분·선생산 금지' : v.msg + (extra>0?` · 발주 ${info.order_qty} + 여분 ${extra}`:'')}</div>
+      </div>
+      <div class="r-history">
+        <h4>📜 동일 사양 최근 라벨 이력</h4>
+        <table>
+          <thead><tr><th>발행일자</th><th>업체</th><th>발주번호</th><th style="text-align:right">수량</th></tr></thead>
+          <tbody>${histRows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // 최근 스캔 기록
+  recent.unshift({code: barcode, grade, ts: new Date()});
+  if(recent.length > MAX_RECENT) recent.length = MAX_RECENT;
+  renderRecent();
+
+  // 음성 안내
+  if($('opt-sound').checked && 'speechSynthesis' in window){
+    try {
+      const u = new SpeechSynthesisUtterance(disc ? '단종 예정 품목입니다. 발주수량만 정확히 생산하세요.' : v.sound);
+      u.lang = 'ko-KR'; u.rate = 1.05; u.volume = 1.0;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch(e){}
+  }
+
+  // 자동 초기화 (옵션)
+  if($('opt-autoclear').checked){
+    clearTimeout(window._clearTimer);
+    window._clearTimer = setTimeout(()=>{
+      $('barcode').value = '';
+      $('barcode').focus();
+    }, 5000);
+  } else {
+    $('barcode').select();
+  }
+}
+
+function renderRecent(){
+  const c = $('recent');
+  if(!recent.length){ c.innerHTML = '<span style="color:#9ca3af">아직 스캔 없음</span>'; return; }
+  c.innerHTML = recent.map(r=>{
+    const t = r.ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return `<span class="item v-${r.grade}" data-code="${r.code}">${r.code} <span style="color:#9ca3af;font-size:9px">(${t})</span></span>`;
+  }).join('');
+  c.querySelectorAll('.item').forEach(el=>{
+    el.addEventListener('click', ()=>{ $('barcode').value = el.dataset.code; scanViaServer(el.dataset.code); });
+  });
+}
+
+// === 끝자리/부분 후보 검색 ===
+const FULL_LEN = 12;        // 발주상세NO 정식 길이
+const MIN_SEARCH = 3;       // 후보 검색 최소 글자
+const MAX_CANDS = 50;       // 후보 표시 최대 수
+
+function searchCandidates(q){
+  // endsWith 우선 → includes(부분 매칭)
+  const Q = q.toUpperCase();
+  const ends = [], inc = [];
+  for(const code in DATA.detail_index){
+    const C = code.toUpperCase();
+    if(C === Q) continue;
+    if(C.endsWith(Q)) ends.push(code);
+    else if(C.includes(Q)) inc.push(code);
+    if(ends.length + inc.length > MAX_CANDS * 2) break;
+  }
+  return [...ends, ...inc].slice(0, MAX_CANDS);
+}
+
+function renderCandidates(q){
+  const box = $('candidates');
+  const list = $('cand-list');
+  if(q.length < MIN_SEARCH){
+    box.classList.add('hidden');
+    return;
+  }
+  const codes = searchCandidates(q);
+  if(!codes.length){
+    box.classList.remove('hidden');
+    $('cand-q').textContent = q;
+    list.innerHTML = '<div class="cand-empty">매칭되는 발주상세NO가 없습니다</div>';
+    return;
+  }
+  box.classList.remove('hidden');
+  $('cand-q').textContent = q;
+  const Q = q.toUpperCase();
+  list.innerHTML = codes.map(code=>{
+    const info = DATA.detail_index[code];
+    const fk = info.spec ? (info.spec.replace(/\s+/g,'').toUpperCase().replace(/[X×]/g,'*') + '|' + (info.material||'')) : '';
+    const hist = DATA.label_history[fk];
+    const g = hist ? hist.grade : 'NONE';
+    // 입력 부분 하이라이트
+    const idx = code.toUpperCase().lastIndexOf(Q);
+    const hl = idx>=0
+      ? code.slice(0,idx) + '<mark>' + code.slice(idx, idx+Q.length) + '</mark>' + code.slice(idx+Q.length)
+      : code;
+    return `<div class="cand-item" data-code="${code}">
+      <span class="c-code">${hl}</span>
+      <span class="c-info"><b>${info.company||'-'}</b> · ${info.part_no||'-'}</span>
+      <span class="c-spec">${info.spec||'-'} ${info.material||''}</span>
+      <span class="c-qty">${(info.order_qty||0).toLocaleString()}</span>
+      <span class="c-grade g-${g}">${g}</span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.cand-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const c = el.dataset.code;
+      $('barcode').value = c;
+      box.classList.add('hidden');
+      scanViaServer(c);
+    });
+  });
+}
+
+// 입력 처리
+const bc = $('barcode');
+let typingTimer;
+bc.addEventListener('input', e=>{
+  clearTimeout(typingTimer);
+  const v = e.target.value.trim();
+  $('result').classList.remove('show');
+  if(v.length === 0){
+    $('candidates').classList.add('hidden');
+    return;
+  }
+  if(/[^\x00-\x7F]/.test(v)){
+    // 한글 등 비ASCII = IME 조합값 → 무시 (전역 e.code 캡처가 처리)
+    $('candidates').classList.add('hidden');
+    return;
+  }
+  if(v.indexOf('/') !== -1){
+    // 사양 바코드(내경*외경*폭/소재/수량) → 길이 무관 즉시 사양 조회
+    $('candidates').classList.add('hidden');
+    typingTimer = setTimeout(()=>scanViaServer(v), 200);
+  } else if(v.length >= FULL_LEN){
+    // 정식 길이 → 즉시 판정 (700ms 대기 없이)
+    $('candidates').classList.add('hidden');
+    typingTimer = setTimeout(()=>scanViaServer(v), 200);
+  } else if(v.length >= MIN_SEARCH){
+    // 짧으면 후보 검색
+    renderCandidates(v);
+  } else {
+    $('candidates').classList.add('hidden');
+  }
+});
+bc.addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    clearTimeout(typingTimer);
+    const v = bc.value.trim();
+    if(v.indexOf('/') !== -1){
+      $('candidates').classList.add('hidden');
+      scanViaServer(v);
+    } else if(v.length >= FULL_LEN){
+      $('candidates').classList.add('hidden');
+      scanViaServer(v);
+    } else if(v.length >= MIN_SEARCH){
+      // 후보가 1개면 자동 선택
+      const codes = searchCandidates(v);
+      if(codes.length === 1){
+        bc.value = codes[0];
+        $('candidates').classList.add('hidden');
+        scanViaServer(codes[0]);
+      }
+    }
+  } else if(e.key === 'Escape'){
+    bc.value = '';
+    $('result').classList.remove('show');
+    $('candidates').classList.add('hidden');
+    bc.focus();
+  }
+});
+// 포커스 유지
+document.addEventListener('click', e=>{
+  if(!e.target.matches('input,button,label,select,textarea,a,.item,.item *')){
+    bc.focus();
+  }
+});
+
+// === 바코드 스캐너 IME 우회 — 물리 키(e.code)로 재구성 (한글 키보드여도 정상) ===
+(function(){
+  var buf='', last=0;
+  function codeChar(e){
+    var m, c=e.code;
+    if((m=/^Key([A-Z])$/.exec(c))) return m[1];
+    if((m=/^Digit([0-9])$/.exec(c))){
+      if(e.shiftKey){ return ({'1':'!','2':'@','3':'#','4':'$','5':'%','6':'^','7':'&','8':'*','9':'(','0':')'})[m[1]] || m[1]; }
+      return m[1];
+    }
+    if((m=/^Numpad([0-9])$/.exec(c))) return m[1];
+    if(c==='NumpadMultiply') return '*';
+    if(c==='NumpadDivide') return '/';
+    if(c==='NumpadDecimal') return '.';
+    if(c==='Slash') return e.shiftKey ? '?' : '/';
+    if(c==='Period') return e.shiftKey ? '>' : '.';
+    if(c==='Minus') return e.shiftKey ? '_' : '-';
+    return '';
+  }
+  document.addEventListener('keydown', function(e){
+    var now = e.timeStamp || 0;
+    if(now - last > 120) buf='';   // 사람 타이핑(느림)이면 리셋, 스캐너(빠름)는 누적
+    last = now;
+    if(e.key === 'Enter'){
+      if(buf.length >= 4 && (/[A-Z]/.test(buf) || buf.indexOf('/') >= 0 || buf.indexOf('*') >= 0)){
+        e.preventDefault(); e.stopPropagation();
+        var code = buf; buf='';
+        scanViaServer(code);   // IME 조합값 대신 e.code로 만든 정확한 코드 사용
+      } else { buf=''; }
+      return;
+    }
+    var x = codeChar(e);
+    if(x) buf += x;
+  }, true);
+})();
+// 더 큰 글씨 토글
+$('opt-bigfont').addEventListener('change', e=>{
+  document.body.style.fontSize = e.target.checked ? '120%' : '';
+});
+
+renderRecent();
+bc.focus();
+
+// === Web Serial — USB 시리얼 스캐너 (Honeywell/Zebra USB Serial 모드) ===
+let serialPort = null;
+let serialReader = null;
+let serialReadAborted = false;
+
+function processScannedCode(code){
+  // 스캐너 출력 정리
+  code = String(code || '').trim();
+  if(!code) return;
+  bc.value = code;
+  $('candidates').classList.add('hidden');
+  $('result').classList.remove('show');
+  if(code.indexOf('/') !== -1){
+    scanViaServer(code);
+  } else if(code.length >= FULL_LEN){
+    scanViaServer(code);
+  } else if(code.length >= MIN_SEARCH){
+    const codes = searchCandidates(code);
+    if(codes.length === 1){
+      bc.value = codes[0];
+      scanViaServer(codes[0]);
+    } else {
+      renderCandidates(code);
+      bc.focus();
+    }
+  } else {
+    bc.focus();
+  }
+}
+
+function updateSerialUI(connected, info){
+  const led = $('serial-led');
+  const txt = $('serial-btn-text');
+  const btn = $('serial-btn');
+  const inf = $('serial-info');
+  if(connected){
+    led.style.background = '#16a34a';
+    led.style.boxShadow = '0 0 0 4px #d1fae5';
+    txt.textContent = '🔌 시리얼 연결됨 (클릭하면 끊기)';
+    btn.style.background = '#16a34a';
+    inf.innerHTML = info || '<b style="color:#065f46">✓ 스캐너 신호 수신 중. 스캔하면 자동 입력됩니다.</b>';
+  } else {
+    led.style.background = '#9ca3af';
+    led.style.boxShadow = 'none';
+    txt.textContent = '🔌 USB 시리얼 스캐너 연결';
+    btn.style.background = '#0891b2';
+    inf.textContent = info || '';
+  }
+}
+
+async function listenSerial(){
+  if(!serialPort || !serialPort.readable) return;
+  const decoder = new TextDecoder();
+  serialReadAborted = false;
+  let buffer = '';
+  try {
+    while(serialPort.readable && !serialReadAborted){
+      const reader = serialPort.readable.getReader();
+      serialReader = reader;
+      try {
+        while(true){
+          const {value, done} = await reader.read();
+          if(done) break;
+          buffer += decoder.decode(value, {stream: true});
+          // CR/LF 또는 종료문자로 줄 분리
+          let m;
+          while((m = buffer.match(/^([^\r\n]*?)[\r\n]+/))){
+            processScannedCode(m[1]);
+            buffer = buffer.slice(m[0].length);
+          }
+          // 종료문자 없이 일정 길이 누적된 경우 (Suffix 미설정 등) — 200ms 무신호 시 처리
+          if(buffer.length > 200){
+            processScannedCode(buffer);
+            buffer = '';
+          }
+        }
+      } catch(e){
+        console.warn('serial read err:', e);
+      } finally {
+        try { reader.releaseLock(); } catch(e){}
+        serialReader = null;
+      }
+    }
+  } catch(e){
+    console.error('listenSerial:', e);
+  }
+}
+
+async function connectSerial(){
+  if(!('serial' in navigator)){
+    updateSerialUI(false, '⚠️ 이 브라우저는 Web Serial 미지원 — Chrome/Edge 최신 버전 + HTTPS 접속 필요');
+    return;
+  }
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost'){
+    updateSerialUI(false, '⚠️ Web Serial은 HTTPS 또는 localhost에서만 동작 — <a href="https://192.168.0.60:8843' + location.pathname + '" style="color:#15803d;font-weight:700">HTTPS로 이동</a>');
+    return;
+  }
+  try {
+    updateSerialUI(false, '포트 선택 다이얼로그를 확인하세요...');
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
+    serialPort = port;
+    updateSerialUI(true);
+    listenSerial();
+    // 연결 해제 감지 (USB 뽑힘 등)
+    port.addEventListener && port.addEventListener('disconnect', ()=>{
+      serialPort = null;
+      updateSerialUI(false, '⚠️ 시리얼 포트 연결 해제됨 (USB 뽑힘?)');
+    });
+  } catch(e){
+    if(e.name === 'NotFoundError'){
+      updateSerialUI(false, '포트 선택 취소됨');
+    } else {
+      updateSerialUI(false, '❌ 연결 실패: ' + e.message);
+    }
+  }
+}
+
+async function disconnectSerial(){
+  serialReadAborted = true;
+  if(serialReader){
+    try { await serialReader.cancel(); } catch(e){}
+    serialReader = null;
+  }
+  if(serialPort){
+    try { await serialPort.close(); } catch(e){}
+    serialPort = null;
+  }
+  updateSerialUI(false, '연결 해제됨');
+}
+
+$('serial-btn').addEventListener('click', ()=>{
+  if(serialPort) disconnectSerial();
+  else connectSerial();
+});
+
+// 페이지 로드 시 이전에 권한 부여된 포트 자동 재연결
+(async function autoConnectSerial(){
+  if(!('serial' in navigator)) return;
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+  try {
+    const ports = await navigator.serial.getPorts();
+    if(ports.length > 0){
+      const port = ports[0];
+      await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
+      serialPort = port;
+      updateSerialUI(true, '<b style="color:#065f46">✓ 이전 권한으로 자동 연결됨</b>');
+      listenSerial();
+    }
+  } catch(e){ console.warn('auto serial:', e); }
+})();
+
+// === HTTPS 안내 배너 — 숨김 (요청) ===
+// (카메라/QR 안내 배너 비표시. 시리얼 안내는 버튼 영역에 유지)
+
+// === QR / 바코드 카메라 스캔 ===
+let qrScanner = null;
+const qrModal = $('qr-modal');
+
+function onQrDetected(decoded){
+  if(!decoded) return;
+  const code = String(decoded).trim();
+  // 스캐너 정지
+  if(qrScanner){
+    qrScanner.stop().then(()=>qrScanner.clear()).catch(()=>{});
+    qrScanner = null;
+  }
+  qrModal.classList.remove('open');
+  // 입력란에 값 + 자동 판정
+  bc.value = code;
+  $('candidates').classList.add('hidden');
+  // 사양 바코드(/) 우선, 아니면 12자 발주상세NO
+  if(code.indexOf('/') !== -1){
+    scanViaServer(code);
+  } else if(code.length >= FULL_LEN){
+    scanViaServer(code);
+  } else if(code.length >= MIN_SEARCH){
+    const codes = searchCandidates(code);
+    if(codes.length === 1){
+      bc.value = codes[0];
+      scanViaServer(codes[0]);
+    } else {
+      renderCandidates(code);
+      bc.focus();
+    }
+  } else {
+    bc.focus();
+  }
+}
+
+async function startQrScan(){
+  $('qr-status').className = 'qr-status';
+  $('qr-status').textContent = '카메라 시작 중...';
+  $('qr-fallback').style.display = 'none';
+  try {
+    if(!window.Html5Qrcode){ throw new Error('html5-qrcode 라이브러리 로드 실패'); }
+    qrScanner = new Html5Qrcode('qr-reader');
+    await qrScanner.start(
+      { facingMode: 'environment' },  // 후면 카메라 우선
+      { fps: 12, qrbox: { width: 260, height: 260 }, aspectRatio: 1.333 },
+      (decodedText) => onQrDetected(decodedText),
+      () => {}  // 매 프레임 실패 시 무시
+    );
+    $('qr-status').textContent = '✓ QR/바코드를 화면 안에 비추세요. 인식되면 자동 입력됩니다.';
+  } catch(e){
+    console.error('QR 시작 실패:', e);
+    qrScanner = null;
+    $('qr-status').className = 'qr-status error';
+    $('qr-status').textContent = '카메라를 시작할 수 없습니다: ' + (e.message || e);
+    $('qr-fallback').style.display = 'block';
+  }
+}
+
+function stopQrScan(){
+  if(qrScanner){
+    qrScanner.stop().then(()=>qrScanner.clear()).catch(()=>{});
+    qrScanner = null;
+  }
+  qrModal.classList.remove('open');
+  bc.focus();
+}
+
+$('qr-open').addEventListener('click', ()=>{
+  qrModal.classList.add('open');
+  startQrScan();
+});
+$('qr-close').addEventListener('click', stopQrScan);
+qrModal.addEventListener('click', e=>{ if(e.target === qrModal) stopQrScan(); });
+
+// 파일 폴백 (사진에서 QR 인식)
+$('qr-file').addEventListener('change', async e=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  $('qr-status').className = 'qr-status';
+  $('qr-status').textContent = '사진 분석 중...';
+  try {
+    if(!window.Html5Qrcode){ throw new Error('라이브러리 미로드'); }
+    // 일회용 인스턴스
+    const tmp = new Html5Qrcode('qr-reader');
+    const result = await tmp.scanFile(file, true);
+    onQrDetected(result);
+  } catch(err){
+    $('qr-status').className = 'qr-status error';
+    $('qr-status').textContent = '사진에서 QR을 찾지 못했습니다: ' + (err.message || err);
+  } finally {
+    e.target.value = '';
+  }
+});
+
+// ===== Firebase 연동 (NAS 서버 대체) =====
+let CODE = localStorage.getItem('scanner_code') || '';
+let SCANNED = new Set();   // scanned_index 키 집합 (fbKey 적용된 발주NO)
+
+function fbRoot(){ return firebase.database().ref('scanner/' + CODE); }
+
+function nowTs(){
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())
+    +' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+}
+
+function applyRefdata(d, gen){
+  DATA = d;
+  const g = document.getElementById('genInfo');
+  let warn = '';
+  const t = new Date(String(gen || '').replace(' ', 'T')).getTime();
+  if (!isNaN(t) && (Date.now() - t) > 24 * 3600 * 1000) {
+    warn = ' <span style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;'
+      + 'padding:2px 8px;border-radius:6px;font-weight:800">⚠️ 데이터 갱신 필요(24시간 초과)</span>';
+  }
+  if (g) g.innerHTML = '데이터 생성시각: <b>'+(gen||'?')+'</b> · 최근 '
+    +(d.label_days||100)+'일 라벨 기준' + warn;
+  renderPreprod();
+  refreshCoverage();
+}
+
+function loadRefdata(){
+  fbRoot().child('generated').once('value').then(snap => {
+    const gen = snap.val();
+    if (!gen) { askCode('접속코드가 올바르지 않거나 데이터가 없습니다'); return; }
+    const cached = localStorage.getItem('scanner_refdata');
+    if (cached && localStorage.getItem('scanner_refdata_gen') === gen) {
+      applyRefdata(JSON.parse(cached), gen);
+      return;
+    }
+    fbRoot().child('refdata_json').once('value').then(s2 => {
+      const txt = s2.val();
+      if (!txt) return;
+      try {
+        localStorage.setItem('scanner_refdata', txt);
+        localStorage.setItem('scanner_refdata_gen', gen);
+      } catch (e) {}   // localStorage 한도 초과 시 캐시만 포기
+      applyRefdata(JSON.parse(txt), gen);
+    });
+  }).catch(() => {
+    const cached = localStorage.getItem('scanner_refdata');  // 오프라인 폴백
+    if (cached) applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || '');
+    else setSyncState(false);
+  });
+}
+
+function subscribeScans(){
+  fbRoot().child('scanned_index').on('value', snap => {
+    SCANNED = new Set(Object.keys(snap.val() || {}));
+    refreshCoverage();
+  });
+  fbRoot().child('scans').orderByChild('ts').limitToLast(50).on('value', snap => {
+    const arr = [];
+    snap.forEach(ch => { arr.push(ch.val()); });
+    arr.sort((a, b) => (a.ts < b.ts ? 1 : -1));
+    recent.length = 0;
+    arr.forEach(r => recent.push({
+      code: r.detail_no || r.code, grade: r.grade || 'NONE',
+      ts: new Date(String(r.ts).replace(' ', 'T')), device: r.device || '',
+    }));
+    renderRecent();
+  });
+}
+
+function setSyncState(ok){
+  let el = document.getElementById('sync-warn');
+  if (ok) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sync-warn';
+    el.style.cssText = 'position:fixed;bottom:12px;right:12px;background:#dc2626;'
+      + 'color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;z-index:999';
+    el.textContent = '⚠️ 기록 저장 실패 — 인터넷/Firebase 확인';
+    document.body.appendChild(el);
+  }
+}
+
+function askCode(msg){
+  let ov = document.getElementById('code-gate');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'code-gate';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.92);'
+      + 'z-index:1000;display:flex;align-items:center;justify-content:center';
+    ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px;width:320px;text-align:center">'
+      + '<div style="font-size:22px;margin-bottom:6px">📷</div>'
+      + '<div style="font-weight:800;font-size:17px;margin-bottom:10px">스캐너 접속코드</div>'
+      + '<div id="code-gate-msg" style="color:#dc2626;font-size:12px;min-height:16px;margin-bottom:8px"></div>'
+      + '<input id="code-gate-in" type="password" style="width:100%;padding:10px;border:1px solid #cbd5e1;'
+      + 'border-radius:8px;font-size:15px;text-align:center" placeholder="접속코드 입력">'
+      + '<button id="code-gate-btn" style="margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;'
+      + 'background:#15803d;color:#fff;font-weight:800;font-size:15px;cursor:pointer">입장</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('code-gate-btn').addEventListener('click', submitCode);
+    document.getElementById('code-gate-in').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submitCode();
+    });
+  }
+  document.getElementById('code-gate-msg').textContent = msg || '';
+  ov.style.display = 'flex';
+  document.getElementById('code-gate-in').focus();
+}
+
+function submitCode(){
+  const v = document.getElementById('code-gate-in').value.trim();
+  if (!v) return;
+  CODE = v;
+  localStorage.setItem('scanner_code', v);
+  document.getElementById('code-gate').style.display = 'none';
+  boot();
+}
+
+function boot(){
+  if (!CODE) { askCode(''); return; }
+  loadRefdata();
+  subscribeScans();
+}
+boot();
+function ppNormFk(info){
+  var s=(''+(info.spec||'')).replace(/\s+/g,'').toUpperCase().replace(/X/g,'*').replace(/×/g,'*');
+  return s+'|'+(info.material||'');
+}
+function renderPreprod(){
+  var idx=DATA.detail_index||{}, lh=DATA.label_history||{}, sq=DATA.spec_queue||{};
+  var seen={}, groups={};
+  (DATA.pending||[]).forEach(function(code){
+    if(seen[code]) return; seen[code]=1;
+    var info=idx[code]; if(!info) return;
+    var fk=ppNormFk(info), h=lh[fk];
+    var orders=h?h.orders:0, oq=info.order_qty||0;
+    if(orders>=12 && oq>0 && oq<=50){
+      if(!groups[fk]) groups[fk]={spec:info.spec||'', material:info.material||'', orders:orders,
+        avg:(h?Math.round(h.qty_sum/orders):0), queue:(sq[fk]||0), items:[]};
+      groups[fk].items.push({code:code, oq:oq, company:info.company||''});
+    }
+  });
+  var arr=Object.keys(groups).map(function(k){return groups[k];});
+  arr.sort(function(a,b){return b.orders-a.orders;});
+  var totalOrders=0; arr.forEach(function(g){totalOrders+=g.items.length;});
+  var s=document.getElementById('pp-summary');
+  if(s) s.innerHTML='🟢 선생산 대상 <b>'+arr.length+'개 품목</b> <span style="font-weight:500;color:#16a34a">('+totalOrders+'건 발주 · 100일 12회↑ AND 발주 50개↓)</span>';
+  var box=document.getElementById('pp-list');
+  if(!box) return;
+  box.innerHTML = arr.map(function(g){
+    var warn = g.queue>1 ? ' <span style="color:#b45309;font-weight:800">⚠️큐'+g.queue+'(중복주의)</span>' : '';
+    var head='<div style="background:#f0fdf4;border-radius:8px;padding:7px 11px;margin-top:10px;font-weight:800;color:#166534;font-size:14px">'
+      + g.spec+' '+g.material+warn
+      + ' <span style="font-weight:500;color:#16a34a">· 100일 '+g.orders+'회 · 평균 '+g.avg+'개/회'
+      + (g.items.length>1 ? ' · <b>같은 사양 '+g.items.length+'건</b>' : '')+'</span></div>';
+    var rows=g.items.map(function(x){
+      return '<div class="pp-item" data-code="'+x.code+'" style="display:grid;grid-template-columns:160px 80px 1fr;gap:8px;align-items:center;padding:7px 10px 7px 22px;border-bottom:1px solid #f0fdf4;font-size:13px;cursor:pointer">'
+        + '<span style="font-family:Consolas,monospace;font-weight:700;color:#15803d;text-decoration:underline">'+x.code+'</span>'
+        + '<span style="text-align:right">발주 '+x.oq+'</span>'
+        + '<span style="color:#334155">'+x.company+'</span></div>';
+    }).join('');
+    return head+rows;
+  }).join('') || '<div style="color:#9ca3af;padding:12px;text-align:center">선생산 대상 없음</div>';
+  box.querySelectorAll('.pp-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      scanViaServer(el.getAttribute('data-code'));
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  });
+}
+function togglePreprod(){
+  var m=document.getElementById('pp-list'), b=document.getElementById('pp-toggle');
+  if(!m) return;
+  var willShow=(m.style.display==='none' || m.style.display==='');
+  m.style.display = willShow ? 'block' : 'none';
+  if(b) b.textContent = willShow ? '▲ 목록 접기' : '▼ 목록 펼치기';
+}
+function refreshCoverage(){
+  if (!DATA || !DATA.detail_index) return;
+  renderCoverage(ScannerService.coverage(DATA, SCANNED));
+}
+function renderCoverage(c){
+  if(!c || c.total === undefined) return;
+  $('cov-summary').innerHTML = '대기 발주 <b>'+c.total+'</b>건 중 <b style="color:#16a34a">'
+    + c.scanned_count+'건 스캔</b> · <b style="color:#dc2626">미스캔 '+c.missing_count+'건</b>';
+  $('cov-missing').innerHTML = (c.missing||[]).map(function(m){ return '<span style="padding:5px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fecaca;'
+    + 'color:#991b1b;font-size:12px;font-family:Consolas,monospace" title="'+(m.company||'')+'">'
+    + m.detail_no+' <span style="color:#7f1d1d">'+(m.spec||'')+' '+(m.material||'')+'</span></span>';
+  }).join('') || '<span style="color:#16a34a;font-size:13px">✅ 대기 발주 모두 스캔 완료</span>';
+}
+function toggleCoverage(){
+  var m=document.getElementById('cov-missing'), b=document.getElementById('cov-toggle');
+  if(!m) return;
+  var willShow = (m.style.display==='none' || m.style.display==='');
+  m.style.display = willShow ? 'flex' : 'none';
+  if(b) b.textContent = willShow ? '▲ 미스캔 목록 접기' : '▼ 미스캔 목록 펼치기';
+}
+function toggleHist(){
+  var d=document.getElementById('hist-detail'), t=document.getElementById('hist-toggle');
+  if(!d) return;
+  var willShow = (d.style.display==='none' || d.style.display==='');
+  d.style.display = willShow ? 'block' : 'none';
+  if(t) t.textContent = willShow ? '▲ 발주이력 접기' : '▼ 발주이력 보기';
+}
+function manualSearch(){
+  var i=$('mIn').value.trim(), o=$('mOut').value.trim(), h=$('mH').value.trim(), m=$('mMat').value;
+  if(!i || !o){ alert('내경·외경을 입력하세요'); $('mIn').focus(); return; }
+  if(!m){ alert('소재를 선택하세요'); $('mMat').focus(); return; }
+  var dims = i+'*'+o+(h?('*'+h):'');
+  scanViaServer(dims+'/'+m+'/0');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function scanViaServer(code){
+  bc.value = '';            // 다음 스캔 대비 즉시 비움 (중복 누적 방지)
+  clearTimeout(typingTimer);
+  bc.focus();
+  if (!DATA || !DATA.detail_index || !Object.keys(DATA.detail_index).length) return;
+  const r = ScannerService.scanResult(DATA, code);
+  renderServerResult(code, r);
+  const entry = {
+    ts: nowTs(), code: code,
+    detail_no: r.detail_no || code, found: r.found ? 1 : 0,
+    company: r.company || '', spec: r.spec || '', material: r.material || '',
+    order_qty: r.order_qty || 0, grade: r.grade || '',
+    work_qty: r.work_qty || 0,
+    preprod_qty: (r.preprod_qty === null || r.preprod_qty === undefined) ? -1 : r.preprod_qty,
+    device: DEVICE, by: r.by || 'detail',
+  };
+  fbRoot().child('scans').push(entry)
+    .then(() => setSyncState(true)).catch(() => setSyncState(false));
+  if (r.found && r.by === 'detail' && r.detail_no) {
+    fbRoot().child('scanned_index').child(ScannerCore.fbKey(r.detail_no))
+      .set(entry.ts).catch(() => {});
+  }
+  refreshCoverage();   // 구독이 곧 갱신하지만 즉시 반영
+}
+function renderServerResult(code, r){
+  const el = $('result');
+  var _re = $('result-empty'); if(_re) _re.style.display = 'none';
+  if(!r.found){
+    el.className = 'result show verdict-unknown';
+    el.innerHTML = '<div class="r-banner"><div class="r-icon">❓</div>'
+      + '<div class="r-text-main"><div class="r-title">알 수 없는 바코드</div>'
+      + '<div class="r-subtitle">발주상세NO를 ERP에서 찾을 수 없습니다</div></div></div>'
+      + '<div class="r-info"><div class="r-card"><div class="k">스캔 입력</div>'
+      + '<div class="v">'+code+'</div></div></div>';
+    return;
+  }
+  const extra = r.work_qty - r.order_qty;          // 추가생산 = 권장총생산 − 발주
+  const eligible = !!r.preprod_eligible;           // 선생산 허용(12회+ AND 50개이하)
+  const st = (r.stock === null || r.stock === undefined) ? '미확인' : r.stock.toLocaleString()+'개';
+  const avg = r.avg_order ? r.avg_order.toLocaleString() : '-';
+  const ordN = (r.hist && r.hist.orders) ? r.hist.orders : 0;
+  const oqStr = r.order_qty.toLocaleString();
+  const noQty = (!r.order_qty || r.order_qty <= 0);   // 수량 미입력 = 조회 전용
+  const gLabel = ({NONE:'이력 없음', LOW:'일회성', MID:'가끔 발주', HIGH:'자주 발주'})[r.grade] || '';
+  const disc = findDiscontinue(r.spec, r.material, r.company);   // 단종예정 여부
+  var discCustKnown = !!(disc && r.company && r.company.indexOf('사양 직접조회') < 0);  // 작업지시(거래처 확정) vs 수동조회(미상)
+  // state: 조회전용 / 정수량 / 추가생산 +X / 추가 불필요
+  var verd, icon, title, sub;
+  if (noQty) {
+    verd='unknown'; icon='📊'; title='사양 조회';
+    sub='100일 <b>'+ordN+'회</b> 발주 · '+gLabel+' · 평균 '+avg+'개/회 (수량 입력 시 추가생산 계산)';
+  } else if (!eligible) {
+    var why = (r.order_qty > 50) ? '대량 발주(50개 초과)' : ('저빈도(100일 '+ordN+'회 < 12회)');
+    verd='unknown'; icon='📦'; title='정수량 생산';
+    sub='발주 <b>'+oqStr+'개</b>만 가공 · '+why;
+  } else if (extra > 0) {
+    verd='HIGH'; icon='✅'; title='추가생산 +'+extra.toLocaleString()+'개';
+    sub='발주 '+oqStr+' → 총 <b>'+r.work_qty.toLocaleString()+'개</b> 생산 (소량·다빈도 선생산, 평균 '+avg+'개/회)';
+  } else {
+    verd='unknown'; icon='ℹ️'; title='추가 불필요';
+    if (r.queued_others && r.queued_others > 0)
+      sub='이미 같은 사양 생산 큐에 <b>'+r.queued_others.toLocaleString()+'개</b> 잡힘 · 발주 '+oqStr+'개만';
+    else
+      sub='재고가 평균물량 충당 · 발주 <b>'+oqStr+'개</b>만';
+  }
+  // 단종예정이면 정수량으로 덮어쓴다 (여분·선생산 금지)
+  if (disc) {
+    verd='NONE'; icon='🚫';
+    var cust = disc.customer || '';
+    if (discCustKnown) {
+      // 작업지시 = 해당 거래처(디와이파워) 발주 확정
+      title = noQty ? '단종예정 사양' : '단종예정 정수량';
+      sub = cust+' 단종예정 — '+(noQty?'발주수량만 정수량 생산':'발주 <b>'+oqStr+'개</b>만 가공')+' (여분·선생산 금지)';
+    } else {
+      // 치수 수동조회 = 거래처 미상 → 조건부 안내
+      title = cust+' 발주면 정수량';
+      sub = '<b>'+cust+' 발주면 단종예정</b> — 발주수량만 정수량 생산 (여분·선생산 금지) · 타 거래처는 정상';
+    }
+  }
+  const dm = r.hist ? ('📊 최근 '+(DATA.label_days||100)+'일 발주 '+(r.hist.qty_sum||0).toLocaleString()+'개 · '+(r.hist.orders||0)+'회') : '';
+  var qOther = (r.queued_others && r.queued_others>0) ? ' · 다른 작업지시 <b>'+r.queued_others.toLocaleString()+'개</b> 생산 대기' : '';
+  var qWarn = (r.spec_queue && r.spec_queue > 1)
+    ? '<div style="margin:0 0 14px;padding:12px 16px;border-radius:10px;background:#fef3c7;border:2px solid #f59e0b;color:#92400e;font-weight:800;font-size:16px">⚠️ 같은 사양 생산 대기 '+r.spec_queue+'건 (이 발주 포함)'+qOther+' — 중복 선생산 주의!</div>'
+    : '';
+  var histRows = '', histChart = '';
+  if (r.hist && r.hist.rows && r.hist.rows.length) {
+    var rws = r.hist.rows;
+    var DAYS = DATA.label_days || 100;
+    var nowT = new Date().getTime(), startT = nowT - DAYS*86400000;
+    var maxQ = 1;
+    rws.forEach(function(x){ if((x.qty||0) > maxQ) maxQ = x.qty; });
+    // 히스토그램 (100일 X축, 발주일 위치 · 높이=수량)
+    var bars = rws.map(function(x){
+      var t = new Date((x.date||'')+'T00:00:00').getTime();
+      if(isNaN(t)) return '';
+      var xp = (t-startT)/(nowT-startT)*100; if(xp<0)xp=0; if(xp>100)xp=100;
+      var hp = Math.round((x.qty||0)/maxQ*64) + 4;
+      return '<div title="'+(x.date||'')+' · '+(x.company||'')+' · '+((x.qty||0).toLocaleString())+'개" '
+        + 'style="position:absolute;bottom:0;left:'+xp.toFixed(1)+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end">'
+        + '<span style="font-size:10px;font-weight:800;color:#166534;white-space:nowrap">'+((x.qty||0).toLocaleString())+'</span>'
+        + '<div style="width:9px;height:'+hp+'px;background:linear-gradient(#22c55e,#052e16);border-radius:3px 3px 0 0"></div>'
+        + '</div>';
+    }).join('');
+    var sdt = new Date(startT); var sd = (sdt.getMonth()+1)+'/'+sdt.getDate();
+    histChart = '<div style="font-size:12px;color:#64748b;font-weight:700;margin:2px 4px 0">📈 최근 '+DAYS+'일 발주 추이 (막대=발주, 높이=수량)</div>'
+      + '<div style="position:relative;height:80px;margin:18px 12px 24px;border-left:2px solid #d1d5db;border-bottom:2px solid #052e16">'
+      + bars
+      + '<span style="position:absolute;bottom:-18px;left:0;font-size:11px;color:#94a3b8;font-weight:600">'+sd+'</span>'
+      + '<span style="position:absolute;bottom:-18px;right:0;font-size:11px;color:#94a3b8;font-weight:600">오늘</span>'
+      + '</div>';
+    // 고정 크기 카드 (5자리 기준 일정 사이즈)
+    histRows = rws.map(function(x){ return '<div style="width:150px;flex:0 0 150px;border:1px solid #d1d5db;border-radius:12px;background:#fff;padding:12px 14px">'
+      + '<div style="color:#16a34a;font-weight:700;font-size:13px">'+(x.date||'-')+'</div>'
+      + '<div style="font-weight:900;color:#052e16;font-size:30px;line-height:1.1;margin:2px 0">'+((x.qty||0).toLocaleString())+'</div>'
+      + '<div style="color:#64748b;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(x.company||'')+'</div>'
+      + '</div>'; }).join('');
+  }
+  var prod = (DATA.detail_index && DATA.detail_index[r.detail_no]) ? (DATA.detail_index[r.detail_no].product || '') : '';
+  el.className = 'result show verdict-' + verd + (disc ? ' is-discontinue' : '');
+  el.innerHTML =
+    (disc ? '<div class="disc-banner">🚫 '
+        + (discCustKnown
+            ? (disc.customer||'')+' 단종예정 — <b>정수량만 생산</b> (여분·선생산 금지)'
+            : '<b>'+(disc.customer||'')+' 발주면 정수량만 생산</b> (단종예정 · 여분·선생산 금지)')
+        + '<div class="disc-sub">'
+        + (discCustKnown
+            ? (noQty?'':'발주수량 '+r.order_qty.toLocaleString()+'개만 ')+'정확히 가공하세요'
+            : (disc.customer||'')+' 발주일 때만 해당 · 타 거래처는 정상')
+        + (disc.code?(' · '+disc.code):'')+'</div></div>' : '')
+    + '<div class="r-banner"><div class="r-icon">' + icon + '</div><div class="r-text-main">'
+    + '<div class="r-title" style="font-size:48px">' + title + '</div>'
+    + '<div class="r-subtitle">' + sub + '</div>'
+    + '<div style="margin-top:10px;font-size:26px;font-weight:800;color:#1f2937;line-height:1.25">'
+      + '<span style="color:#0f172a">' + r.company + '</span>'
+      + ' <span style="color:#15803d">· ' + r.spec + ' · ' + r.material + '</span>'
+      + (prod ? ' <span style="font-size:18px;font-weight:800;background:#dcfce7;color:#14532d;padding:3px 12px;border-radius:9px;margin-left:6px">품명 ' + prod + '</span>' : '')
+      + '</div>'
+      + (r.by === 'spec' ? '<div style="margin-top:6px;font-size:13px;color:#15803d;font-weight:700">📷 사양 바코드 조회 — 발주상세NO 미등록(신규 주문 포함)도 100일 이력 표시</div>' : '')
+      + '</div></div>'
+    + (dm ? '<div class="r-rec" style="cursor:pointer" onclick="toggleHist()"><div class="r-rec-label">'+dm+(histRows?'  <span style="color:#16a34a;font-weight:700" id="hist-toggle">▲ 발주이력 접기</span>':'')+'</div></div>' : '')
+    + (histRows ? '<div id="hist-detail" style="display:block;margin-top:8px;padding:10px;background:rgba(240,253,244,.7);border:1px solid #bbf7d0;border-radius:10px">'
+        + histChart
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow-y:auto;margin-top:6px">'+histRows+'</div>'
+        + '</div>' : '')
+    + qWarn
+    + '<div class="r-info">'
+    + '<div class="r-card"><div class="k">발주수량</div><div class="v big">'+(noQty?'미입력':r.order_qty.toLocaleString())+'</div></div>'
+    + '<div class="r-card"><div class="k">현재고</div><div class="v big">'+st+'</div></div>'
+    + '<div class="r-card"><div class="k">추가생산</div><div class="v big">'+(noQty?'-':(disc?'정수량':(!eligible?'정수량':(extra>0?('+'+extra.toLocaleString()+'개'):'불필요'))))+'</div></div>'
+    + '<div class="r-card"><div class="k">총 생산량</div><div class="v big">'+(noQty?'-':((disc?r.order_qty:r.work_qty).toLocaleString()+'개'))+'</div></div>'
+    + '</div>';
+}
+refreshCoverage();
+</script>
