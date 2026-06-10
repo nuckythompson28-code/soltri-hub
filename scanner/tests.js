@@ -114,6 +114,15 @@
   cov = svc.coverage(DATA, new Set([core.fbKey('B1KA58001400')]));
   eq('coverage 전부스캔', [cov.total, cov.scanned_count, cov.missing_count], [1, 1, 0]);
 
+  // parseSpecBarcode 엣지 + fbKey 적용 coverage
+  eq('parse: 세그먼트 1개→null', svc.parseSpecBarcode('ABC'), null);
+  eq('parse: 2세그먼트 숫자→material 빈값', svc.parseSpecBarcode('60*65/30'), ['60*65', '', 30]);
+  eq('parse: 수량 없음→qty 0', svc.parseSpecBarcode('60*65/CN10'), ['60*65', 'CN10', 0]);
+  cov = svc.coverage(
+    { pending: ['A/B.100'], detail_index: { 'A/B.100': { company: 'X', spec: '1*2*3', material: 'M', order_qty: 1 } } },
+    new Set([core.fbKey('A/B.100')]));
+  eq('coverage fbKey 치환 매칭', [cov.total, cov.missing_count], [1, 0]);
+
   // ===== 보고 =====
   const fails = results.filter(r => !r.ok);
   if (isNode) {

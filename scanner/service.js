@@ -37,7 +37,7 @@
     const g = hist ? hist.grade : 'NONE';
     const stk = data.stock || {};
     let stock = stk[fk];
-    if (stock === undefined) stock = stk[core.freqKey(spec, core.baseMat(material))];
+    if (stock === undefined || stock === null) stock = stk[core.freqKey(spec, core.baseMat(material))];
     const stockVal = (stock === undefined) ? null : stock;
     const qtySum = hist ? hist.qty_sum : 0;
     const orders = hist ? hist.orders : 0;

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>scanner 로직 테스트</title>
+<style>
+body{font-family:Consolas,monospace;font-size:13px;padding:20px;background:#0f172a;color:#e2e8f0}
+.pass{color:#4ade80}.fail{color:#f87171;font-weight:bold}
+h1{font-size:16px}#sum{font-size:15px;font-weight:bold;margin:10px 0}
+</style>
+</head>
+<body>
+<h1>scanner core.js / service.js 테스트 (Firebase 불필요)</h1>
+<div id="sum"></div>
+<div id="out"></div>
+<script src="core.js"></script>
+<script src="service.js"></script>
+<script src="tests.js"></script>
+<script>
+const rs = window.ScannerTestResults || [];
+const fails = rs.filter(r => !r.ok);
+const sum = document.getElementById('sum');
+if (!rs.length) {
+  sum.textContent = '테스트가 실행되지 않음 — core.js/service.js 로드 실패?';
+  sum.className = 'fail';
+} else {
+  sum.textContent = (rs.length - fails.length) + '/' + rs.length + ' passed'
+    + (fails.length ? ' — FAIL!' : ' ✅');
+  sum.className = fails.length ? 'fail' : 'pass';
+}
+document.getElementById('out').innerHTML = rs.map(r =>
+  '<div class="' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + ' ' + r.name
+  + (r.ok ? '' : ' got=' + JSON.stringify(r.got) + ' want=' + JSON.stringify(r.want)) + '</div>'
+).join('');
+</script>
+</body>
+</html>
