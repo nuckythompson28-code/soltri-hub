@@ -965,13 +965,21 @@ function applyRefdata(d, gen){
 }
 
 function loadRefdata(){
-  fbRoot().child('generated').once('value').then(snap => {
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 7000));
+  Promise.race([fbRoot().child('generated').once('value'), timeout]).then(snap => {
     const gen = snap.val();
     if (!gen) { askCode('접속코드가 올바르지 않거나 데이터가 없습니다'); return; }
+    subscribeScans();
     const cached = localStorage.getItem('scanner_refdata');
     if (cached && localStorage.getItem('scanner_refdata_gen') === gen) {
-      applyRefdata(JSON.parse(cached), gen);
-      return;
+      try {
+        applyRefdata(JSON.parse(cached), gen);
+        return;
+      } catch (e) {
+        localStorage.removeItem('scanner_refdata');
+        localStorage.removeItem('scanner_refdata_gen');
+        // 손상 캐시 — 전체 다운로드 경로로 진행
+      }
     }
     fbRoot().child('refdata_json').once('value').then(s2 => {
       const txt = s2.val();
@@ -979,27 +987,41 @@ function loadRefdata(){
       try {
         localStorage.setItem('scanner_refdata', txt);
         localStorage.setItem('scanner_refdata_gen', gen);
-      } catch (e) {}   // localStorage 한도 초과 시 캐시만 포기
+      } catch (e) { console.warn('refdata 캐시 저장 실패(용량?):', e); }   // localStorage 한도 초과 시 캐시만 포기
       applyRefdata(JSON.parse(txt), gen);
     });
   }).catch(() => {
     const cached = localStorage.getItem('scanner_refdata');  // 오프라인 폴백
-    if (cached) applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || '');
+    if (cached) {
+      try {
+        applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || '');
+      } catch (e) {
+        localStorage.removeItem('scanner_refdata');
+        localStorage.removeItem('scanner_refdata_gen');
+        return;
+      }
+      subscribeScans();   // 재연결 시 구독이 살아나도록
+    }
     else setSyncState(false);
   });
 }
 
+let _subs = [];
 function subscribeScans(){
-  fbRoot().child('scanned_index').on('value', snap => {
+  _subs.forEach(q => q.off());
+  const idx = fbRoot().child('scanned_index');
+  const q = fbRoot().child('scans').orderByChild('ts').limitToLast(50);
+  _subs = [idx, q];
+  idx.on('value', snap => {
     SCANNED = new Set(Object.keys(snap.val() || {}));
     refreshCoverage();
   });
-  fbRoot().child('scans').orderByChild('ts').limitToLast(50).on('value', snap => {
+  q.on('value', snap => {
     const arr = [];
     snap.forEach(ch => { arr.push(ch.val()); });
     arr.sort((a, b) => (a.ts < b.ts ? 1 : -1));
     recent.length = 0;
-    arr.forEach(r => recent.push({
+    arr.slice(0, MAX_RECENT).forEach(r => recent.push({
       code: r.detail_no || r.code, grade: r.grade || 'NONE',
       ts: new Date(String(r.ts).replace(' ', 'T')), device: r.device || '',
     }));
@@ -1015,7 +1037,7 @@ function setSyncState(ok){
     el.id = 'sync-warn';
     el.style.cssText = 'position:fixed;bottom:12px;right:12px;background:#dc2626;'
       + 'color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;z-index:999';
-    el.textContent = '⚠️ 기록 저장 실패 — 인터넷/Firebase 확인';
+    el.textContent = '⚠️ 오프라인 — 기록은 재연결 시 자동 전송';
     document.body.appendChild(el);
   }
 }
@@ -1049,6 +1071,7 @@ function askCode(msg){
 function submitCode(){
   const v = document.getElementById('code-gate-in').value.trim();
   if (!v) return;
+  if (!/^[A-Za-z0-9]+$/.test(v)) { document.getElementById('code-gate-msg').textContent = '영문/숫자만 입력하세요'; return; }
   CODE = v;
   localStorage.setItem('scanner_code', v);
   document.getElementById('code-gate').style.display = 'none';
@@ -1057,8 +1080,14 @@ function submitCode(){
 
 function boot(){
   if (!CODE) { askCode(''); return; }
-  loadRefdata();
-  subscribeScans();
+  try {
+    firebase.database().ref('.info/connected').on('value', s => setSyncState(s.val() === true));
+    loadRefdata();
+  } catch (e) {
+    localStorage.removeItem('scanner_code');
+    CODE = '';
+    askCode('코드 오류 — 다시 입력하세요');
+  }
 }
 boot();
 function ppNormFk(info){
