@@ -200,14 +200,6 @@
   eq('직접조회: 거래처 미상 eligible false', r.preprod_eligible, false);
   eq('직접조회: 정수량', r.work_qty, 20);
 
-  // ===== 창고프로그램 수치 병기 — 판정은 ERP 기준 =====
-  r = svc.scanResult(Object.assign({}, DATA, { stock_wh: { '182*190*20|CN10': 1962 } }), 'B1KA58001400');
-  eq('stock_wh: ERP 기준 유지', r.stock, 100);
-  eq('stock_wh: 창고 수치 병기', r.stock_wh, 1962);
-  eq('stock_wh: 판정 ERP(100≥50)', r.stock_covers, true);
-  r = svc.scanResult(DATA, 'B1KA58001400');
-  eq('stock_wh: 데이터 없으면 null', r.stock_wh, null);
-
   // ===== coverage (NAS service.coverage 동치) =====
   let cov = svc.coverage(DATA, new Set());
   eq('coverage 미스캔1', [cov.total, cov.scanned_count, cov.missing_count], [1, 0, 1]);

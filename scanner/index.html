@@ -1327,17 +1327,7 @@ function renderServerResult(code, r){
   var qWarn = (r.spec_queue && r.spec_queue > 1)
     ? '<div style="margin:0 0 14px;padding:12px 16px;border-radius:10px;background:#fef3c7;border:2px solid #f59e0b;color:#92400e;font-weight:800;font-size:16px">⚠️ 같은 사양 생산 대기 '+r.spec_queue+'건 (이 발주 포함)'+qOther+' — 중복 선생산 주의!</div>'
     : '';
-  // ERP vs 창고프로그램(8591) 재고 기록 교차검증 — 크게 어긋나면 실물 확인 유도.
-  // 판정은 ERP 기준 그대로 (창고 수치는 5/18 실사 스냅샷 + 수기 갱신이라 자동판정엔 미사용).
-  var whWarn = '';
-  if (r.stock !== null && r.stock !== undefined && r.stock_wh !== null && r.stock_wh !== undefined) {
-    var whLo = Math.min(r.stock, r.stock_wh), whHi = Math.max(r.stock, r.stock_wh);
-    if (whHi - whLo >= 50 && whHi >= 2 * Math.max(1, whLo)) {
-      whWarn = '<div style="margin:0 0 14px;padding:12px 16px;border-radius:10px;background:#fee2e2;border:2px solid #ef4444;color:#991b1b;font-weight:800;font-size:15px">'
-        + '⚠️ 재고 기록 불일치 — ERP <b>'+r.stock.toLocaleString()+'개</b> · 창고프로그램 <b>'+r.stock_wh.toLocaleString()+'개</b>'
-        + ' → 실물 확인 권장 <span style="font-weight:600;font-size:13px">(판정은 ERP 기준)</span></div>';
-    }
-  }
+  // 재고 수량의 단일 기준 = ERP 완제품재고창고 (2026-06-11 확정 — 창고프로그램 수치 병기는 도입 당일 제거)
   var histRows = '', histChart = '';
   if (r.hist && r.hist.rows && r.hist.rows.length) {
     var rws = r.hist.rows;
@@ -1417,7 +1407,6 @@ function renderServerResult(code, r){
         + '<div style="display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow-y:auto;margin-top:6px">'+histRows+'</div>'
         + '</div>' : '')
     + qWarn
-    + whWarn
     + '<div class="r-info">'
     + '<div class="r-card"><div class="k">발주수량</div><div class="v big">'+(noQty?'미입력':r.order_qty.toLocaleString())+'</div></div>'
     + '<div class="r-card"><div class="k">현재고</div><div class="v big">'+st+'</div></div>'
