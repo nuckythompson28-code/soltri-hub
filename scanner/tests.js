@@ -26,28 +26,33 @@
   eq('grade 4', core.grade(4), 'MID');
   eq('grade 5', core.grade(5), 'HIGH');
   eq('grade 99', core.grade(99), 'HIGH');
-  eq('preprod_eligible 50/12', core.preprodEligible(50, 12), true);
-  eq('preprod_eligible 51/12', core.preprodEligible(51, 12), false);
-  eq('preprod_eligible 50/11', core.preprodEligible(50, 11), false);
-  eq('preprod_eligible 0/30', core.preprodEligible(0, 30), false);
-  eq('preprod_eligible 490/32', core.preprodEligible(490, 32), false);
+  eq('preprod_eligible 지정거래처 50/12', core.preprodEligible(50, 12, '디와이파워'), true);
+  eq('preprod_eligible 대량도 허용(상한폐지)', core.preprodEligible(490, 32, '디와이파워'), true);
+  eq('preprod_eligible 50/11', core.preprodEligible(50, 11, '디와이파워'), false);
+  eq('preprod_eligible 0/30', core.preprodEligible(0, 30, '디와이파워'), false);
+  eq('preprod_eligible 비대상 거래처', core.preprodEligible(50, 12, '유창하이텍'), false);
+  eq('preprod_eligible 거래처 미상', core.preprodEligible(50, 12, null), false);
+  eq('preprod_eligible 정규화 매칭', core.preprodEligible(50, 12, ' wipro(brasil) '), true);
+  eq('preprod_eligible WIPRO(USA) 제외', core.preprodEligible(50, 12, 'WIPRO(USA)'), false);
   // 분기가중 추세: 목표 = (3·Q1+2·Q2+Q3)/6, 추가 = 목표 − 재고 − 큐
-  eq('recommend 추세 45/64/67 재고4', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67), 85);
-  eq('recommend 추세 Q1=0 가드', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 0, 64, 67), 34);
-  eq('recommend 추세 상한500', core.recommendQty(10, 'HIGH', 9999, 20, 0, 0, 2000, 0, 0), 510);
-  eq('recommend 추세 큐30 차감', core.recommendQty(34, 'HIGH', 176, 17, 4, 30, 45, 64, 67), 55);
-  eq('recommend 추세 대량→정수량', core.recommendQty(51, 'HIGH', 176, 17, 4, 0, 45, 64, 67), 51);
+  eq('recommend 추세 45/64/67 재고4', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '디와이파워'), 85);
+  eq('recommend 추세 Q1=0 가드', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 0, 64, 67, '디와이파워'), 34);
+  eq('recommend 추세 상한500', core.recommendQty(10, 'HIGH', 9999, 20, 0, 0, 2000, 0, 0, 'HIMC'), 510);
+  eq('recommend 추세 큐30 차감', core.recommendQty(34, 'HIGH', 176, 17, 4, 30, 45, 64, 67, '디와이파워'), 55);
+  eq('recommend 추세 51개도 허용(상한폐지)', core.recommendQty(51, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '디와이파워'), 102);
+  eq('recommend 추세 비대상 거래처→정수량', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '유창하이텍'), 34);
   // Q 데이터 없으면(구 캐시) 평균발주량 방식 폴백
-  eq('recommend 50,6000,12,재고0', core.recommendQty(50, 'HIGH', 6000, 12, 0), 550);
-  eq('recommend 30,6000,20,재고100', core.recommendQty(30, 'HIGH', 6000, 20, 100), 230);
-  eq('recommend 재고미확인(null)=0취급', core.recommendQty(40, 'HIGH', 6000, 12, null), 540);
-  eq('recommend 재고600≥평균→추가0', core.recommendQty(40, 'HIGH', 6000, 12, 600), 40);
-  eq('recommend 51개 초과→정수량', core.recommendQty(51, 'HIGH', 6000, 30, 0), 51);
-  eq('recommend 대량 490', core.recommendQty(490, 'HIGH', 28362, 32, 209), 490);
-  eq('recommend 저빈도 6회→정수량', core.recommendQty(50, 'HIGH', 800, 6, 0), 50);
-  eq('recommend 이력없음', core.recommendQty(50, 'NONE', 0, 0, 0), 50);
-  eq('recommend 큐에 대량 잡힘→추가0', core.recommendQty(42, 'HIGH', 35316, 32, 0, 6964), 42);
-  eq('recommend 큐 100 차감', core.recommendQty(40, 'HIGH', 6000, 12, 0, 100), 440);
+  eq('recommend 50,6000,12,재고0', core.recommendQty(50, 'HIGH', 6000, 12, 0, 0, null, 0, 0, '디와이파워'), 550);
+  eq('recommend 30,6000,20,재고100', core.recommendQty(30, 'HIGH', 6000, 20, 100, 0, null, 0, 0, '디와이파워'), 230);
+  eq('recommend 재고미확인(null)=0취급', core.recommendQty(40, 'HIGH', 6000, 12, null, 0, null, 0, 0, '디와이파워'), 540);
+  eq('recommend 재고600≥평균→추가0', core.recommendQty(40, 'HIGH', 6000, 12, 600, 0, null, 0, 0, '디와이파워'), 40);
+  eq('recommend 51개 지정거래처→추가200', core.recommendQty(51, 'HIGH', 6000, 30, 0, 0, null, 0, 0, '디와이파워'), 251);
+  eq('recommend 비대상 거래처 490→정수량', core.recommendQty(490, 'HIGH', 28362, 32, 209, 0, null, 0, 0, '파카코리아'), 490);
+  eq('recommend 거래처 미지정→정수량', core.recommendQty(50, 'HIGH', 6000, 12, 0), 50);
+  eq('recommend 저빈도 6회→정수량', core.recommendQty(50, 'HIGH', 800, 6, 0, 0, null, 0, 0, '디와이파워'), 50);
+  eq('recommend 이력없음', core.recommendQty(50, 'NONE', 0, 0, 0, 0, null, 0, 0, '디와이파워'), 50);
+  eq('recommend 큐에 대량 잡힘→추가0', core.recommendQty(42, 'HIGH', 35316, 32, 0, 6964, null, 0, 0, '디와이파워'), 42);
+  eq('recommend 큐 100 차감', core.recommendQty(40, 'HIGH', 6000, 12, 0, 100, null, 0, 0, '디와이파워'), 440);
   eq('preprod_qty NONE→0', core.preprodQty(500, 100, 'NONE'), 0);
   eq('preprod_qty LOW→0', core.preprodQty(500, 100, 'LOW'), 0);
   eq('preprod_qty MID 500-100', core.preprodQty(500, 100, 'MID'), 400);
@@ -142,9 +147,9 @@
   const DATA2 = {
     label_days: 100,
     detail_index: {
-      'B1KA10000100': { detail_no: 'B1KA10000100', company: 'A', po_num: '',
+      'B1KA10000100': { detail_no: 'B1KA10000100', company: '디와이파워', po_num: '',
         part_no: '', spec: '10*20*5', material: 'CN10', order_qty: 20 },
-      'B1KA20000200': { detail_no: 'B1KA20000200', company: 'B', po_num: '',
+      'B1KA20000200': { detail_no: 'B1KA20000200', company: '한림테크', po_num: '',
         part_no: '', spec: '10*20*5', material: 'CN10', order_qty: 30 },
     },
     label_history: {
@@ -162,6 +167,39 @@
   r = svc.scanResult(DATA2, 'B1KA20000200');
   eq('배정: 늦은 발주 정수량', r.work_qty, 30);
   eq('배정: 늦은 발주 deferred true', r.extra_deferred, true);
+
+  // ===== 거래처 게이트 — 비대상은 정수량, 지정 거래처는 대량도 추가생산 =====
+  const DATA3 = {
+    label_days: 100,
+    detail_index: {
+      'V1': { detail_no: 'V1', company: '파카코리아', po_num: '',
+        part_no: '', spec: '10*20*5', material: 'CN10', order_qty: 20 },
+      'V2': { detail_no: 'V2', company: 'WIPRO(BRASIL)', po_num: '',
+        part_no: '', spec: '30*40*5', material: 'CN10', order_qty: 120 },
+    },
+    label_history: {
+      '10*20*5|CN10': { orders: 15, companies: 2, qty_sum: 600,
+        last: '2026-06-01', grade: 'HIGH', q1: 200, q2: 200, q3: 200, rows: [] },
+      '30*40*5|CN10': { orders: 15, companies: 2, qty_sum: 600,
+        last: '2026-06-01', grade: 'HIGH', q1: 200, q2: 200, q3: 200, rows: [] },
+    },
+    stock: { '10*20*5|CN10': 0, '30*40*5|CN10': 0 },
+    pending: ['V1', 'V2'],
+  };
+  r = svc.scanResult(DATA3, 'V1');
+  eq('게이트: 비대상 거래처 eligible false', r.preprod_eligible, false);
+  eq('게이트: 비대상 거래처 정수량', r.work_qty, 20);
+  r = svc.scanResult(DATA3, 'V2');
+  eq('게이트: 지정 거래처 120개 eligible', r.preprod_eligible, true);
+  eq('게이트: 지정 거래처 추가200', r.work_qty, 320);
+
+  // 사양 직접조회 = 거래처 미상 → 12회 이상이어도 추가생산 불허
+  r = svc.scanResult({ label_days: 100, detail_index: {}, pending: [],
+    label_history: { '10*20*5|CN10': { orders: 15, companies: 2, qty_sum: 600,
+      last: '2026-06-01', grade: 'HIGH', q1: 200, q2: 200, q3: 200, rows: [] } },
+    stock: { '10*20*5|CN10': 0 } }, '10*20*5/CN10/20');
+  eq('직접조회: 거래처 미상 eligible false', r.preprod_eligible, false);
+  eq('직접조회: 정수량', r.work_qty, 20);
 
   // ===== coverage (NAS service.coverage 동치) =====
   let cov = svc.coverage(DATA, new Set());

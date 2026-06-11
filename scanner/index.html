@@ -1153,7 +1153,7 @@ function renderPreprod(){
     var info=idx[code]; if(!info) return;
     var fk=ppNormFk(info), h=lh[fk];
     var orders=h?h.orders:0, oq=info.order_qty||0;
-    if(orders>=12 && oq>0 && oq<=50){
+    if(ScannerCore.preprodEligible(oq, orders, info.company||'')){
       if(!groups[fk]) groups[fk]={spec:info.spec||'', material:info.material||'', orders:orders,
         avg:(h?Math.round(h.qty_sum/orders):0), queue:(sq[fk]||0), items:[]};
       groups[fk].items.push({code:code, oq:oq, company:info.company||''});
@@ -1163,7 +1163,7 @@ function renderPreprod(){
   arr.sort(function(a,b){return b.orders-a.orders;});
   var totalOrders=0; arr.forEach(function(g){totalOrders+=g.items.length;});
   var s=document.getElementById('pp-summary');
-  if(s) s.innerHTML='🟢 선생산 대상 <b>'+arr.length+'개 품목</b> <span style="font-weight:500;color:#16a34a">('+totalOrders+'건 발주 · 100일 12회↑ AND 발주 50개↓)</span>';
+  if(s) s.innerHTML='🟢 선생산 대상 <b>'+arr.length+'개 품목</b> <span style="font-weight:500;color:#16a34a">('+totalOrders+'건 발주 · 100일 12회↑ AND 지정 거래처)</span>';
   var box=document.getElementById('pp-list');
   if(!box) return;
   box.innerHTML = arr.map(function(g){
@@ -1267,7 +1267,7 @@ function renderServerResult(code, r){
     return;
   }
   const extra = r.work_qty - r.order_qty;          // 추가생산 = 권장총생산 − 발주
-  const eligible = !!r.preprod_eligible;           // 선생산 허용(12회+ AND 50개이하)
+  const eligible = !!r.preprod_eligible;           // 선생산 허용(12회+ AND 지정 거래처)
   const st = (r.stock === null || r.stock === undefined) ? '미확인' : r.stock.toLocaleString()+'개';
   const avg = r.avg_order ? r.avg_order.toLocaleString() : '-';
   const ordN = (r.hist && r.hist.orders) ? r.hist.orders : 0;
@@ -1282,7 +1282,8 @@ function renderServerResult(code, r){
     verd='unknown'; icon='📊'; title='사양 조회';
     sub='100일 <b>'+ordN+'회</b> 발주 · '+gLabel+' · 평균 '+avg+'개/회 (수량 입력 시 추가생산 계산)';
   } else if (!eligible) {
-    var why = (r.order_qty > 50) ? '대량 발주(50개 초과)' : ('저빈도(100일 '+ordN+'회 < 12회)');
+    var why = (ordN < 12) ? ('저빈도(100일 '+ordN+'회 < 12회)')
+      : (r.by === 'spec' ? '거래처 미상(직접조회) — 선생산은 지정 거래처만' : '선생산 비대상 거래처');
     verd='unknown'; icon='📦'; title='정수량 생산';
     sub='발주 <b>'+oqStr+'개</b>만 가공 · '+why;
   } else if (extra > 0) {

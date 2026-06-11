@@ -35,11 +35,26 @@
 
   const EXTRA_CAP = 500;        // 선생산 추가 절대 상한
   const PREPROD_FREQ_MIN = 12;  // 선생산 허용 최소 발주 횟수 (100일)
-  const PREPROD_ORDER_MAX = 50; // 선생산 허용 최대 발주 수량
 
-  function preprodEligible(orderQty, orders) {
+  // 선생산 허용 거래처 — 재발주가 확실한 업체만 (2026-06-11 발주수량 50개 상한 폐지,
+  // 업체 화이트리스트로 대체). 비교는 normCompany(공백 제거+대문자) 기준.
+  // WIPRO(USA)는 지시에 따라 제외.
+  const PREPROD_COMPANIES = {
+    '디와이파워': 1, 'HIMC': 1, '한림테크': 1, '한림알앤에이': 1, '한국티앤에스': 1,
+    'WIPRO': 1, 'WIPRO(BRASIL)': 1, 'WIPRO(ROMANIA)': 1, 'WIPRO(SWEDEN)': 1,
+    'WIPRO(FINLAND)': 1, 'DANTAL': 1, 'MILACRON': 1,
+    '한국케이밸브': 1, 'BUNTING': 1, '수산세보틱스': 1,
+  };
+
+  function normCompany(c) {
+    return String(c === null || c === undefined ? '' : c).replace(/\s+/g, '').toUpperCase();
+  }
+
+  // 선생산 허용 = 100일 12회 이상 발주 AND 지정 거래처. 거래처 미상(직접조회)은 불허.
+  function preprodEligible(orderQty, orders, company) {
     const oq = orderQty || 0;
-    return (orders || 0) >= PREPROD_FREQ_MIN && oq > 0 && oq <= PREPROD_ORDER_MAX;
+    return (orders || 0) >= PREPROD_FREQ_MIN && oq > 0
+      && Object.prototype.hasOwnProperty.call(PREPROD_COMPANIES, normCompany(company));
   }
 
   // 주의: Python round()는 은행가 반올림, Math.round는 .5 올림.
@@ -47,10 +62,10 @@
   // 추가 목표 = 분기가중 추세수요 (3·Q1+2·Q2+Q3)/6 — Q1~Q3는 build_data가 집계
   // (일회성 대량 발주 = 사양 중앙값 5배 초과 제외). Q1=0 → 추가 0.
   // Q 데이터 없으면(구 캐시) 기존 평균발주량 방식 폴백.
-  function recommendQty(orderQty, g, qtySum, orders, stock, queuedOthers, q1, q2, q3) {
+  function recommendQty(orderQty, g, qtySum, orders, stock, queuedOthers, q1, q2, q3, company) {
     queuedOthers = queuedOthers || 0;
     const oq = (orderQty && orderQty > 0) ? orderQty : 0;
-    if (!preprodEligible(oq, orders)) return oq;
+    if (!preprodEligible(oq, orders, company)) return oq;
     let target;
     if (q1 !== null && q1 !== undefined) {
       if ((q1 || 0) <= 0) return oq;
@@ -127,7 +142,7 @@
 
   const core = {
     normSpec, fmtNum, baseMat, freqKey, grade,
-    EXTRA_CAP, PREPROD_FREQ_MIN, PREPROD_ORDER_MAX,
+    EXTRA_CAP, PREPROD_FREQ_MIN, PREPROD_COMPANIES, normCompany,
     preprodEligible, recommendQty, preprodQty, composeStockSpec, fbKey,
     specNumset, stockLookup,
   };
