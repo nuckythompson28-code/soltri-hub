@@ -1293,8 +1293,6 @@ function renderServerResult(code, r){
     verd='unknown'; icon='ℹ️'; title='추가 불필요';
     if (r.extra_deferred)
       sub='같은 사양 작업지시가 먼저 있음 — <b>추가분은 그 발주에 배정</b> · 이 발주는 '+oqStr+'개만';
-    else if (r.queued_others && r.queued_others > 0)
-      sub='이미 같은 사양 생산 큐에 <b>'+r.queued_others.toLocaleString()+'개</b> 잡힘 · 발주 '+oqStr+'개만';
     else
       sub='재고·추세가 충당 · 발주 <b>'+oqStr+'개</b>만';
   }

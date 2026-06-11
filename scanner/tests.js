@@ -34,25 +34,24 @@
   eq('preprod_eligible 거래처 미상', core.preprodEligible(50, 12, null), false);
   eq('preprod_eligible 정규화 매칭', core.preprodEligible(50, 12, ' wipro(brasil) '), true);
   eq('preprod_eligible WIPRO(USA) 제외', core.preprodEligible(50, 12, 'WIPRO(USA)'), false);
-  // 분기가중 추세: 목표 = (3·Q1+2·Q2+Q3)/6, 추가 = 목표 − 재고 − 큐
-  eq('recommend 추세 45/64/67 재고4', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '디와이파워'), 85);
-  eq('recommend 추세 Q1=0 가드', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 0, 64, 67, '디와이파워'), 34);
-  eq('recommend 추세 상한500', core.recommendQty(10, 'HIGH', 9999, 20, 0, 0, 2000, 0, 0, 'HIMC'), 510);
-  eq('recommend 추세 큐30 차감', core.recommendQty(34, 'HIGH', 176, 17, 4, 30, 45, 64, 67, '디와이파워'), 55);
-  eq('recommend 추세 51개도 허용(상한폐지)', core.recommendQty(51, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '디와이파워'), 102);
-  eq('recommend 추세 비대상 거래처→정수량', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67, '유창하이텍'), 34);
+  // 분기가중 추세: 목표 = (3·Q1+2·Q2+Q3)/6, 추가 = 목표 − 재고
+  // (생산큐 물량 차감은 2026-06-11 제거 — 큐는 출하분이라 버퍼가 안 됨)
+  eq('recommend 추세 45/64/67 재고4', core.recommendQty(34, 'HIGH', 176, 17, 4, 45, 64, 67, '디와이파워'), 85);
+  eq('recommend 추세 Q1=0 가드', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 64, 67, '디와이파워'), 34);
+  eq('recommend 추세 상한500', core.recommendQty(10, 'HIGH', 9999, 20, 0, 2000, 0, 0, 'HIMC'), 510);
+  eq('recommend 추세 51개도 허용(상한폐지)', core.recommendQty(51, 'HIGH', 176, 17, 4, 45, 64, 67, '디와이파워'), 102);
+  eq('recommend 추세 비대상 거래처→정수량', core.recommendQty(34, 'HIGH', 176, 17, 4, 45, 64, 67, '유창하이텍'), 34);
   // Q 데이터 없으면(구 캐시) 평균발주량 방식 폴백
-  eq('recommend 50,6000,12,재고0', core.recommendQty(50, 'HIGH', 6000, 12, 0, 0, null, 0, 0, '디와이파워'), 550);
-  eq('recommend 30,6000,20,재고100', core.recommendQty(30, 'HIGH', 6000, 20, 100, 0, null, 0, 0, '디와이파워'), 230);
-  eq('recommend 재고미확인(null)=0취급', core.recommendQty(40, 'HIGH', 6000, 12, null, 0, null, 0, 0, '디와이파워'), 540);
-  eq('recommend 재고600≥평균→추가0', core.recommendQty(40, 'HIGH', 6000, 12, 600, 0, null, 0, 0, '디와이파워'), 40);
-  eq('recommend 51개 지정거래처→추가200', core.recommendQty(51, 'HIGH', 6000, 30, 0, 0, null, 0, 0, '디와이파워'), 251);
-  eq('recommend 비대상 거래처 490→정수량', core.recommendQty(490, 'HIGH', 28362, 32, 209, 0, null, 0, 0, '파카코리아'), 490);
+  eq('recommend 50,6000,12,재고0', core.recommendQty(50, 'HIGH', 6000, 12, 0, null, 0, 0, '디와이파워'), 550);
+  eq('recommend 30,6000,20,재고100', core.recommendQty(30, 'HIGH', 6000, 20, 100, null, 0, 0, '디와이파워'), 230);
+  eq('recommend 재고미확인(null)=0취급', core.recommendQty(40, 'HIGH', 6000, 12, null, null, 0, 0, '디와이파워'), 540);
+  eq('recommend 재고600≥평균→추가0', core.recommendQty(40, 'HIGH', 6000, 12, 600, null, 0, 0, '디와이파워'), 40);
+  eq('recommend 51개 지정거래처→추가200', core.recommendQty(51, 'HIGH', 6000, 30, 0, null, 0, 0, '디와이파워'), 251);
+  eq('recommend 비대상 거래처 490→정수량', core.recommendQty(490, 'HIGH', 28362, 32, 209, null, 0, 0, '파카코리아'), 490);
   eq('recommend 거래처 미지정→정수량', core.recommendQty(50, 'HIGH', 6000, 12, 0), 50);
-  eq('recommend 저빈도 6회→정수량', core.recommendQty(50, 'HIGH', 800, 6, 0, 0, null, 0, 0, '디와이파워'), 50);
-  eq('recommend 이력없음', core.recommendQty(50, 'NONE', 0, 0, 0, 0, null, 0, 0, '디와이파워'), 50);
-  eq('recommend 큐에 대량 잡힘→추가0', core.recommendQty(42, 'HIGH', 35316, 32, 0, 6964, null, 0, 0, '디와이파워'), 42);
-  eq('recommend 큐 100 차감', core.recommendQty(40, 'HIGH', 6000, 12, 0, 100, null, 0, 0, '디와이파워'), 440);
+  eq('recommend 저빈도 6회→정수량', core.recommendQty(50, 'HIGH', 800, 6, 0, null, 0, 0, '디와이파워'), 50);
+  eq('recommend 이력없음', core.recommendQty(50, 'NONE', 0, 0, 0, null, 0, 0, '디와이파워'), 50);
+  eq('recommend 대량 큐 무관 — 평균1104→상한500', core.recommendQty(42, 'HIGH', 35316, 32, 0, null, 0, 0, '디와이파워'), 542);
   eq('preprod_qty NONE→0', core.preprodQty(500, 100, 'NONE'), 0);
   eq('preprod_qty LOW→0', core.preprodQty(500, 100, 'LOW'), 0);
   eq('preprod_qty MID 500-100', core.preprodQty(500, 100, 'MID'), 400);
@@ -162,7 +161,7 @@
     pending: ['B1KA10000100', 'B1KA20000200'],
   };
   r = svc.scanResult(DATA2, 'B1KA10000100');
-  eq('배정: 이른 발주 추가 170', r.work_qty, 190);
+  eq('배정: 이른 발주 추가 200(큐 차감 없음)', r.work_qty, 220);
   eq('배정: 이른 발주 deferred false', r.extra_deferred, false);
   r = svc.scanResult(DATA2, 'B1KA20000200');
   eq('배정: 늦은 발주 정수량', r.work_qty, 30);

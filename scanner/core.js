@@ -62,8 +62,10 @@
   // 추가 목표 = 분기가중 추세수요 (3·Q1+2·Q2+Q3)/6 — Q1~Q3는 build_data가 집계
   // (일회성 대량 발주 = 사양 중앙값 5배 초과 제외). Q1=0 → 추가 0.
   // Q 데이터 없으면(구 캐시) 기존 평균발주량 방식 폴백.
-  function recommendQty(orderQty, g, qtySum, orders, stock, queuedOthers, q1, q2, q3, company) {
-    queuedOthers = queuedOthers || 0;
+  // 추가 = max(0, min(목표,500) − 현재고). 같은 사양 생산큐 물량은 차감하지 않음
+  // (2026-06-11 제거 — 큐의 발주수량은 출하로 사라져 버퍼 재고가 안 됨.
+  //  중복 선생산은 '가장 이른 발주 1건 배정'(service)이 별도로 막는다).
+  function recommendQty(orderQty, g, qtySum, orders, stock, q1, q2, q3, company) {
     const oq = (orderQty && orderQty > 0) ? orderQty : 0;
     if (!preprodEligible(oq, orders, company)) return oq;
     let target;
@@ -74,7 +76,7 @@
       target = orders ? Math.round(qtySum / orders) : 0;
     }
     const s = (stock !== null && stock !== undefined) ? stock : 0;
-    const extra = Math.max(0, Math.min(target, EXTRA_CAP) - s - Math.max(0, queuedOthers));
+    const extra = Math.max(0, Math.min(target, EXTRA_CAP) - s);
     return oq + extra;
   }
 

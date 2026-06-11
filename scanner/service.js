@@ -46,7 +46,7 @@
       spec: spec, material: material, part_no: '', product: '',
       order_qty: oq, grade: g,
       // 사양 직접조회는 거래처 미상 → 선생산(추가생산) 불허, 정수량만
-      work_qty: core.recommendQty(oq, g, qtySum, orders, stockVal, queuedOthers,
+      work_qty: core.recommendQty(oq, g, qtySum, orders, stockVal,
         hist ? hist.q1 : null, hist ? (hist.q2 || 0) : 0, hist ? (hist.q3 || 0) : 0, null),
       avg_order: orders ? Math.round(qtySum / orders) : 0,
       preprod_eligible: core.preprodEligible(oq, orders, null),
@@ -75,7 +75,7 @@
     const specQueue = (data.spec_queue || {})[fk] || 0;
     const specQueueQty = (data.spec_queue_qty || {})[fk] || 0;
     const queuedOthers = Math.max(0, specQueueQty - oq);
-    let work = core.recommendQty(oq, g, qtySum, orders, stockVal, queuedOthers,
+    let work = core.recommendQty(oq, g, qtySum, orders, stockVal,
       hist ? hist.q1 : null, hist ? (hist.q2 || 0) : 0, hist ? (hist.q3 || 0) : 0,
       info.company || '');
     // 같은 사양 대기 발주가 여럿이면 추가분은 '가장 이른 발주상세NO' 1건에만 배정
