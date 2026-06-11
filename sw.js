@@ -1,5 +1,5 @@
-// 김공장 서비스워커 — 앱 셸 캐시(오프라인) + 백그라운드 갱신
-const CACHE = 'soltri-hub-v15';
+﻿// 源怨듭옣 ?쒕퉬?ㅼ썙而???????罹먯떆(?ㅽ봽?쇱씤) + 諛깃렇?쇱슫??媛깆떊
+const CACHE = 'soltri-hub-v16';
 const ASSETS = ['./', 'index.html', 'o0852.html', 'o0400.html', 'simulator.html', 'firststep.html', 'cheatsheet.html', 'quiz.html', 'taehyung.html',
   'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'scanner/', 'scanner/index.html', 'scanner/core.js', 'scanner/service.js'];

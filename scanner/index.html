@@ -1311,12 +1311,17 @@ function renderServerResult(code, r){
       sub = '<b>'+cust+' 발주면 단종예정</b> — 발주수량만 정수량 생산 (여분·선생산 금지) · 타 거래처는 정상';
     }
   }
-  // 재고가 발주량을 충당하면 생산 자체가 불필요 — 재고 출고 안내 (헤드라인 최우선)
-  if (!noQty && r.stock_covers) {
+  // 재고가 발주량을 충당하면 생산 자체가 불필요 — 재고 출고 안내.
+  // 단, 추세 공식이 추가생산을 추천한 다빈도 품목(extra>0)은 덮지 않는다 —
+  // 재고로 발주는 막아도 버퍼 보충 생산은 필요하기 때문.
+  var stockOnly = !noQty && r.stock_covers && (extra <= 0 || disc);
+  if (stockOnly) {
     verd = 'HIGH'; icon = '📦';
     title = '생산 불필요 — 재고 충분';
     sub = '현재고 <b>'+r.stock.toLocaleString()+'개</b> ≥ 발주 <b>'+oqStr+'개</b> — 재고 출고로 처리 가능'
       + (disc ? ' · 단종예정이라 생산 금지' : '');
+  } else if (!noQty && r.stock_covers && extra > 0) {
+    sub += ' · 현재고 '+r.stock.toLocaleString()+'개로 발주분 재고출고도 가능';
   }
   const dm = r.hist ? ('📊 최근 '+(DATA.label_days||100)+'일 발주 '+(r.hist.qty_sum||0).toLocaleString()+'개 · '+(r.hist.orders||0)+'회') : '';
   var qOther = (r.queued_others && r.queued_others>0) ? ' · 다른 작업지시 <b>'+r.queued_others.toLocaleString()+'개</b> 생산 대기' : '';
@@ -1398,8 +1403,8 @@ function renderServerResult(code, r){
     + '<div class="r-info">'
     + '<div class="r-card"><div class="k">발주수량</div><div class="v big">'+(noQty?'미입력':r.order_qty.toLocaleString())+'</div></div>'
     + '<div class="r-card"><div class="k">현재고</div><div class="v big">'+st+'</div></div>'
-    + '<div class="r-card"><div class="k">추가생산</div><div class="v big">'+(noQty?'-':(r.stock_covers?'불필요':(disc?'정수량':(!eligible?'정수량':(extra>0?('+'+extra.toLocaleString()+'개'):'불필요')))))+'</div></div>'
-    + '<div class="r-card"><div class="k">총 생산량</div><div class="v big">'+(noQty?'-':(r.stock_covers?'0개 (재고출고)':((disc?r.order_qty:r.work_qty).toLocaleString()+'개')))+'</div></div>'
+    + '<div class="r-card"><div class="k">추가생산</div><div class="v big">'+(noQty?'-':(stockOnly?'불필요':(disc?'정수량':(!eligible?'정수량':(extra>0?('+'+extra.toLocaleString()+'개'):'불필요')))))+'</div></div>'
+    + '<div class="r-card"><div class="k">총 생산량</div><div class="v big">'+(noQty?'-':(stockOnly?'0개 (재고출고)':((disc?r.order_qty:r.work_qty).toLocaleString()+'개')))+'</div></div>'
     + '</div>';
 }
 refreshCoverage();
