@@ -52,6 +52,8 @@
       preprod_eligible: core.preprodEligible(oq, orders, null),
       preprod_qty: core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
+      // 창고프로그램(8591) 수치 — 표시·교차검증용. 판정은 ERP(stock) 기준 유지.
+      stock_wh: core.stockLookup(data.stock_wh || {}, spec, material),
       stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
       by: 'spec', hist: hist,
     };
@@ -107,6 +109,8 @@
       preprod_eligible: core.preprodEligible(oq, orders, info.company || ''),
       preprod_qty: core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
+      // 창고프로그램(8591) 수치 — 표시·교차검증용. 판정은 ERP(stock) 기준 유지.
+      stock_wh: core.stockLookup(data.stock_wh || {}, info.spec || '', info.material || ''),
       stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
       hist: hist,
     };
