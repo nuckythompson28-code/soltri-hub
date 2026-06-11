@@ -43,14 +43,23 @@
   }
 
   // 주의: Python round()는 은행가 반올림, Math.round는 .5 올림.
-  // 평균이 정확히 .5로 떨어지는 드문 경우 1 차이 가능 — 운영상 무시.
-  function recommendQty(orderQty, g, qtySum, orders, stock, queuedOthers) {
+  // 값이 정확히 .5로 떨어지는 드문 경우 1 차이 가능 — 운영상 무시.
+  // 추가 목표 = 분기가중 추세수요 (3·Q1+2·Q2+Q3)/6 — Q1~Q3는 build_data가 집계
+  // (일회성 대량 발주 = 사양 중앙값 5배 초과 제외). Q1=0 → 추가 0.
+  // Q 데이터 없으면(구 캐시) 기존 평균발주량 방식 폴백.
+  function recommendQty(orderQty, g, qtySum, orders, stock, queuedOthers, q1, q2, q3) {
     queuedOthers = queuedOthers || 0;
     const oq = (orderQty && orderQty > 0) ? orderQty : 0;
     if (!preprodEligible(oq, orders)) return oq;
-    const avg = orders ? Math.round(qtySum / orders) : 0;
+    let target;
+    if (q1 !== null && q1 !== undefined) {
+      if ((q1 || 0) <= 0) return oq;
+      target = Math.round((3 * q1 + 2 * (q2 || 0) + (q3 || 0)) / 6);
+    } else {
+      target = orders ? Math.round(qtySum / orders) : 0;
+    }
     const s = (stock !== null && stock !== undefined) ? stock : 0;
-    const extra = Math.max(0, Math.min(avg, EXTRA_CAP) - s - Math.max(0, queuedOthers));
+    const extra = Math.max(0, Math.min(target, EXTRA_CAP) - s - Math.max(0, queuedOthers));
     return oq + extra;
   }
 

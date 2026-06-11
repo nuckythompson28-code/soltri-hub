@@ -31,6 +31,13 @@
   eq('preprod_eligible 50/11', core.preprodEligible(50, 11), false);
   eq('preprod_eligible 0/30', core.preprodEligible(0, 30), false);
   eq('preprod_eligible 490/32', core.preprodEligible(490, 32), false);
+  // 분기가중 추세: 목표 = (3·Q1+2·Q2+Q3)/6, 추가 = 목표 − 재고 − 큐
+  eq('recommend 추세 45/64/67 재고4', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 45, 64, 67), 85);
+  eq('recommend 추세 Q1=0 가드', core.recommendQty(34, 'HIGH', 176, 17, 4, 0, 0, 64, 67), 34);
+  eq('recommend 추세 상한500', core.recommendQty(10, 'HIGH', 9999, 20, 0, 0, 2000, 0, 0), 510);
+  eq('recommend 추세 큐30 차감', core.recommendQty(34, 'HIGH', 176, 17, 4, 30, 45, 64, 67), 55);
+  eq('recommend 추세 대량→정수량', core.recommendQty(51, 'HIGH', 176, 17, 4, 0, 45, 64, 67), 51);
+  // Q 데이터 없으면(구 캐시) 평균발주량 방식 폴백
   eq('recommend 50,6000,12,재고0', core.recommendQty(50, 'HIGH', 6000, 12, 0), 550);
   eq('recommend 30,6000,20,재고100', core.recommendQty(30, 'HIGH', 6000, 20, 100), 230);
   eq('recommend 재고미확인(null)=0취급', core.recommendQty(40, 'HIGH', 6000, 12, null), 540);
@@ -130,6 +137,31 @@
     stock: { '20*182*190|CN10': 60 } }), 'B1KA58001400');
   eq('재고 순서폴백: stock 60', r.stock, 60);
   eq('재고 순서폴백: stock_covers(60≥50)', r.stock_covers, true);
+
+  // ===== 같은 사양 추가분 배정 — 이른 발주 1건에만 =====
+  const DATA2 = {
+    label_days: 100,
+    detail_index: {
+      'B1KA10000100': { detail_no: 'B1KA10000100', company: 'A', po_num: '',
+        part_no: '', spec: '10*20*5', material: 'CN10', order_qty: 20 },
+      'B1KA20000200': { detail_no: 'B1KA20000200', company: 'B', po_num: '',
+        part_no: '', spec: '10*20*5', material: 'CN10', order_qty: 30 },
+    },
+    label_history: {
+      '10*20*5|CN10': { orders: 15, companies: 2, qty_sum: 600,
+        last: '2026-06-01', grade: 'HIGH', q1: 200, q2: 200, q3: 200, rows: [] },
+    },
+    stock: { '10*20*5|CN10': 0 },
+    spec_queue: { '10*20*5|CN10': 2 },
+    spec_queue_qty: { '10*20*5|CN10': 50 },
+    pending: ['B1KA10000100', 'B1KA20000200'],
+  };
+  r = svc.scanResult(DATA2, 'B1KA10000100');
+  eq('배정: 이른 발주 추가 170', r.work_qty, 190);
+  eq('배정: 이른 발주 deferred false', r.extra_deferred, false);
+  r = svc.scanResult(DATA2, 'B1KA20000200');
+  eq('배정: 늦은 발주 정수량', r.work_qty, 30);
+  eq('배정: 늦은 발주 deferred true', r.extra_deferred, true);
 
   // ===== coverage (NAS service.coverage 동치) =====
   let cov = svc.coverage(DATA, new Set());
