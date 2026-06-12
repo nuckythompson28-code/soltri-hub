@@ -954,7 +954,7 @@ function onQrDetected(decoded){
 
 // 후면 멀티렌즈 폰에서 자동초점 없는 렌즈(광각 등)가 잡히는 경우 대비:
 // 시작 후 연속 AF + 약한 줌을 적용하고, 그래도 흐리면 카메라 전환 버튼으로 렌즈를 바꾼다.
-let qrCams = [], qrCamIdx = -1;
+let qrCams = [], qrCamIdx = -1, qrCamId = null;   // qrCamId = 사용자가 찾아둔 렌즈(다음 열기 때 재사용)
 
 let qrZoom = 0;   // 현재 적용된 줌 (0 = 미적용)
 
@@ -1017,19 +1017,34 @@ async function startQrScan(cam){
     );
     await applyFocusTweaks();
     $('qr-status').textContent = '✓ QR/바코드를 화면 안에 비추세요. 흐릿하면 🔄 카메라 전환을 눌러보세요.';
+    return true;
   } catch(e){
     console.error('QR 시작 실패:', e);
+    try { if(qrScanner) qrScanner.clear(); } catch(e2){}
     qrScanner = null;
     $('qr-status').className = 'qr-status error';
     $('qr-status').textContent = '카메라를 시작할 수 없습니다: ' + (e.message || e);
     $('qr-fallback').style.display = 'block';
+    return false;
   }
 }
 
+// 후면 렌즈 후보만 추림 — 라벨에 front가 있으면 전면, 비어 있으면(권한 전) 전부 후보.
+// 갤럭시 등은 브라우저로 못 여는 렌즈(심도 센서 등)도 목록에 섞여 있어서
+// 전환 시 실패하면 자동으로 다음 렌즈로 건너뛴다.
+function backCams(){
+  const back = qrCams.filter(c => !/front|전면/i.test(c.label || ''));
+  return back.length ? back : qrCams;
+}
+
+let qrSwitching = false;
 async function switchQrCamera(){
+  if(qrSwitching) return;
+  qrSwitching = true;
   try {
     if(!qrCams.length) qrCams = await Html5Qrcode.getCameras();
-    if(qrCams.length < 2){
+    const cams = backCams();
+    if(cams.length < 2 && qrCams.length < 2){
       $('qr-status').textContent = '전환할 다른 카메라가 없습니다.';
       return;
     }
@@ -1037,20 +1052,34 @@ async function switchQrCamera(){
     if(qrCamIdx < 0 && qrScanner){
       try {
         const cur = qrScanner.getRunningTrackSettings().deviceId;
-        qrCamIdx = qrCams.findIndex(c => c.id === cur);
+        qrCamIdx = cams.findIndex(c => c.id === cur);
       } catch(e){}
     }
-    qrCamIdx = (qrCamIdx + 1) % qrCams.length;
     if(qrScanner){
       try { await qrScanner.stop(); qrScanner.clear(); } catch(e){}
       qrScanner = null;
     }
-    const label = qrCams[qrCamIdx].label || ('카메라 ' + (qrCamIdx + 1));
-    await startQrScan({ deviceId: { exact: qrCams[qrCamIdx].id } });
-    $('qr-status').textContent = '✓ ' + label + ' 사용 중. 흐릿하면 🔄 한 번 더 누르세요.';
+    // 실패하는 렌즈(심도 센서 등)는 건너뛰고 열리는 렌즈가 나올 때까지 순환
+    for(let n = 0; n < cams.length; n++){
+      qrCamIdx = (qrCamIdx + 1) % cams.length;
+      const c = cams[qrCamIdx];
+      const ok = await startQrScan({ deviceId: { exact: c.id } });
+      if(ok){
+        qrCamId = c.id;
+        const label = c.label || ('카메라 ' + (qrCamIdx + 1));
+        $('qr-status').className = 'qr-status';
+        $('qr-status').textContent = '✓ ' + label + ' 사용 중. 흐릿하면 🔄 한 번 더, 또는 ➕줌.';
+        return;
+      }
+    }
+    // 전부 실패 → 기본(후면 우선)으로 복귀
+    qrCamIdx = -1; qrCamId = null;
+    await startQrScan();
   } catch(e){
     $('qr-status').className = 'qr-status error';
     $('qr-status').textContent = '카메라 전환 실패: ' + (e.message || e);
+  } finally {
+    qrSwitching = false;
   }
 }
 $('qr-switch').addEventListener('click', switchQrCamera);
@@ -1064,11 +1093,15 @@ function stopQrScan(){
   if(!isMobile()) bc.focus();
 }
 
-$('qr-open').addEventListener('click', ()=>{
+$('qr-open').addEventListener('click', async ()=>{
   qrModal.classList.add('open');
-  // 이전에 전환해 둔 렌즈가 있으면 그 렌즈로 바로 시작
-  const saved = (qrCamIdx >= 0 && qrCams[qrCamIdx]) ? { deviceId: { exact: qrCams[qrCamIdx].id } } : undefined;
-  startQrScan(saved);
+  // 이전에 전환해 둔 렌즈가 있으면 그 렌즈로 바로 시작 — 실패하면 기본으로 복귀
+  if(qrCamId){
+    const ok = await startQrScan({ deviceId: { exact: qrCamId } });
+    if(!ok){ qrCamId = null; qrCamIdx = -1; startQrScan(); }
+  } else {
+    startQrScan();
+  }
 });
 $('qr-close').addEventListener('click', stopQrScan);
 qrModal.addEventListener('click', e=>{ if(e.target === qrModal) stopQrScan(); });
