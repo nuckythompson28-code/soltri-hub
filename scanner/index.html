@@ -228,6 +228,9 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
     </div>
     <div id="qr-reader"></div>
     <div class="qr-status" id="qr-status">카메라 시작 중...</div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="qr-modal-close" id="qr-switch" type="button">🔄 카메라 전환 — 화면이 흐릿하면 누르세요</button>
+    </div>
     <label class="qr-file-input" for="qr-file">📸 또는 사진 파일에서 QR 인식 (HTTPS 미지원 환경용)</label>
     <input type="file" id="qr-file" accept="image/*" capture="environment" style="display:none">
     <div class="qr-fallback" id="qr-fallback" style="display:none">
@@ -934,7 +937,23 @@ function onQrDetected(decoded){
   }
 }
 
-async function startQrScan(){
+// 후면 멀티렌즈 폰에서 자동초점 없는 렌즈(광각 등)가 잡히는 경우 대비:
+// 시작 후 연속 AF + 약한 줌을 적용하고, 그래도 흐리면 카메라 전환 버튼으로 렌즈를 바꾼다.
+let qrCams = [], qrCamIdx = -1;
+
+async function applyFocusTweaks(){
+  try {
+    const caps = qrScanner.getRunningTrackCapabilities();
+    const adv = [];
+    if(caps && Array.isArray(caps.focusMode) && caps.focusMode.indexOf('continuous') !== -1)
+      adv.push({ focusMode: 'continuous' });
+    if(caps && caps.zoom && caps.zoom.max >= 2)
+      adv.push({ zoom: Math.min(2, caps.zoom.max) });
+    if(adv.length) await qrScanner.applyVideoConstraints({ advanced: adv });
+  } catch(e){ /* focusMode/zoom 미지원 기기(아이폰 등)는 무시 — 자체 AF에 맡김 */ }
+}
+
+async function startQrScan(cam){
   $('qr-status').className = 'qr-status';
   $('qr-status').textContent = '카메라 시작 중...';
   $('qr-fallback').style.display = 'none';
@@ -942,12 +961,13 @@ async function startQrScan(){
     if(!window.Html5Qrcode){ throw new Error('html5-qrcode 라이브러리 로드 실패'); }
     qrScanner = new Html5Qrcode('qr-reader');
     await qrScanner.start(
-      { facingMode: 'environment' },  // 후면 카메라 우선
+      cam || { facingMode: 'environment' },  // 후면 카메라 우선
       { fps: 12, qrbox: { width: 260, height: 260 }, aspectRatio: 1.333 },
       (decodedText) => onQrDetected(decodedText),
       () => {}  // 매 프레임 실패 시 무시
     );
-    $('qr-status').textContent = '✓ QR/바코드를 화면 안에 비추세요. 인식되면 자동 입력됩니다.';
+    await applyFocusTweaks();
+    $('qr-status').textContent = '✓ QR/바코드를 화면 안에 비추세요. 흐릿하면 🔄 카메라 전환을 눌러보세요.';
   } catch(e){
     console.error('QR 시작 실패:', e);
     qrScanner = null;
@@ -956,6 +976,35 @@ async function startQrScan(){
     $('qr-fallback').style.display = 'block';
   }
 }
+
+async function switchQrCamera(){
+  try {
+    if(!qrCams.length) qrCams = await Html5Qrcode.getCameras();
+    if(qrCams.length < 2){
+      $('qr-status').textContent = '전환할 다른 카메라가 없습니다.';
+      return;
+    }
+    // 첫 전환이면 현재 쓰는 렌즈 위치부터 시작
+    if(qrCamIdx < 0 && qrScanner){
+      try {
+        const cur = qrScanner.getRunningTrackSettings().deviceId;
+        qrCamIdx = qrCams.findIndex(c => c.id === cur);
+      } catch(e){}
+    }
+    qrCamIdx = (qrCamIdx + 1) % qrCams.length;
+    if(qrScanner){
+      try { await qrScanner.stop(); qrScanner.clear(); } catch(e){}
+      qrScanner = null;
+    }
+    const label = qrCams[qrCamIdx].label || ('카메라 ' + (qrCamIdx + 1));
+    await startQrScan({ deviceId: { exact: qrCams[qrCamIdx].id } });
+    $('qr-status').textContent = '✓ ' + label + ' 사용 중. 흐릿하면 🔄 한 번 더 누르세요.';
+  } catch(e){
+    $('qr-status').className = 'qr-status error';
+    $('qr-status').textContent = '카메라 전환 실패: ' + (e.message || e);
+  }
+}
+$('qr-switch').addEventListener('click', switchQrCamera);
 
 function stopQrScan(){
   if(qrScanner){
@@ -968,7 +1017,9 @@ function stopQrScan(){
 
 $('qr-open').addEventListener('click', ()=>{
   qrModal.classList.add('open');
-  startQrScan();
+  // 이전에 전환해 둔 렌즈가 있으면 그 렌즈로 바로 시작
+  const saved = (qrCamIdx >= 0 && qrCams[qrCamIdx]) ? { deviceId: { exact: qrCams[qrCamIdx].id } } : undefined;
+  startQrScan(saved);
 });
 $('qr-close').addEventListener('click', stopQrScan);
 qrModal.addEventListener('click', e=>{ if(e.target === qrModal) stopQrScan(); });
