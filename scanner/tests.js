@@ -200,6 +200,32 @@
   eq('직접조회: 거래처 미상 eligible false', r.preprod_eligible, false);
   eq('직접조회: 정수량', r.work_qty, 20);
 
+  // ===== 발주감시 연동 (watch) — 감시 품목은 추가생산 금지, 정수량만 =====
+  const WDATA = { label_days: 100, pending: [],
+    detail_index: {
+      'W1': { detail_no: 'W1', company: '디와이파워', spec: '157*165*15', material: 'RS40', order_qty: 18 },
+      'W2': { detail_no: 'W2', company: 'CHANGSHA', spec: '157*165*15', material: 'RS40', order_qty: 800 },
+    },
+    label_history: { '157*165*15|RS40': { orders: 12, companies: 1, qty_sum: 251,
+      last: '2026-06-08', grade: 'HIGH', q1: 72, q2: 81, q3: 98, rows: [] } },
+    stock: { '157*165*15|RS40': 25 },
+    watch: { '157*165*15|RS40': { spec: '157*165*15', material: 'RS40',
+      company: '디와이파워', part_no: 'H72037200', name: '단종예정 정수량생산', memo: '' } } };
+  r = svc.scanResult(WDATA, 'W1');
+  eq('감시: 단종예정 → 정수량(추가 54 차단)', r.work_qty, 18);
+  eq('감시: eligible false', r.preprod_eligible, false);
+  eq('감시: preprod 0', r.preprod_qty, 0);
+  eq('감시: watch 동봉', !!r.watch, true);
+  r = svc.scanResult(WDATA, 'W2');
+  eq('감시: 타 거래처 발주는 정상', !r.watch, true);
+  const WDATA2 = JSON.parse(JSON.stringify(WDATA));
+  WDATA2.detail_index['W1'].spec = '165*157*15';
+  r = svc.scanResult(WDATA2, 'W1');
+  eq('감시: 치수 순서 무관 매칭', !!r.watch, true);
+  r = svc.scanResult(WDATA, '157*165*15/RS40/10');
+  eq('감시: 직접조회도 안내(거래처 미상)', !!r.watch, true);
+  eq('감시: 직접조회 preprod 0', r.preprod_qty, 0);
+
   // ===== coverage (NAS service.coverage 동치) =====
   let cov = svc.coverage(DATA, new Set());
   eq('coverage 미스캔1', [cov.total, cov.scanned_count, cov.missing_count], [1, 0, 1]);

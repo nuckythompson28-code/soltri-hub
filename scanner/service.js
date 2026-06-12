@@ -41,6 +41,8 @@
     const specQueue = (data.spec_queue || {})[fk] || 0;
     const specQueueQty = (data.spec_queue_qty || {})[fk] || 0;
     const queuedOthers = Math.max(0, specQueueQty - oq);
+    // 발주감시 품목(단종예정·재고소진 등) — 직접조회는 거래처 미상이라 사양만으로 안내
+    const watch = core.watchLookup(data.watch || {}, spec, material, null);
     return {
       found: true, code: raw, detail_no: '', company: '(사양 직접조회)',
       spec: spec, material: material, part_no: '', product: '',
@@ -49,11 +51,11 @@
       work_qty: core.recommendQty(oq, g, qtySum, orders, stockVal,
         hist ? hist.q1 : null, hist ? (hist.q2 || 0) : 0, hist ? (hist.q3 || 0) : 0, null),
       avg_order: orders ? Math.round(qtySum / orders) : 0,
-      preprod_eligible: core.preprodEligible(oq, orders, null),
-      preprod_qty: core.preprodQty(qtySum, stockVal, g),
+      preprod_eligible: watch ? false : core.preprodEligible(oq, orders, null),
+      preprod_qty: watch ? 0 : core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
       stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
-      by: 'spec', hist: hist,
+      by: 'spec', hist: hist, watch: watch,
     };
   }
 
@@ -95,6 +97,13 @@
         }
       }
     }
+    // 발주감시 품목(단종예정·재고소진 등) → 추가생산 금지, 정수량만 (2026-06-12)
+    const watch = core.watchLookup(data.watch || {}, info.spec || '',
+      info.material || '', info.company || '');
+    if (watch) {
+      work = oq;
+      extraDeferred = false;
+    }
     return {
       found: true, code: c, detail_no: info.detail_no,
       company: info.company || '', spec: info.spec || '',
@@ -104,11 +113,11 @@
       work_qty: work,
       extra_deferred: extraDeferred,
       avg_order: orders ? Math.round(qtySum / orders) : 0,
-      preprod_eligible: core.preprodEligible(oq, orders, info.company || ''),
-      preprod_qty: core.preprodQty(qtySum, stockVal, g),
+      preprod_eligible: watch ? false : core.preprodEligible(oq, orders, info.company || ''),
+      preprod_qty: watch ? 0 : core.preprodQty(qtySum, stockVal, g),
       stock: stockVal, spec_queue: specQueue, queued_others: queuedOthers,
       stock_covers: (stockVal !== null && oq > 0 && stockVal >= oq),
-      hist: hist,
+      hist: hist, watch: watch,
     };
   }
 

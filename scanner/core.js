@@ -137,6 +137,31 @@
     return 0;
   }
 
+  // 발주감시 품목 매칭 — 매칭되면 추가생산 금지(단종예정·재고소진 등).
+  // 품목 목록은 발주감시_품목.json → build_data가 페이로드 watch로 동봉.
+  // 치수 숫자집합+재질 기본형으로 비교(표기 순서 무관 — stockLookup과 동일 원리).
+  // 감시 항목에 거래처가 있고 스캔 거래처가 확정이면 거래처도 일치해야 적용 —
+  // 같은 사양이라도 타 거래처(수출 등) 발주는 정상 생산.
+  function watchLookup(watch, spec, material, company) {
+    if (!watch) return null;
+    const keys = Object.keys(watch);
+    if (!keys.length) return null;
+    const ns = specNumset(spec);
+    if (ns === null) return null;
+    const mb = normCompany(baseMat(material));
+    const co = normCompany(company);
+    const known = !!co && String(company || '').indexOf('직접조회') < 0;
+    for (let i = 0; i < keys.length; i++) {
+      const w = watch[keys[i]];
+      if (specNumset(w.spec || '') !== ns) continue;
+      if (normCompany(baseMat(w.material || '')) !== mb) continue;
+      const wco = normCompany(w.company || '');
+      if (wco && known && co.indexOf(wco) < 0) continue;
+      return w;
+    }
+    return null;
+  }
+
   // Firebase 키 금지 문자(. # $ [ ] /) 치환 — scanned_index 키 읽기/쓰기 공통
   function fbKey(s) {
     return String(s).replace(/[.#$\[\]\/]/g, '_');
@@ -146,7 +171,7 @@
     normSpec, fmtNum, baseMat, freqKey, grade,
     EXTRA_CAP, PREPROD_FREQ_MIN, PREPROD_COMPANIES, normCompany,
     preprodEligible, recommendQty, preprodQty, composeStockSpec, fbKey,
-    specNumset, stockLookup,
+    specNumset, stockLookup, watchLookup,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
   else root.ScannerCore = core;
