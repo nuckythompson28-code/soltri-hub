@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>O8000/O9010 기계 수정 가이드 — 삽입 5군데</title>
+<title>O0400/O0410 기계 수정 가이드 — 삽입 4군데</title>
 <style>
   :root{
     --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#222b36;
@@ -46,13 +46,14 @@
   .ln.anchor{background:#1a2233}
   .ln.anchor .src{color:var(--accent)}
   .ln.anchor .tag{color:var(--accent)}
-  .ellipsis{color:#46505c; padding:0 18px; font-family:monospace; font-size:13px}
-  .cm{color:#6b7785; font-weight:400}
   ol.check{background:var(--panel); border:1px solid var(--line); border-radius:12px;
     padding:16px 18px 16px 40px; margin:14px 0; font-size:14.5px}
   ol.check li{margin:7px 0}
   ol.check b{color:var(--accent)}
   .alarm{color:var(--red); font-weight:700}
+  table.kt{width:100%; border-collapse:collapse; margin:10px 0 20px; font-size:14px}
+  table.kt th,table.kt td{border:1px solid var(--line); padding:7px 12px; text-align:left}
+  table.kt th{background:var(--panel2); color:var(--accent2)}
   .foot{margin-top:36px; color:var(--dim); font-size:12.5px; text-align:center}
   .legendbar{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--dim); margin:6px 0 4px}
   .legendbar .sw{display:inline-block; width:13px; height:13px; border-radius:3px; vertical-align:-2px; margin-right:5px}
@@ -72,13 +73,23 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>O<span>8000</span> / O<span>9010</span> 기계 수정 가이드</h1>
-  <div class="sub">안전 가드 패치 · 2026-06-12 · 중간 시작 사고 재발 방지 · <a href="o8000.html" style="color:var(--accent)">← O8000 코드 분석으로</a></div>
+  <h1>O<span>0400</span> / O<span>0410</span> 기계 수정 가이드</h1>
+  <div class="sub">안전 가드 패치 (반토막) · 2026-06-12 · <a href="o0400.html" style="color:var(--accent)">← O0400 코드 분석으로</a></div>
 
   <div class="bigmsg">
     ✅ <b>기존 줄은 한 줄도 고치지 않습니다.</b><br>
-    아래 <b>5군데에 새 줄만 끼워 넣으면</b> 끝입니다. (O8000에 2줄 · O9010에 10줄)<br>
-    <span style="color:var(--dim); font-size:13.5px">파란 줄 = 원본에서 찾을 위치(기준 줄) · 초록 줄 = 그 위/아래에 새로 입력할 줄</span>
+    아래 <b>4군데에 새 줄만 끼워 넣으면</b> 끝입니다. (O0400에 2줄 · O0410에 9줄)<br>
+    <span style="color:var(--dim); font-size:13.5px">파란 줄 = 원본에서 찾을 위치(기준 줄) · 초록 줄 = 그 아래에 새로 입력할 줄</span>
+  </div>
+
+  <div class="warn"><b>🔑 키 번호 주의 — 프로그램마다 다릅니다!</b><br>
+    프로그램끼리 통행권이 섞이지 않도록 키 값을 다르게 씁니다. O8000 것을 복사해 쓰면 안 됩니다.
+    <table class="kt">
+      <tr><th>프로그램</th><th>열쇠 (#149)</th><th>도장 검사값 (#148)</th></tr>
+      <tr><td>O8000 / O9010</td><td>8000</td><td>8001 (적용 완료)</td></tr>
+      <tr><td style="color:var(--green);font-weight:700">O0400 / O0410 ← 이 가이드</td><td style="color:var(--green);font-weight:700">400</td><td style="color:var(--green);font-weight:700">401</td></tr>
+      <tr><td>O0852 / O9001</td><td>852</td><td>853 (별도 가이드)</td></tr>
+    </table>
   </div>
 
   <div class="legendbar">
@@ -87,40 +98,40 @@
     <span><span class="sw" style="background:none; border:1px solid #333"></span>회색 = 주변 참고용 (건드리지 않음)</span>
   </div>
 
-  <!-- ================= O8000 ================= -->
-  <h2>📄 O8000 <span class="where">— 2줄 삽입</span></h2>
+  <!-- ================= O0400 ================= -->
+  <h2>📄 O0400 <span class="where">— 2줄 삽입</span></h2>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ①</span><span class="desc"><b>O8000;</b> 바로 아랫줄에 열쇠 1줄 추가</span></div>
+    <div class="stephead"><span class="no">삽입 ①</span><span class="desc"><b>N1;</b> 바로 아랫줄에 열쇠 1줄 추가</span></div>
     <pre>
-<div class="ln ctx"><span class="tag"></span><span class="src">%</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">O8000;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#149=8000 (SAFETY KEY - DO NOT DELETE);</span></div>
+<div class="ln ctx"><span class="tag"></span><span class="src">O0400(MAIN PROGRAM);</span></div>
+<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N1;</span></div>
+<div class="ln add"><span class="tag">+ 입력</span><span class="src">#149=400 (SAFETY KEY - DO NOT DELETE);</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">#120=13; (HOW MANY)</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">#101=80. (MAT DIA OD);</span></div>
 </pre>
   </div>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ②</span><span class="desc"><b>#119=0.55;</b> 와 <b>G100;</b> 사이에 도장 1줄 추가</span></div>
+    <div class="stephead"><span class="no">삽입 ②</span><span class="desc"><b>#100=254;</b> 와 <b>M98 P0410;</b> 사이에 도장 1줄 추가</span></div>
     <pre>
-<div class="ln ctx"><span class="tag"></span><span class="src">#124=0;</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">#119=0.55;</span></div>
+<div class="ln ctx"><span class="tag"></span><span class="src">#124=0 ( 0=NORMAL MODE 1=MANUAL MODE);</span></div>
+<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">#100=254;</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#148=#149+1 (KEY CONFIRM - DO NOT DELETE);</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">G100 ;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">G97 M3 S50;</span></div>
+<div class="ln ctx"><span class="tag"></span><span class="src">M98 P0410;</span></div>
+<div class="ln ctx"><span class="tag"></span><span class="src">M30;</span></div>
 </pre>
   </div>
 
-  <!-- ================= O9010 ================= -->
-  <h2>📄 O9010 <span class="where">— 3군데 10줄 삽입 (편집하려면 NE9 잠금을 잠시 풀어야 할 수 있음)</span></h2>
+  <!-- ================= O0410 ================= -->
+  <h2>📄 O0410 <span class="where">— 2군데 9줄 삽입</span></h2>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ③</span><span class="desc"><b>O9010(...)</b> 바로 아랫줄에 검문소 8줄 추가</span></div>
+    <div class="stephead"><span class="no">삽입 ③</span><span class="desc"><b>O0410(...)</b> 바로 아랫줄에 검문소 8줄 추가</span></div>
     <pre>
 <div class="ln ctx"><span class="tag"></span><span class="src">%</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">O9010(G100 FULL CUTTING);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">IF[#148 EQ 8001] GOTO 2;</span></div>
+<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">O0410(G100 FULL CUTTING);</span></div>
+<div class="ln add"><span class="tag">+ 입력</span><span class="src">IF[#148 EQ 401] GOTO 2;</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#3000=25 (RESTART FROM TOP);</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">N2;</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#148=0;</span></div>
@@ -129,27 +140,15 @@
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#3000=20 (CHECK #120 HOWMANY);</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">N3;</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">#500=0 (W.SHIF ORIGIN);</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#501=#101+5.;</span></div>
+<div class="ln ctx"><span class="tag"></span><span class="src">#501=[#101+5.];</span></div>
 </pre>
   </div>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ④</span><span class="desc"><b>N300(STEP CUTTING);</b> 바로 아랫줄에 라벨 1줄 추가 <span style="color:var(--red)">(알람 060 해결 — 필수!)</span></span></div>
-    <pre>
-<div class="ln ctx"><span class="tag"></span><span class="src">G00 Z5. M09; M01;</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N300(STEP CUTTING);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">N310;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#520=0;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#521=0;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#522=0;</span></div>
-</pre>
-  </div>
-
-  <div class="step">
-    <div class="stephead"><span class="no">삽입 ⑤</span><span class="desc">맨 끝 <b>N450;</b> 바로 아랫줄에 #124 자동 복귀 1줄 추가</span></div>
+    <div class="stephead"><span class="no">삽입 ④</span><span class="desc">맨 끝 <b>N450 (EXIT);</b> 바로 아랫줄에 #124 자동 복귀 1줄 추가</span></div>
     <pre>
 <div class="ln ctx"><span class="tag"></span><span class="src">IF[#520LT#531] GOTO 420;</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N450;</span></div>
+<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N450 (EXIT);</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#124=0 (ONE-SHOT RESET);</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">G30 U0 W0 M5;</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">G10 L2 P0 Z0;</span></div>
@@ -158,26 +157,21 @@
   </div>
 
   <div class="warn"><b>⚠️ 입력 후 반드시 확인</b><br>
-    · 삽입 ③의 <b>N2 / N3</b>, 삽입 ④의 <b>N310</b>이 빠지면 GOTO가 갈 곳이 없어 <span class="alarm">알람 060</span>이 납니다<br>
-    · O9010에 이미 N2·N3 라벨이 있는 다른 버전이라면 번호를 N4·N5 등으로 바꾸고 GOTO 숫자도 같이 바꿔야 합니다 (현재 원본엔 없음 — 확인 완료)<br>
+    · 삽입 ③의 <b>N2 / N3</b> 라벨이 빠지면 GOTO가 갈 곳이 없어 <span class="alarm">알람 060</span>이 납니다<br>
+    · 검사값은 <b>401</b>입니다 — O8000의 8001을 그대로 쓰면 영영 통과 못 합니다<br>
     · 괄호 안 영문 메시지는 알람 화면에 그대로 표시되므로 오타 없이 입력
   </div>
 
   <h2>🧪 입력 끝나면 — 동작 시험 3가지</h2>
   <ol class="check">
     <li><b>정상 시작</b>: 커서 맨 위 → 스타트 → 평소처럼 가공 시작되면 OK</li>
-    <li><b>중간 시작 시험</b>: 커서를 #104 줄에 두고 스타트 → <span class="alarm">알람 25 (RESTART FROM TOP)</span> 뜨고 축이 안 움직이면 OK <span style="color:var(--dim)">— 사고 때와 같은 조작이 이제 막히는지 확인</span></li>
+    <li><b>중간 시작 시험</b>: 커서를 #104 줄에 두고 스타트 → <span class="alarm">알람 25 (RESTART FROM TOP)</span> 뜨고 축이 안 움직이면 OK</li>
     <li><b>수량 가드 시험</b>: #120=0으로 바꾸고 맨 위에서 스타트 → <span class="alarm">알람 20 (CHECK #120 HOWMANY)</span> 뜨면 OK → #120 원래대로 복구</li>
   </ol>
 
-  <h2>🔒 마지막 — 기계 설정 (선택이지만 권장)</h2>
-  <ol class="check">
-    <li>파라미터 <b>3202 #4 (NE9) = 1</b> → O9010(9000번대) 표시·편집 잠금. <span style="color:var(--dim)">단, 위 삽입 ③④⑤를 먼저 끝낸 뒤 잠글 것</span></li>
-  </ol>
-
   <div class="foot">
-    Soltri · O8000 안전 가드 패치 가이드 · 2026-06-12<br>
-    상세 해설: <a href="o8000.html" style="color:var(--accent)">김공장 → O8000 풀커팅</a> · 같은 패치: <a href="o0400-guide.html" style="color:var(--accent)">O0400 가이드</a> · <a href="o0852-guide.html" style="color:var(--accent)">O0852 가이드</a> · 패치 전체 원문: 사무실 PC CNC_CODES\O8000.txt
+    Soltri · O0400 반토막 안전 가드 패치 가이드 · 2026-06-12<br>
+    상세 해설: <a href="o0400.html" style="color:var(--accent)">김공장 → O0400 반토막</a> · 같은 패치: <a href="o8000-guide.html" style="color:var(--accent)">O8000 가이드</a> · <a href="o0852-guide.html" style="color:var(--accent)">O0852 가이드</a>
   </div>
 </div>
 </body>
