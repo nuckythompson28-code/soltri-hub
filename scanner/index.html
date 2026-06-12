@@ -228,9 +228,12 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
     </div>
     <div id="qr-reader"></div>
     <div class="qr-status" id="qr-status">카메라 시작 중...</div>
-    <div style="text-align:center;margin-top:8px">
-      <button class="qr-modal-close" id="qr-switch" type="button">🔄 카메라 전환 — 화면이 흐릿하면 누르세요</button>
+    <div style="text-align:center;margin-top:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+      <button class="qr-modal-close" id="qr-switch" type="button">🔄 카메라 전환</button>
+      <button class="qr-modal-close" id="qr-zoom-out" type="button">➖ 줌</button>
+      <button class="qr-modal-close" id="qr-zoom-in" type="button">➕ 줌</button>
     </div>
+    <div style="text-align:center;margin-top:6px;font-size:11px;color:#5b6472">흐릿하면: 🔄 렌즈 전환 → ➕줌 올리고 <b>한 뼘(15~20cm) 거리</b>에서 비추세요</div>
     <label class="qr-file-input" for="qr-file">📸 또는 사진 파일에서 QR 인식 (HTTPS 미지원 환경용)</label>
     <input type="file" id="qr-file" accept="image/*" capture="environment" style="display:none">
     <div class="qr-fallback" id="qr-fallback" style="display:none">
@@ -953,17 +956,51 @@ function onQrDetected(decoded){
 // 시작 후 연속 AF + 약한 줌을 적용하고, 그래도 흐리면 카메라 전환 버튼으로 렌즈를 바꾼다.
 let qrCams = [], qrCamIdx = -1;
 
+let qrZoom = 0;   // 현재 적용된 줌 (0 = 미적용)
+
 async function applyFocusTweaks(){
   try {
     const caps = qrScanner.getRunningTrackCapabilities();
     const adv = [];
     if(caps && Array.isArray(caps.focusMode) && caps.focusMode.indexOf('continuous') !== -1)
       adv.push({ focusMode: 'continuous' });
-    if(caps && caps.zoom && caps.zoom.max >= 2)
-      adv.push({ zoom: Math.min(2, caps.zoom.max) });
-    if(adv.length) await qrScanner.applyVideoConstraints({ advanced: adv });
+    if(caps && caps.zoom && caps.zoom.max >= 2){
+      qrZoom = Math.min(2, caps.zoom.max);
+      adv.push({ zoom: qrZoom });
+    }
+    // 해상도 협상(ideal이라 실패 없음) — 작은 바코드 인식률 개선
+    const want = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+    if(adv.length) want.advanced = adv;
+    await qrScanner.applyVideoConstraints(want);
   } catch(e){ /* focusMode/zoom 미지원 기기(아이폰 등)는 무시 — 자체 AF에 맡김 */ }
 }
+
+// 줌 수동 조절 — 메인 렌즈 최소 초점거리가 긴 기종(갤럭시 S2x+ 등)은
+// 줌을 올리고 한 뼘 거리에서 비추는 게 초점 잡는 정석.
+async function nudgeZoom(dir){
+  if(!qrScanner) return;
+  try {
+    const caps = qrScanner.getRunningTrackCapabilities();
+    if(!caps || !caps.zoom){
+      $('qr-status').textContent = '이 카메라는 줌 미지원 — 🔄 카메라 전환을 눌러 다른 렌즈를 써보세요.';
+      return;
+    }
+    let cur = qrZoom;
+    if(!cur){
+      try { cur = qrScanner.getRunningTrackSettings().zoom || caps.zoom.min || 1; } catch(e){ cur = 1; }
+    }
+    const step = Math.max(caps.zoom.step || 0.5, 0.5);
+    let z = cur + dir * step;
+    z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, z));
+    await qrScanner.applyVideoConstraints({ advanced: [{ zoom: z }] });
+    qrZoom = z;
+    $('qr-status').textContent = '🔍 줌 ' + z.toFixed(1) + '배 — 초점이 맞는 거리를 찾아 천천히 움직여 보세요.';
+  } catch(e){
+    $('qr-status').textContent = '줌 조절 실패: ' + (e.message || e);
+  }
+}
+$('qr-zoom-in').addEventListener('click', ()=>nudgeZoom(+1));
+$('qr-zoom-out').addEventListener('click', ()=>nudgeZoom(-1));
 
 async function startQrScan(cam){
   $('qr-status').className = 'qr-status';
