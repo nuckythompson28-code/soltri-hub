@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>O0400/O0410 기계 수정 가이드 — 삽입 4군데</title>
+<title>O0400 정비 완본 가이드 — 9000번대 이전 + 통행권 + NE9</title>
 <style>
   :root{
     --bg:#0f1216; --panel:#161b22; --panel2:#1c232d; --line:#222b36;
@@ -14,20 +14,23 @@
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--txt); font-size:15px; line-height:1.6;
     font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif; padding:30px 18px 80px}
-  .wrap{max-width:860px; margin:0 auto}
+  .wrap{max-width:880px; margin:0 auto}
   h1{font-size:25px; font-weight:800; margin:0 0 4px}
   h1 span{color:var(--accent)}
   .sub{color:var(--dim); font-size:14px; margin-bottom:20px}
   .bigmsg{background:#1d2a22; border:1px solid #2d5a3a; border-left:4px solid var(--green);
-    border-radius:12px; padding:16px 20px; margin:18px 0 26px; font-size:16px}
+    border-radius:12px; padding:16px 20px; margin:18px 0 26px; font-size:15.5px}
   .bigmsg b{color:var(--green)}
   .warn{background:#2a1d1d; border:1px solid #5a2d2d; border-left:4px solid var(--red);
     border-radius:12px; padding:14px 18px; margin:18px 0; font-size:14px}
   .warn b{color:var(--red)}
-  h2{font-size:19px; margin:36px 0 6px; color:var(--accent2)}
+  .info{background:#1a2233; border:1px solid #2d3a5a; border-left:4px solid var(--accent);
+    border-radius:12px; padding:14px 18px; margin:18px 0; font-size:14px}
+  .info b{color:var(--accent)}
+  h2{font-size:19px; margin:34px 0 6px; color:var(--accent2)}
   h2 .where{font-size:13px; color:var(--dim); font-weight:400; margin-left:8px}
   .step{background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    overflow:hidden; margin:12px 0 26px}
+    overflow:hidden; margin:12px 0 22px}
   .stephead{display:flex; align-items:center; gap:10px; padding:12px 18px;
     background:var(--panel2); border-bottom:1px solid var(--line); font-size:14px}
   .stephead .no{background:var(--green); color:#0f1216; font-weight:800; border-radius:8px;
@@ -54,6 +57,8 @@
   table.kt{width:100%; border-collapse:collapse; margin:10px 0 20px; font-size:14px}
   table.kt th,table.kt td{border:1px solid var(--line); padding:7px 12px; text-align:left}
   table.kt th{background:var(--panel2); color:var(--accent2)}
+  table.kt td:first-child{font-family:monospace}
+  .arrow{color:var(--green);font-weight:800}
   .foot{margin-top:36px; color:var(--dim); font-size:12.5px; text-align:center}
   .legendbar{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--dim); margin:6px 0 4px}
   .legendbar .sw{display:inline-block; width:13px; height:13px; border-radius:3px; vertical-align:-2px; margin-right:5px}
@@ -68,110 +73,86 @@
     .ln.anchor .src{color:#1a4fa0}
     .bigmsg{background:#eefaf0; border-color:#7cc78f; color:#111}
     .warn{background:#fdeeee; border-color:#d99}
+    .info{background:#eef2fb; border-color:#9ab}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>O<span>0400</span> / O<span>0410</span> 기계 수정 가이드</h1>
-  <div class="sub">안전 가드 패치 (반토막) · 2026-06-12 · <a href="o0400.html" style="color:var(--accent)">← O0400 코드 분석으로</a></div>
+  <h1>O<span>0400</span> 정비 완본 가이드</h1>
+  <div class="sub">9000번대 이전 + 통행권 안전가드 + NE9 잠금 · 2026-06-15 · <a href="o0400.html" style="color:var(--accent)">← O0400 코드 분석으로</a></div>
 
   <div class="bigmsg">
-    ✅ <b>기존 줄은 한 줄도 고치지 않습니다.</b><br>
-    아래 <b>4군데에 새 줄만 끼워 넣으면</b> 끝입니다. (O0400에 2줄 · O0410에 9줄)<br>
-    <span style="color:var(--dim); font-size:13.5px">파란 줄 = 원본에서 찾을 위치(기준 줄) · 초록 줄 = 그 아래에 새로 입력할 줄</span>
+    🔧 <b>O0400 한 번에 정비</b> — 세 가지를 한 번의 등록으로 끝냅니다:<br>
+    ① 로직·서브를 <b>9000번대로 이전</b> (NE9로 잠그기 위해) ②  <b>통행권 안전가드</b>(중간시작 차단) ③ <b>NE9 잠금</b><br>
+    <span style="color:var(--dim); font-size:13.5px">로직은 한 글자도 안 바뀝니다 — 번호와 안전장치만 추가</span>
   </div>
 
-  <div class="warn"><b>🔑 키 번호 주의 — 프로그램마다 다릅니다!</b><br>
-    프로그램끼리 통행권이 섞이지 않도록 키 값을 다르게 씁니다. O8000 것을 복사해 쓰면 안 됩니다.
-    <table class="kt">
-      <tr><th>프로그램</th><th>열쇠 (#149)</th><th>도장 검사값 (#148)</th></tr>
-      <tr><td>O8000 / O9010</td><td>8000</td><td>8001 (적용 완료)</td></tr>
-      <tr><td style="color:var(--green);font-weight:700">O0400 / O0410 ← 이 가이드</td><td style="color:var(--green);font-weight:700">400</td><td style="color:var(--green);font-weight:700">401</td></tr>
-      <tr><td>O0852 / O9001</td><td>852</td><td>853 (별도 가이드)</td></tr>
-    </table>
-  </div>
+  <h2>STEP A <span class="where">번호 이전 — 기존 삭제 후 새 번호로 등록</span></h2>
+  <div class="info"><b>왜?</b> O7000번대·O0410은 <b>NE9 보호 범위(9000~9999) 밖</b>이라 작업자가 편집·삭제할 수 있습니다.
+    9000번대로 옮겨야 NE9 한 번으로 다 잠깁니다.</div>
+  <table class="kt">
+    <tr><th>기존 번호</th><th></th><th>새 번호</th><th>역할</th></tr>
+    <tr><td>O0410</td><td class="arrow">→</td><td><b>O9020</b></td><td>로직 (전체길이·그룹루프·잔여)</td></tr>
+    <tr><td>O7001</td><td class="arrow">→</td><td><b>O9021</b></td><td>면가공 FACE</td></tr>
+    <tr><td>O7002</td><td class="arrow">→</td><td><b>O9022</b></td><td>스텝/보링</td></tr>
+    <tr><td>O7003</td><td class="arrow">→</td><td><b>O9023</b></td><td>면취 CHAMFER</td></tr>
+    <tr><td>O7004</td><td class="arrow">→</td><td><b>O9024</b></td><td>절단 PARTING</td></tr>
+    <tr><td>O7005</td><td class="arrow">→</td><td><b>O9025</b></td><td>잔여분 스텝</td></tr>
+  </table>
+  <div class="warn"><b>작업:</b> 기존 <code>O0410 · O7001~O7005</code>를 <b>삭제</b>하고, 완본 파일의 <b>O9020~O9025를 통째로 등록</b>하세요.
+    (완본에는 통행권·#124 리셋이 이미 들어 있습니다.) 호출번호(<code>M98 P7001</code>→<code>P9021</code> 등)도 완본에 다 반영돼 있어 따로 손댈 필요 없습니다.</div>
 
-  <div class="legendbar">
-    <span><span class="sw" style="background:#1a2233; border:1px solid #4fb6ff"></span>기준 줄 (원본에 이미 있음 — 찾기만)</span>
-    <span><span class="sw" style="background:#14301d; border:1px solid #7ee787"></span>새로 입력할 줄</span>
-    <span><span class="sw" style="background:none; border:1px solid #333"></span>회색 = 주변 참고용 (건드리지 않음)</span>
-  </div>
-
-  <!-- ================= O0400 ================= -->
-  <h2>📄 O0400 <span class="where">— 2줄 삽입</span></h2>
+  <h2>STEP B <span class="where">메인 O0400 — 2줄 삽입 + 호출번호 1곳 수정</span></h2>
+  <div class="info"><b>메인 O0400은 살아있는 채로 수정</b>합니다 (작업자 입력용이라 삭제 안 함).</div>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ①</span><span class="desc"><b>N1;</b> 바로 아랫줄에 열쇠 1줄 추가</span></div>
+    <div class="stephead"><span class="no">B-1</span><span class="desc"><b>N1;</b> 바로 아랫줄에 열쇠 1줄 추가</span></div>
     <pre>
 <div class="ln ctx"><span class="tag"></span><span class="src">O0400(MAIN PROGRAM);</span></div>
 <div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N1;</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#149=400 (SAFETY KEY - DO NOT DELETE);</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">#120=13; (HOW MANY)</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#101=80. (MAT DIA OD);</span></div>
 </pre>
   </div>
 
   <div class="step">
-    <div class="stephead"><span class="no">삽입 ②</span><span class="desc"><b>#100=254;</b> 와 <b>M98 P0410;</b> 사이에 도장 1줄 추가</span></div>
+    <div class="stephead"><span class="no">B-2</span><span class="desc"><b>#100=254;</b> 아래에 도장 1줄 추가 + <b>호출번호 P0410→P9020</b></span></div>
     <pre>
 <div class="ln ctx"><span class="tag"></span><span class="src">#124=0 ( 0=NORMAL MODE 1=MANUAL MODE);</span></div>
 <div class="ln anchor"><span class="tag">기준 줄</span><span class="src">#100=254;</span></div>
 <div class="ln add"><span class="tag">+ 입력</span><span class="src">#148=#149+1 (KEY CONFIRM - DO NOT DELETE);</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">M98 P0410;</span></div>
+<div class="ln add"><span class="tag">수정</span><span class="src">M98 P9020;   ← 기존 M98 P0410 에서 번호만 변경</span></div>
 <div class="ln ctx"><span class="tag"></span><span class="src">M30;</span></div>
 </pre>
   </div>
 
-  <!-- ================= O0410 ================= -->
-  <h2>📄 O0410 <span class="where">— 2군데 9줄 삽입</span></h2>
+  <div class="info">※ O9020(로직) 머리의 <b>통행권 검문·#120 가드</b>와 끝의 <b>#124 1회용 리셋</b>은
+    STEP A에서 등록하는 완본에 <b>이미 포함</b>돼 있습니다 — 따로 입력할 필요 없습니다.
+    키는 <b>400 → 도장 401</b>입니다 (O8000의 8001, O0852의 853과 다름 — 프로그램끼리 안 섞이게).</div>
 
-  <div class="step">
-    <div class="stephead"><span class="no">삽입 ③</span><span class="desc"><b>O0410(...)</b> 바로 아랫줄에 검문소 8줄 추가</span></div>
-    <pre>
-<div class="ln ctx"><span class="tag"></span><span class="src">%</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">O0410(G100 FULL CUTTING);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">IF[#148 EQ 401] GOTO 2;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#3000=25 (RESTART FROM TOP);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">N2;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#148=0;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#149=0;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">IF[#120 GE 1] GOTO 3;</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#3000=20 (CHECK #120 HOWMANY);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">N3;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#500=0 (W.SHIF ORIGIN);</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">#501=[#101+5.];</span></div>
-</pre>
-  </div>
-
-  <div class="step">
-    <div class="stephead"><span class="no">삽입 ④</span><span class="desc">맨 끝 <b>N450 (EXIT);</b> 바로 아랫줄에 #124 자동 복귀 1줄 추가</span></div>
-    <pre>
-<div class="ln ctx"><span class="tag"></span><span class="src">IF[#520LT#531] GOTO 420;</span></div>
-<div class="ln anchor"><span class="tag">기준 줄</span><span class="src">N450 (EXIT);</span></div>
-<div class="ln add"><span class="tag">+ 입력</span><span class="src">#124=0 (ONE-SHOT RESET);</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">G30 U0 W0 M5;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">G10 L2 P0 Z0;</span></div>
-<div class="ln ctx"><span class="tag"></span><span class="src">M99;</span></div>
-</pre>
-  </div>
-
-  <div class="warn"><b>⚠️ 입력 후 반드시 확인</b><br>
-    · 삽입 ③의 <b>N2 / N3</b> 라벨이 빠지면 GOTO가 갈 곳이 없어 <span class="alarm">알람 060</span>이 납니다<br>
-    · 검사값은 <b>401</b>입니다 — O8000의 8001을 그대로 쓰면 영영 통과 못 합니다<br>
-    · 괄호 안 영문 메시지는 알람 화면에 그대로 표시되므로 오타 없이 입력
-  </div>
+  <h2>STEP C <span class="where">NE9 잠금</span></h2>
+  <ol class="check">
+    <li>시운전 1회 — 정상 가공 확인</li>
+    <li>파라미터 <b>3202 #4 (NE9) = 1</b> → O9020~O9025 포함 9000번대 전체 편집·삭제 잠금</li>
+  </ol>
+  <div class="warn"><b>⚠️ NE9는 9000번대 "대역 전체"를 한 번에 잠급니다.</b>
+    이 기계의 O9001~9003(O0852)·O9010(O8000)도 같이 잠기는데, 그게 정상입니다.<br>
+    <b>NE8(3202 #0)은 절대 켜지 마세요</b> — 켜면 8000번대 메인(O8000)까지 잠겨 작업자가 파라미터를 못 고칩니다.</div>
 
   <h2>🧪 입력 끝나면 — 동작 시험 3가지</h2>
   <ol class="check">
-    <li><b>정상 시작</b>: 커서 맨 위 → 스타트 → 평소처럼 가공 시작되면 OK</li>
+    <li><b>정상 시작</b>: 커서 맨 위 → 스타트 → 평소처럼 가공되면 OK</li>
     <li><b>중간 시작 시험</b>: 커서를 #104 줄에 두고 스타트 → <span class="alarm">알람 25 (RESTART FROM TOP)</span> 뜨고 축이 안 움직이면 OK</li>
-    <li><b>수량 가드 시험</b>: #120=0으로 바꾸고 맨 위에서 스타트 → <span class="alarm">알람 20 (CHECK #120 HOWMANY)</span> 뜨면 OK → #120 원래대로 복구</li>
+    <li><b>수량 가드 시험</b>: #120=0으로 바꾸고 맨 위에서 스타트 → <span class="alarm">알람 20 (CHECK #120 HOWMANY)</span> 뜨면 OK → 복구</li>
   </ol>
 
+  <div class="info"><b>📌 다음 단계 (이번 작업 아님)</b> — O0852처럼 <b>호기별 M코드를 #130 머신셀렉트로 변수화</b>하면
+    코드 1벌로 전 호기를 돌릴 수 있습니다. 단, 기계 컨트롤러가 <b>변수 M코드 <code>M[#변수]</code>를 지원하는지 확인</b>이 먼저입니다.</div>
+
   <div class="foot">
-    Soltri · O0400 반토막 안전 가드 패치 가이드 · 2026-06-12<br>
-    상세 해설: <a href="o0400.html" style="color:var(--accent)">김공장 → O0400 반토막</a> · 같은 패치: <a href="o8000-guide.html" style="color:var(--accent)">O8000 가이드</a> · <a href="o0852-guide.html" style="color:var(--accent)">O0852 가이드</a>
+    Soltri · O0400 정비 완본 가이드 · 2026-06-15<br>
+    완본 원문: 사무실 PC <code>CNC_CODES\O0400_정비완본.txt</code> · 상세 해설: <a href="o0400.html" style="color:var(--accent)">김공장 → O0400 반토막</a> · 같은 패치: <a href="o8000-guide.html" style="color:var(--accent)">O8000 가이드</a>
   </div>
 </div>
 </body>
