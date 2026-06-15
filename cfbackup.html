@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💾 CF카드 프로그램 백업 — 김공장</title>
+<style>
+  :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
+    --accent:#ff8c42;--cyan:#7df9ff;--green:#7ee787;--red:#ff7b72;--gold:#ffd23f;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:#080a0e;color:var(--txt);min-height:100vh;padding:20px 16px 60px}
+  .wrap{max-width:600px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .home{color:var(--dim);text-decoration:none;font-size:13px;font-family:monospace}
+  .home:active{color:var(--accent)}
+  h1{font-size:19px;font-weight:800;margin:0;color:var(--accent)}
+  .sub{color:var(--dim);font-size:12.5px;margin:8px 2px 16px;line-height:1.55}
+  .sub b{color:var(--cyan)}
+
+  .hl{background:#10141a;border-left:3px solid var(--gold);border-radius:0 10px 10px 0;
+    padding:12px 14px;font-size:13.5px;color:#e8edf3;line-height:1.6;margin-bottom:20px}
+  .hl b{color:var(--gold)}
+  .hl code{background:#1d2632;color:var(--cyan);padding:1px 7px;border-radius:5px;font-size:14px;font-weight:700}
+
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps li{position:relative;background:#12161d;border:1px solid #243042;border-radius:12px;
+    padding:14px 16px 14px 52px;margin-bottom:11px;font-size:14px;line-height:1.55}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:13px;top:13px;
+    width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1a1206;
+    font-weight:900;font-family:monospace;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .steps li b{color:var(--cyan)}
+  .steps code{background:#0a0d11;border:1px solid #1d2632;color:var(--gold);padding:1px 7px;
+    border-radius:5px;font-family:"D2Coding",monospace;font-size:13.5px;font-weight:700}
+  .steps .hint{display:block;color:var(--dim);font-size:12px;margin-top:5px}
+
+  .key{display:inline-block;background:#1c232d;border:1px solid #3a4654;border-bottom-width:2px;
+    border-radius:6px;padding:1px 8px;font-family:monospace;font-size:12.5px;color:#cdd6e2;font-weight:700;margin:0 1px}
+
+  .warn{background:#241616;border:1px solid #5a2d2d;border-left:3px solid var(--red);
+    border-radius:0 10px 10px 0;padding:12px 14px;font-size:13px;line-height:1.6;margin:18px 0}
+  .warn b{color:var(--red)}
+  .warn code{background:#0a0d11;color:#ffb27a;padding:1px 6px;border-radius:5px;font-family:monospace;font-weight:700}
+  .tip{background:#14241a;border:1px solid #2d5a3a;border-left:3px solid var(--green);
+    border-radius:0 10px 10px 0;padding:12px 14px;font-size:13px;line-height:1.6;margin:18px 0}
+  .tip b{color:var(--green)}
+
+  h2{font-size:15px;color:var(--gold);margin:26px 0 8px;font-weight:800}
+  table.m{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.m th,table.m td{border:1px solid #243042;padding:7px 9px;text-align:left}
+  table.m th{background:#1c232d;color:var(--cyan)}
+  table.m td:first-child{font-family:monospace;font-weight:700;color:#ffb27a;white-space:nowrap}
+  .pending{color:#566;font-style:italic}
+  .foot{margin-top:26px;text-align:center;font-size:11px;color:var(--dim);line-height:1.6}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff8c42">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="home" href="index.html">◀ 김공장</a>
+    <h1>💾 CF카드 프로그램 백업</h1>
+  </div>
+  <p class="sub">기계(컨트롤러)에 등록된 <b>모든 NC 프로그램(O번호 전체)을 CF카드로 한 번에</b> 빼는 방법. 위아(현대위아) · FANUC 0i 계열 기준.</p>
+
+  <div class="hl">
+    🔑 <b>핵심:</b> 프로그램 번호란에 <code>O-9999</code> 를 넣고 <b>PUNCH(출력)</b> 하면
+    <b>O0001 ~ O9999 전부</b> 한 번에 빠집니다. (한 개만 빼려면 <code>O1234</code>처럼 단일 번호)
+  </div>
+
+  <h2>📋 절차 (FANUC 0i 계열)</h2>
+  <ol class="steps">
+    <li><b>CF카드 삽입</b> — 컨트롤러 측면 또는 도어 안 메모리카드 슬롯에.
+      <span class="hint">포맷은 FAT / FAT32. 구형 컨트롤러는 2GB 이하 카드 권장.</span></li>
+    <li><b>I/O 채널을 메모리카드로 지정</b> — SETTING(설정) 화면, 또는 파라미터 <code>No.20 (I/O CHANNEL) = 4</code>
+      <span class="hint">이게 4(메모리카드)가 아니면 카드로 안 나가고 다른 포트로 나가려다 실패합니다.</span></li>
+    <li><b>EDIT 모드</b> 선택
+      <span class="hint">편집 모드여야 출력이 됩니다. (자동/MDI 모드에선 PUNCH 안 뜸)</span></li>
+    <li><span class="key">PROG</span> 키 → 프로그램 화면</li>
+    <li>우측 <span class="key">操作 / OPRT</span> 소프트키 → 확장 <span class="key">+</span> → <span class="key">PUNCH</span>
+      <span class="hint">기종에 따라 [출력] / [F 출력] / [F OUTPUT] 으로 표시되기도 합니다.</span></li>
+    <li>프로그램 번호 입력란에 <code>O-9999</code> 또는 <code>-9999</code> 입력
+      <span class="hint">= O0001 ~ O9999 전체 일괄. 단일은 O번호 하나만.</span></li>
+    <li><span class="key">EXEC / 실행</span> → 카드에 기록 ✅</li>
+  </ol>
+
+  <div class="warn">
+    <b>⚠️ 9000번대(로직·매크로)는 보호 켜져 있으면 빠지지 않습니다</b><br>
+    O9010·O9020 같은 로직과 메이커 매크로는 NE9 보호 대상입니다. <b>전체 백업하려면 잠시 풀고</b> 출력하세요:<br>
+    · <code>3202 #4 (NE9)</code> = 0 → 9000번대 잠금 해제<br>
+    · <code>3202 #0 (NE8)</code> = 0 → 8000번대(O8000) 잠금 해제<br>
+    출력 끝나면 <b>다시 1로 잠그기</b>. 안 풀면 정작 중요한 로직이 백업에서 누락됩니다.
+  </div>
+
+  <div class="tip">
+    <b>💡 자주 막히는 곳</b><br>
+    · 카드 인식 안 됨 → <b>포맷(FAT/FAT32)·용량</b> 확인<br>
+    · PUNCH 메뉴 안 보임 → <b>EDIT 모드</b>인지 확인<br>
+    · "I/O ERROR" → 파라미터 <b>No.20 = 4</b>(메모리카드) 확인<br>
+    · 일부 프로그램만 나옴 → <b>NE8/NE9 보호</b> 때문 (위 경고 참고)
+  </div>
+
+  <h2>🕹️ 호기별 컨트롤러 모델 · 키 차이</h2>
+  <table class="m">
+    <tr><th>호기</th><th>위아 기종</th><th>FANUC</th><th>CF 슬롯 위치 / 메모</th></tr>
+    <tr><td>전수조사 예정</td><td colspan="3" class="pending">— 호기별 모델 조사 후 채워넣을 예정 (0i-D/F 세대별 [DEVICE] 선택 차이 포함) —</td></tr>
+  </table>
+  <p class="sub" style="margin-top:10px">※ 위아+FANUC 0i 계열은 위 절차가 거의 공통입니다. 0i-D ↔ 0i-F 세대에서 <b>메모리카드 선택([DEVICE]) 위치</b>만 살짝 다른데, 호기별 모델이 정리되면 이 표에 채워 넣습니다.</p>
+
+  <p class="foot">Soltri · 김공장 · CF카드 백업 절차 · 2026-06-15</p>
+</div>
+</body>
+</html>
