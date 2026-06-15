@@ -1154,46 +1154,89 @@ function applyRefdata(d, gen){
   refreshCoverage();
 }
 
-function loadRefdata(){
-  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 7000));
-  Promise.race([fbRoot().child('generated').once('value'), timeout]).then(snap => {
-    const gen = snap.val();
-    if (!gen) { askCode('접속코드가 올바르지 않거나 데이터가 없습니다'); return; }
-    subscribeScans();
+// 자동 갱신 토스트 — 새 빌드가 올라와 데이터가 바뀌면 잠깐 안내
+function showDataUpdatedToast(gen){
+  let t = document.getElementById('data-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'data-toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);'
+      + 'background:#166534;color:#fff;padding:11px 20px;border-radius:12px;font-weight:800;'
+      + 'font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:99999;opacity:0;'
+      + 'transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = '🔄 데이터 자동 갱신됨 · ' + (gen || '');
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(()=>{ t.style.opacity = '0'; }, 4000);
+}
+
+let _lastGen = null;        // 현재 적용된 데이터 생성시각 — 변하면 자동 재로딩
+let _firstApplied = false;  // 최초 1회 적용 여부
+
+function fetchAndApply(gen, isFirst){
+  // 갱신 시엔 항상 새로 받음. 최초엔 같은 gen 캐시가 있으면 캐시 사용(빠른 표시)
+  if(isFirst){
     const cached = localStorage.getItem('scanner_refdata');
-    if (cached && localStorage.getItem('scanner_refdata_gen') === gen) {
-      try {
-        applyRefdata(JSON.parse(cached), gen);
-        return;
-      } catch (e) {
-        localStorage.removeItem('scanner_refdata');
-        localStorage.removeItem('scanner_refdata_gen');
-        // 손상 캐시 — 전체 다운로드 경로로 진행
-      }
+    if(cached && localStorage.getItem('scanner_refdata_gen') === gen){
+      try { applyRefdata(JSON.parse(cached), gen); _firstApplied = true; return; }
+      catch(e){ localStorage.removeItem('scanner_refdata'); localStorage.removeItem('scanner_refdata_gen'); }
     }
-    fbRoot().child('refdata_json').once('value').then(s2 => {
-      const txt = s2.val();
-      if (!txt) return;
-      try {
-        localStorage.setItem('scanner_refdata', txt);
-        localStorage.setItem('scanner_refdata_gen', gen);
-      } catch (e) { console.warn('refdata 캐시 저장 실패(용량?):', e); }   // localStorage 한도 초과 시 캐시만 포기
-      applyRefdata(JSON.parse(txt), gen);
-    });
-  }).catch(() => {
-    const cached = localStorage.getItem('scanner_refdata');  // 오프라인 폴백
-    if (cached) {
-      try {
-        applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || '');
-      } catch (e) {
-        localStorage.removeItem('scanner_refdata');
-        localStorage.removeItem('scanner_refdata_gen');
-        return;
-      }
-      subscribeScans();   // 재연결 시 구독이 살아나도록
-    }
-    else setSyncState(false);
+  }
+  fbRoot().child('refdata_json').once('value').then(s2 => {
+    const txt = s2.val();
+    if(!txt) return;
+    try {
+      localStorage.setItem('scanner_refdata', txt);
+      localStorage.setItem('scanner_refdata_gen', gen);
+    } catch(e){ console.warn('refdata 캐시 저장 실패(용량?):', e); }
+    applyRefdata(JSON.parse(txt), gen);
+    _firstApplied = true;
+    if(!isFirst) showDataUpdatedToast(gen);   // 백그라운드 자동 갱신 알림
   });
+}
+
+function loadRefdata(){
+  // 생성시각을 실시간 구독 — 새 빌드(아침 배치/스캐너갱신)가 올라오면 자동으로 데이터 교체.
+  // PC를 새로고침 안 하고 켜둬도 몇 초 내 최신화됨. 전체 리로드가 아니라 DATA만 조용히 갱신.
+  const genRef = fbRoot().child('generated');
+  genRef.on('value', snap => {
+    const gen = snap.val();
+    if(!gen){ if(!_firstApplied) askCode('접속코드가 올바르지 않거나 데이터가 없습니다'); return; }
+    if(gen === _lastGen) return;          // 변화 없음 → 무시
+    const isFirst = (_lastGen === null);
+    _lastGen = gen;
+    if(isFirst) subscribeScans();
+    fetchAndApply(gen, isFirst);
+  }, err => {
+    console.warn('generated 구독 실패 — 캐시 폴백:', err);
+    const cached = localStorage.getItem('scanner_refdata');
+    if(cached){
+      try { applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || ''); subscribeScans(); }
+      catch(e){ localStorage.removeItem('scanner_refdata'); localStorage.removeItem('scanner_refdata_gen'); }
+    } else setSyncState(false);
+  });
+
+  // 오프라인/최초 7초 내 응답 없으면 캐시로 먼저 표시 (구독은 살아서 이후 자동 갱신)
+  setTimeout(()=>{
+    if(_firstApplied) return;
+    const cached = localStorage.getItem('scanner_refdata');
+    if(cached){
+      try { applyRefdata(JSON.parse(cached), localStorage.getItem('scanner_refdata_gen') || ''); }
+      catch(e){}
+    }
+  }, 7000);
+
+  // 안전 폴링 — 실시간 연결이 조용히 끊겨도 5분마다 생성시각 재확인 후 변하면 갱신
+  if(!loadRefdata._poll){
+    loadRefdata._poll = setInterval(()=>{
+      fbRoot().child('generated').once('value').then(s=>{
+        const gen = s.val();
+        if(gen && gen !== _lastGen){ _lastGen = gen; fetchAndApply(gen, false); }
+      }).catch(()=>{});
+    }, 5 * 60 * 1000);
+  }
 }
 
 let _subs = [];
