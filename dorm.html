@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏠 기숙사 현황 — 김공장</title>
+<style>
+  :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
+    --accent:#ff8c42;--cyan:#7df9ff;--gold:#ffd23f;--ph:#36d399;--np:#ff8c42;--bd:#c08bff;--kr:#4fb6ff;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:#080a0e;color:var(--txt);min-height:100vh;
+    background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 3px);}
+  .wrap{max-width:640px;margin:0 auto;padding:18px 14px 80px}
+
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+  .home{color:var(--dim);text-decoration:none;font-size:13px;font-family:monospace}
+  .home:active{color:var(--accent)}
+  h1{font-size:18px;font-weight:800;margin:0;font-family:monospace;color:var(--accent);
+    text-shadow:0 0 10px rgba(255,140,66,.6);letter-spacing:1px}
+  .meta{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:11.5px;margin:7px 2px 14px;font-family:monospace}
+  .dot{width:8px;height:8px;border-radius:50%;background:#444;display:inline-block}
+  .dot.on{background:var(--ph);box-shadow:0 0 7px var(--ph)} .dot.off{background:#ff5d5d}
+  .who{margin-left:auto;color:var(--cyan);text-decoration:none;border:1px solid var(--line);padding:3px 9px;border-radius:999px;font-size:11px}
+
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+  .scell{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 4px;text-align:center}
+  .scell .c{font-size:22px;font-weight:900;font-family:monospace;line-height:1;color:#cdd6e2}
+  .scell .l{font-size:10.5px;color:var(--dim);font-weight:700;margin-top:3px}
+
+  .bld{font-size:12px;color:var(--gold);font-weight:800;letter-spacing:1px;margin:20px 3px 9px;font-family:monospace}
+  .room{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:11px}
+  .rhead{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .rname{font-size:15px;font-weight:800}
+  .rcount{font-size:11px;font-weight:800;font-family:monospace;color:var(--accent);background:#2a2018;padding:2px 9px;border-radius:999px}
+  .radd{margin-left:auto;background:#12161d;border:1px solid var(--line);color:var(--cyan);font-size:12px;font-weight:700;
+    padding:5px 11px;border-radius:9px;cursor:pointer}
+  .radd:active{transform:scale(.95)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#12161d;border:1.5px solid #2c3744;
+    border-radius:11px;padding:9px 12px;cursor:pointer;transition:transform .1s,border-color .12s;position:relative}
+  .chip:active{transform:scale(.95)}
+  .chip .fl{font-size:16px;line-height:1}
+  .chip .nm{font-size:15px;font-weight:700}
+  .chip.ph{border-color:#1f4d3c} .chip.np{border-color:#5a3a22} .chip.bd{border-color:#4a3666} .chip.kr{border-color:#274a63}
+  .chip .pl{font-size:9.5px;font-weight:800;font-family:monospace;color:var(--gold);background:rgba(255,210,63,.14);
+    padding:1px 6px;border-radius:999px;margin-left:1px}
+  .empty{color:var(--dim);font-size:12.5px;font-family:monospace;padding:4px 2px}
+  .addroom{width:100%;margin-top:6px;background:none;border:1px dashed #344150;color:var(--dim);
+    padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer}
+
+  /* 시트 */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;z-index:20;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+  .mask.open{display:flex}
+  .sheet{width:100%;max-width:640px;background:#0e1319;border-top:2px solid var(--accent);border-radius:18px 18px 0 0;
+    max-height:90vh;overflow-y:auto;padding:16px 16px 30px;box-shadow:0 -10px 40px rgba(0,0,0,.6)}
+  .shead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .shead .bn{font-size:22px;font-weight:900;color:var(--accent)}
+  .shead .bt{font-size:12px;color:var(--dim);font-family:monospace}
+  .shead .close{margin-left:auto;background:#1c232d;border:1px solid var(--line);color:var(--txt);width:36px;height:36px;border-radius:10px;font-size:18px;cursor:pointer}
+  .seclbl{font-size:11px;color:var(--dim);font-weight:800;letter-spacing:.5px;margin:15px 2px 8px;text-transform:uppercase}
+  .roomopts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .roomopts button{padding:14px 6px;border-radius:12px;border:2px solid var(--line);background:#12161d;color:var(--txt);
+    font-size:14px;font-weight:700;cursor:pointer;text-align:left}
+  .roomopts button:active{transform:scale(.97)}
+  .roomopts button.cur{border-color:var(--accent);background:rgba(255,140,66,.12);color:var(--accent)}
+  .roomopts button .rc{display:block;font-size:10.5px;color:var(--dim);font-family:monospace;margin-top:2px}
+  .natopts{display:flex;gap:7px;flex-wrap:wrap}
+  .natopts button{padding:9px 13px;border-radius:10px;border:2px solid var(--line);background:#12161d;color:var(--dim);
+    font-size:13px;font-weight:700;cursor:pointer}
+  .natopts button.sel{border-color:var(--accent);color:var(--txt)}
+  .srow{display:flex;gap:8px;margin-top:14px}
+  .srow button{flex:1;padding:13px;border-radius:11px;border:1px solid var(--line);background:#12161d;color:var(--txt);font-size:13px;font-weight:700;cursor:pointer}
+  .srow .plan.on{border-color:var(--gold);color:var(--gold);background:rgba(255,210,63,.1)}
+  .srow .out{border-color:#6e2626;color:#ff8a8a}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c232d;border:1px solid var(--accent);
+    color:var(--txt);padding:10px 18px;border-radius:999px;font-size:13px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:700}
+  .toast.show{opacity:1}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff8c42">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});}</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="home" href="index.html">← 김공장</a>
+    <h1>🏠 기숙사 현황</h1>
+  </div>
+  <div class="meta">
+    <span class="dot" id="dot"></span><span id="conn">연결 중…</span>
+    <span id="upd"></span>
+    <a class="who" id="who" href="javascript:void(0)">이름</a>
+  </div>
+
+  <div class="summary">
+    <div class="scell"><div class="c" id="c-all">·</div><div class="l">전체</div></div>
+    <div class="scell"><div class="c" id="c-105">·</div><div class="l">105동</div></div>
+    <div class="scell"><div class="c" id="c-106">·</div><div class="l">106동</div></div>
+    <div class="scell"><div class="c" id="c-ext">·</div><div class="l">외부거주</div></div>
+  </div>
+
+  <div id="board"></div>
+  <button class="addroom" id="addroom">＋ 방 추가</button>
+</div>
+
+<!-- 거주자 시트 -->
+<div class="mask" id="mask">
+  <div class="sheet">
+    <div class="shead">
+      <span class="bn" id="s-name"></span>
+      <span class="bt" id="s-room"></span>
+      <button class="close" id="s-close">✕</button>
+    </div>
+
+    <div class="seclbl">방 이동 — 옮길 방을 누르세요</div>
+    <div class="roomopts" id="s-rooms"></div>
+
+    <div class="seclbl">국적</div>
+    <div class="natopts" id="s-nat"></div>
+
+    <div class="srow">
+      <button class="plan" id="s-plan">예정 표시</button>
+      <button id="s-rename">✏️ 이름변경</button>
+      <button class="out" id="s-out">🚪 퇴거</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = "https://kimkongjang-c8b9c-default-rtdb.asia-southeast1.firebasedatabase.app";
+const BASE = DB + "/scanner/soltri2026/dorm";
+const RROOMS = BASE + "/rooms";
+const RRES = BASE + "/residents";
+
+const NAT = {ph:{f:"🇵🇭",l:"필리핀"},np:{f:"🇳🇵",l:"네팔"},bd:{f:"🇧🇩",l:"방글라"},kr:{f:"🇰🇷",l:"한국"},etc:{f:"🌐",l:"기타"},"":{f:"🏳️",l:"미정"}};
+
+// 시드 (데이터 없을 때 1회)
+const SEED_ROOMS = {
+  r1:{id:"r1",name:"105동 1509호",bld:"105동",order:0},
+  r2:{id:"r2",name:"105동 112호",bld:"105동",order:1},
+  r3:{id:"r3",name:"106동 1509호",bld:"106동",order:2},
+  r4:{id:"r4",name:"외부거주",bld:"외부",order:3,ext:true}
+};
+function P(n,room,nat,planned){ return {name:n,room:room,nat:nat,planned:!!planned}; }
+const SEED_RES = {
+  p1:P("아르넬","r1","ph"), p2:P("마이크","r1","ph"), p3:P("주","r1","ph"),
+  p4:P("준","r1","ph"), p5:P("유부","r1","np"), p6:P("아날","r1","np"),
+  p7:P("존","r3","ph"), p8:P("마크","r3","ph"), p9:P("덴마크","r3","ph"),
+  p10:P("비달","r3","ph"), p11:P("자카리아","r3","bd"),
+  p12:P("라메쉬","r4",""), p13:P("리키","r4",""), p14:P("수잔","r4",""),
+  p15:P("임란","r4",""), p16:P("림부","r4",""),
+  p17:P("김윤호","r2","kr",true)
+};
+
+let ROOMS={}, RES={}, lastSnap="", openPid=null;
+let WHO = localStorage.getItem("kk_who")||"";
+const $ = id=>document.getElementById(id);
+function now(){ return new Date().toISOString().slice(0,16).replace("T"," "); }
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1600); }
+function conn(ok){ $("dot").className="dot "+(ok?"on":"off"); $("conn").textContent=ok?"실시간":"오프라인"; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function fbGet(p){ const r=await fetch(p+".json?_="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; return r.json(); }
+async function fbPut(p,v){ const r=await fetch(p+".json",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)}); if(!r.ok)throw 0; return r.json(); }
+async function fbPatch(p,v){ const r=await fetch(p+".json",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)}); if(!r.ok)throw 0; return r.json(); }
+async function fbPost(p,v){ const r=await fetch(p+".json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)}); if(!r.ok)throw 0; return r.json(); }
+async function fbDel(p){ const r=await fetch(p+".json",{method:"DELETE"}); if(!r.ok)throw 0; return true; }
+
+async function load(){
+  try{
+    let rooms=await fbGet(RROOMS), res=await fbGet(RRES);
+    if(!rooms){ await fbPut(RROOMS,SEED_ROOMS); rooms=SEED_ROOMS; }
+    if(res===null){ await fbPut(RRES,SEED_RES); res=SEED_RES; }
+    conn(true);
+    const snap=JSON.stringify(rooms)+"|"+JSON.stringify(res);
+    if(snap!==lastSnap){
+      lastSnap=snap; ROOMS=rooms||{}; RES=res||{};
+      render();
+    }
+  }catch(e){ conn(false); }
+}
+
+function roomList(){ return Object.values(ROOMS).filter(Boolean).sort((a,b)=>(a.order||0)-(b.order||0)); }
+function resOf(rid){ return Object.entries(RES).filter(([id,r])=>r&&r.room===rid).sort((a,b)=>(a[1].name||"").localeCompare(b[1].name||"")); }
+
+function render(){
+  // 요약
+  const all=Object.values(RES).filter(Boolean).length;
+  const byBld=b=>roomList().filter(r=>r.bld===b).reduce((s,r)=>s+resOf(r.id).length,0);
+  $("c-all").textContent=all; $("c-105").textContent=byBld("105동");
+  $("c-106").textContent=byBld("106동"); $("c-ext").textContent=byBld("외부");
+  let latest=""; Object.values(RES).forEach(r=>{ if(r&&r.updated&&r.updated>latest)latest=r.updated; });
+  $("upd").textContent = latest ? "· 최근 "+latest : "";
+
+  // 보드 (동별 그룹)
+  const board=$("board"); board.innerHTML="";
+  const blds=[...new Set(roomList().map(r=>r.bld))];
+  blds.forEach(bld=>{
+    const h=document.createElement("div"); h.className="bld"; h.textContent="▸ "+bld; board.appendChild(h);
+    roomList().filter(r=>r.bld===bld).forEach(room=>{
+      const members=resOf(room.id);
+      const card=document.createElement("div"); card.className="room";
+      let chips = members.length
+        ? members.map(([id,r])=>{
+            const n=NAT[r.nat||""]||NAT[""];
+            return '<span class="chip '+(r.nat||"")+'" data-pid="'+id+'"><span class="fl">'+n.f+'</span>'+
+              '<span class="nm">'+esc(r.name)+'</span>'+(r.planned?'<span class="pl">예정</span>':'')+'</span>';
+          }).join("")
+        : '<div class="empty">— 비어있음 —</div>';
+      card.innerHTML =
+        '<div class="rhead"><span class="rname">'+esc(room.name)+'</span>'+
+        '<span class="rcount">'+members.length+'명</span>'+
+        '<button class="radd" data-room="'+room.id+'">＋ 입소</button></div>'+
+        '<div class="chips">'+chips+'</div>';
+      board.appendChild(card);
+    });
+  });
+  bindBoard();
+  if(openPid && RES[openPid]) renderSheet();
+}
+function bindBoard(){
+  document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>openSheet(c.dataset.pid));
+  document.querySelectorAll(".radd").forEach(b=>b.onclick=()=>addResident(b.dataset.room));
+}
+
+/* ---- 시트 ---- */
+function openSheet(pid){ openPid=pid; $("mask").classList.add("open"); renderSheet(); }
+function closeSheet(){ openPid=null; $("mask").classList.remove("open"); }
+function renderSheet(){
+  const r=RES[openPid]; if(!r) return closeSheet();
+  $("s-name").textContent=(NAT[r.nat||""]||NAT[""]).f+" "+r.name;
+  $("s-room").textContent=(ROOMS[r.room]?ROOMS[r.room].name:"미배정");
+  // 방 옵션
+  const ro=$("s-rooms"); ro.innerHTML="";
+  roomList().forEach(room=>{
+    const b=document.createElement("button");
+    b.className=(room.id===r.room?"cur":"");
+    b.innerHTML=esc(room.name)+'<span class="rc">'+room.bld+' · '+resOf(room.id).length+'명</span>';
+    b.onclick=()=>moveTo(room.id);
+    ro.appendChild(b);
+  });
+  // 국적
+  const nb=$("s-nat"); nb.innerHTML="";
+  Object.keys(NAT).filter(k=>k!=="").forEach(k=>{
+    const b=document.createElement("button"); b.className=(r.nat===k?"sel":"");
+    b.textContent=NAT[k].f+" "+NAT[k].l; b.onclick=()=>setNat(k); nb.appendChild(b);
+  });
+  $("s-plan").className="plan"+(r.planned?" on":"");
+  $("s-plan").textContent=r.planned?"✓ 예정":"예정 표시";
+}
+async function moveTo(rid){
+  const r=RES[openPid]; if(r.room===rid){ closeSheet(); return; }
+  r.room=rid; r.updated=now(); r.by=WHO||r.by; render();
+  try{ await fbPatch(RRES+"/"+openPid,{room:rid,updated:r.updated,by:WHO||""}); toast(r.name+" → "+ROOMS[rid].name); closeSheet(); load(); }
+  catch(e){ toast("저장 실패 — 와이파이 확인"); }
+}
+async function setNat(k){
+  const r=RES[openPid]; r.nat=k; render();
+  try{ await fbPatch(RRES+"/"+openPid,{nat:k}); load(); }catch(e){ toast("저장 실패"); }
+}
+async function togglePlan(){
+  const r=RES[openPid]; r.planned=!r.planned; render();
+  try{ await fbPatch(RRES+"/"+openPid,{planned:r.planned}); load(); }catch(e){ toast("저장 실패"); }
+}
+async function renameRes(){
+  const r=RES[openPid]; const v=prompt("이름 변경",r.name); if(v===null) return;
+  const nm=v.trim(); if(!nm) return; r.name=nm; render();
+  try{ await fbPatch(RRES+"/"+openPid,{name:nm}); load(); }catch(e){ toast("저장 실패"); }
+}
+async function moveOut(){
+  const r=RES[openPid]; if(!confirm(r.name+" 퇴거 처리할까요? (목록에서 삭제)")) return;
+  delete RES[openPid]; const pid=openPid; closeSheet(); render();
+  try{ await fbDel(RRES+"/"+pid); toast("퇴거 처리됨"); load(); }catch(e){ toast("삭제 실패"); }
+}
+async function addResident(rid){
+  const v=prompt("입소자 이름 ("+(ROOMS[rid]?ROOMS[rid].name:"")+")"); if(v===null) return;
+  const nm=v.trim(); if(!nm) return;
+  const it={name:nm,room:rid,nat:"",planned:false,updated:now(),by:WHO||""};
+  try{ const res=await fbPost(RRES,it); RES[res.name]=it; render(); toast(nm+" 입소"); load(); openSheet(res.name); }
+  catch(e){ toast("저장 실패"); }
+}
+async function addRoom(){
+  const bld=prompt("동 이름 (예: 105동 / 106동 / 외부)"); if(bld===null) return;
+  const nm=prompt("방 이름 (예: 105동 1203호)"); if(nm===null||!nm.trim()) return;
+  const id="r"+Date.now().toString(36);
+  const room={id:id,name:nm.trim(),bld:bld.trim()||"기타",order:roomList().length};
+  try{ await fbPatch(RROOMS,{[id]:room}); ROOMS[id]=room; render(); toast("방 추가됨"); load(); }catch(e){ toast("저장 실패"); }
+}
+
+/* ---- 이벤트 ---- */
+$("s-close").onclick=closeSheet;
+$("mask").onclick=e=>{ if(e.target===$("mask")) closeSheet(); };
+$("s-plan").onclick=togglePlan;
+$("s-rename").onclick=renameRes;
+$("s-out").onclick=moveOut;
+$("addroom").onclick=addRoom;
+$("who").onclick=()=>{ const v=prompt("기록자 이름",WHO); if(v!==null){ WHO=v.trim(); localStorage.setItem("kk_who",WHO); $("who").textContent=WHO||"이름"; } };
+
+$("who").textContent=WHO||"이름";
+load(); setInterval(load,5000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) load(); });
+</script>
+</body>
+</html>
