@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏭 공장현황 — 김공장</title>
+<style>
+  :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
+    --accent:#ff8c42;--cyan:#7df9ff;--gold:#ffd23f;
+    --run:#36d399;--check:#ffd23f;--stop:#6b7a8d;--down:#ff5d5d;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
+    background:#080a0e;color:var(--txt);min-height:100vh;
+    background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 3px);}
+  .wrap{max-width:640px;margin:0 auto;padding:18px 14px 80px}
+
+  /* 헤더 */
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+  .home{color:var(--dim);text-decoration:none;font-size:13px;font-family:monospace}
+  .home:active{color:var(--accent)}
+  h1{font-size:18px;font-weight:800;margin:0;font-family:monospace;color:var(--accent);
+    text-shadow:0 0 10px rgba(255,140,66,.6);letter-spacing:1px}
+  .meta{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:11.5px;margin:7px 2px 14px;font-family:monospace}
+  .dot{width:8px;height:8px;border-radius:50%;background:#444;display:inline-block}
+  .dot.on{background:var(--run);box-shadow:0 0 7px var(--run)}
+  .dot.off{background:var(--down)}
+  .who{margin-left:auto;color:var(--cyan);text-decoration:none;border:1px solid var(--line);
+    padding:3px 9px;border-radius:999px;font-size:11px}
+
+  /* 요약 스트립 */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+  .scell{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 4px;text-align:center}
+  .scell .c{font-size:22px;font-weight:900;font-family:monospace;line-height:1}
+  .scell .l{font-size:10.5px;color:var(--dim);font-weight:700;margin-top:3px}
+  .scell.run .c{color:var(--run)} .scell.check .c{color:var(--check)}
+  .scell.stop .c{color:var(--stop)} .scell.down .c{color:var(--down)}
+
+  /* 설비 그리드 */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .mtile{background:#12161d;border:2px solid #243042;border-radius:14px;padding:12px 8px 11px;
+    cursor:pointer;position:relative;transition:transform .1s,border-color .15s,box-shadow .15s;text-align:center}
+  .mtile:active{transform:scale(.96)}
+  .mtile .n{font-size:25px;font-weight:900;font-family:monospace;line-height:1;color:#cdd6e2}
+  .mtile .sn{font-size:9.5px;color:var(--dim);font-weight:700;margin-top:1px}
+  .mtile .st{display:inline-block;margin-top:7px;font-size:11px;font-weight:800;font-family:monospace;
+    padding:2px 8px;border-radius:999px;letter-spacing:.3px}
+  .mtile .eta{font-size:10px;color:var(--gold);font-weight:700;margin-top:4px;font-family:monospace}
+  .mtile .badge{position:absolute;top:-7px;right:-6px;min-width:21px;height:21px;border-radius:11px;
+    background:var(--accent);color:#1a1207;font-size:12px;font-weight:900;display:flex;align-items:center;
+    justify-content:center;padding:0 5px;box-shadow:0 0 8px rgba(255,140,66,.5);font-family:monospace}
+  /* 상태별 타일 색 */
+  .mtile.run{border-color:#1f4d3c} .mtile.run .st{background:rgba(54,211,153,.16);color:var(--run)}
+  .mtile.check{border-color:#5a5021} .mtile.check .st{background:rgba(255,210,63,.16);color:var(--check)}
+  .mtile.check{box-shadow:inset 0 0 12px rgba(255,210,63,.1)}
+  .mtile.stop{border-color:#33414f} .mtile.stop .st{background:rgba(107,122,141,.18);color:#9fb0c2}
+  .mtile.down{border-color:#6e2626;box-shadow:inset 0 0 14px rgba(255,93,93,.16),0 0 10px rgba(255,93,93,.25)}
+  .mtile.down .st{background:rgba(255,93,93,.18);color:var(--down)}
+  .mtile.down .n{color:#ffb3b3}
+
+  /* 상세 (모달 시트) */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;z-index:20;
+    align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+  .mask.open{display:flex}
+  .sheet{width:100%;max-width:640px;background:#0e1319;border-top:2px solid var(--accent);
+    border-radius:18px 18px 0 0;max-height:90vh;overflow-y:auto;padding:16px 16px 30px;
+    box-shadow:0 -10px 40px rgba(0,0,0,.6)}
+  .shead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .shead .bn{font-size:30px;font-weight:900;font-family:monospace;color:var(--accent);line-height:1}
+  .shead .bt{font-size:12px;color:var(--dim);font-family:monospace}
+  .shead .close{margin-left:auto;background:#1c232d;border:1px solid var(--line);color:var(--txt);
+    width:36px;height:36px;border-radius:10px;font-size:18px;cursor:pointer}
+
+  .seclbl{font-size:11px;color:var(--dim);font-weight:800;letter-spacing:.5px;margin:14px 2px 7px;text-transform:uppercase}
+  /* 상태 선택 버튼 */
+  .stbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .stbtns button{padding:13px 2px;border-radius:12px;border:2px solid var(--line);background:#12161d;
+    color:var(--dim);font-size:13px;font-weight:800;font-family:monospace;cursor:pointer;transition:.12s}
+  .stbtns button:active{transform:scale(.95)}
+  .stbtns button.sel[data-s=run]{border-color:var(--run);background:rgba(54,211,153,.16);color:var(--run)}
+  .stbtns button.sel[data-s=check]{border-color:var(--check);background:rgba(255,210,63,.16);color:var(--check)}
+  .stbtns button.sel[data-s=stop]{border-color:#9fb0c2;background:rgba(107,122,141,.2);color:#cdd6e2}
+  .stbtns button.sel[data-s=down]{border-color:var(--down);background:rgba(255,93,93,.18);color:var(--down)}
+
+  .etarow{display:none;margin-top:10px;align-items:center;gap:9px}
+  .etarow.show{display:flex}
+  .etarow label{font-size:12.5px;color:var(--gold);font-weight:700;white-space:nowrap}
+  .etarow input{flex:1;background:#12161d;border:1px solid var(--line);border-radius:9px;color:var(--txt);
+    padding:9px;font-size:14px;font-family:monospace}
+
+  /* 이슈 목록 */
+  .issues{display:flex;flex-direction:column;gap:8px}
+  .issue{background:#12161d;border:1px solid var(--line);border-radius:11px;padding:10px 11px;
+    display:flex;align-items:flex-start;gap:9px}
+  .issue.done{opacity:.5}
+  .issue .ck{flex:none;width:26px;height:26px;border-radius:7px;border:2px solid #3a4756;background:#0c1015;
+    cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;color:transparent}
+  .issue.done .ck{background:var(--run);border-color:var(--run);color:#06160f}
+  .issue .body{flex:1;min-width:0}
+  .issue .tag{font-size:10px;font-weight:800;font-family:monospace;padding:1px 7px;border-radius:999px;margin-right:6px}
+  .tag.fix{background:rgba(255,140,66,.16);color:var(--accent)}
+  .tag.tool{background:rgba(125,249,255,.13);color:var(--cyan)}
+  .tag.part{background:rgba(255,93,93,.16);color:var(--down)}
+  .issue .txt{font-size:14px;line-height:1.45;word-break:break-word}
+  .issue.done .txt{text-decoration:line-through}
+  .issue .sub{font-size:10.5px;color:var(--dim);margin-top:4px;font-family:monospace}
+  .issue .del{flex:none;background:none;border:none;color:#5b6675;font-size:17px;cursor:pointer;padding:0 2px}
+  .empty{color:var(--dim);font-size:13px;text-align:center;padding:14px;font-family:monospace}
+
+  /* 이슈 추가 */
+  .add{margin-top:11px;background:#12161d;border:1px dashed #344150;border-radius:12px;padding:11px}
+  .kinds{display:flex;gap:7px;margin-bottom:9px}
+  .kinds button{flex:1;padding:9px 2px;border-radius:9px;border:2px solid var(--line);background:#0c1015;
+    color:var(--dim);font-size:12px;font-weight:800;font-family:monospace;cursor:pointer}
+  .kinds button.sel.fix{border-color:var(--accent);color:var(--accent)}
+  .kinds button.sel.tool{border-color:var(--cyan);color:var(--cyan)}
+  .kinds button.sel.part{border-color:var(--down);color:var(--down)}
+  .add textarea{width:100%;background:#0c1015;border:1px solid var(--line);border-radius:9px;color:var(--txt);
+    padding:10px;font-size:14px;font-family:inherit;resize:vertical;min-height:52px}
+  .add .save{width:100%;margin-top:9px;padding:13px;border-radius:11px;border:none;background:var(--accent);
+    color:#1a1207;font-size:15px;font-weight:900;cursor:pointer}
+  .add .save:active{transform:scale(.98)}
+  .add .save:disabled{opacity:.4}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c232d;
+    border:1px solid var(--accent);color:var(--txt);padding:10px 18px;border-radius:999px;font-size:13px;
+    z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:700}
+  .toast.show{opacity:1}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff8c42">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});}</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="home" href="index.html">← 김공장</a>
+    <h1>🏭 공장현황</h1>
+  </div>
+  <div class="meta">
+    <span class="dot" id="dot"></span><span id="conn">연결 중…</span>
+    <span id="upd"></span>
+    <a class="who" id="who" href="javascript:void(0)">이름</a>
+  </div>
+
+  <div class="summary">
+    <div class="scell run"><div class="c" id="c-run">·</div><div class="l">가동중</div></div>
+    <div class="scell check"><div class="c" id="c-check">·</div><div class="l">점검중</div></div>
+    <div class="scell stop"><div class="c" id="c-stop">·</div><div class="l">정지</div></div>
+    <div class="scell down"><div class="c" id="c-down">·</div><div class="l">고장</div></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- 상세 시트 -->
+<div class="mask" id="mask">
+  <div class="sheet" id="sheet">
+    <div class="shead">
+      <span class="bn" id="d-no"></span>
+      <span class="bt" id="d-type"></span>
+      <button class="close" id="d-close">✕</button>
+    </div>
+
+    <div class="seclbl">가동 상태</div>
+    <div class="stbtns" id="d-stbtns">
+      <button data-s="run">가동중</button>
+      <button data-s="check">점검중</button>
+      <button data-s="stop">정지</button>
+      <button data-s="down">고장</button>
+    </div>
+    <div class="etarow" id="d-etarow">
+      <label>복구 예정</label>
+      <input type="date" id="d-eta">
+    </div>
+
+    <div class="seclbl">현재 이슈 / 문제</div>
+    <div class="issues" id="d-issues"></div>
+
+    <div class="add">
+      <div class="kinds" id="d-kinds">
+        <button class="fix sel" data-k="fix">🔧 조치필요</button>
+        <button class="tool" data-k="tool">🧰 치공구부족</button>
+        <button class="part" data-k="part">⚡ 고장·부품</button>
+      </div>
+      <textarea id="d-text" placeholder="예) 압력 높여도 톡 치면 소재가 안쪽으로 밀림 / 작은 파이용 작은 쪼 없음"></textarea>
+      <button class="save" id="d-save">＋ 이슈 추가</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = "https://kimkongjang-c8b9c-default-rtdb.asia-southeast1.firebasedatabase.app";
+const BASE = DB + "/scanner/soltri2026/factory";   // 규칙상 열린 네임스페이스 하위
+const MACH = BASE + "/machines";
+
+// 초기 로스터 (machines.html과 동일) — 데이터 없을 때 1회 시드
+const SEED = [
+  {no:"1",type:"AL"},{no:"2",type:"HA"},{no:"3",type:"HA"},{no:"4",type:"AL"},
+  {no:"5",type:"AL"},{no:"6",type:"HA"},{no:"7",type:"AL"},{no:"8",type:"AL"},
+  {no:"9",type:"AL"},{no:"10",type:"AL"},
+  {no:"13",type:"HA",sub:"S3"},{no:"14",type:"HA",sub:"S4"}
+];
+const STLABEL = {run:"가동중",check:"점검중",stop:"정지",down:"고장"};
+const KINDLABEL = {fix:"🔧 조치필요",tool:"🧰 치공구부족",part:"⚡ 고장·부품"};
+const STORDER = {down:0,check:1,stop:2,run:3};  // 문제 먼저
+
+let DATA = {};        // {no: machine}
+let openNo = null;    // 현재 열린 설비
+let curKind = "fix";
+let lastSnap = "";    // 변경 감지용
+let WHO = localStorage.getItem("kk_who") || "";
+
+const $ = id => document.getElementById(id);
+const mpath = no => MACH + "/m" + no;   // 숫자키 배열변환 방지: m1..m14
+function now(){ return new Date().toISOString().slice(0,16).replace("T"," "); }
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1600); }
+function conn(ok){ $("dot").className="dot "+(ok?"on":"off"); $("conn").textContent=ok?"실시간":"오프라인"; }
+
+/* ---------- Firebase REST ---------- */
+async function fbGet(path){
+  const r = await fetch(path+".json?_="+Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
+async function fbPut(path, val){
+  const r = await fetch(path+".json", {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(val)});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
+async function fbPatch(path, val){
+  const r = await fetch(path+".json", {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(val)});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
+async function fbDel(path){
+  const r = await fetch(path+".json", {method:"DELETE"});
+  if(!r.ok) throw new Error(r.status); return true;
+}
+
+/* ---------- 로드 / 폴링 ---------- */
+async function load(){
+  try{
+    let raw = await fbGet(MACH);
+    if(!raw){                     // 최초 시드 (키 m1..m14 — 숫자키 배열변환 방지)
+      const seeded = {};
+      SEED.forEach((s,i)=>{ seeded["m"+s.no]={no:s.no,type:s.type,sub:s.sub||null,order:i,status:"run",eta:"",issues:{}}; });
+      await fbPut(MACH, seeded);
+      raw = seeded;
+    }
+    conn(true);
+    // 배열변환/객체 모두 수용 → no 기준으로 정규화
+    const norm = {};
+    (Array.isArray(raw)?raw:Object.values(raw)).forEach(v=>{ if(v && v.no) norm[v.no]=v; });
+    const snap = JSON.stringify(norm);
+    if(snap !== lastSnap){
+      lastSnap = snap; DATA = norm;
+      // 입력 중이 아니면 렌더 (입력 방해 방지)
+      if(document.activeElement !== $("d-text")) render();
+      else { renderGridOnly(); }   // 그리드만 갱신, 열린 시트 입력은 보존
+    }
+  }catch(e){ conn(false); }
+}
+
+/* ---------- 렌더 ---------- */
+function machineList(){
+  return Object.values(DATA).sort((a,b)=>{
+    const d = STORDER[a.status||"run"] - STORDER[b.status||"run"];
+    return d!==0 ? d : (parseInt(a.no)-parseInt(b.no));
+  });
+}
+function openIssueCount(m){
+  if(!m.issues) return 0;
+  return Object.values(m.issues).filter(x=>x && !x.done).length;
+}
+function renderSummary(){
+  const cnt={run:0,check:0,stop:0,down:0};
+  Object.values(DATA).forEach(m=>{ cnt[m.status||"run"]=(cnt[m.status||"run"]||0)+1; });
+  $("c-run").textContent=cnt.run; $("c-check").textContent=cnt.check;
+  $("c-stop").textContent=cnt.stop; $("c-down").textContent=cnt.down;
+  // 마지막 갱신 시각 = 가장 최근 updated
+  let latest=""; Object.values(DATA).forEach(m=>{ if(m.updated && m.updated>latest) latest=m.updated; });
+  $("upd").textContent = latest ? "· 최근 "+latest : "";
+}
+function renderGridOnly(){
+  const g = $("grid"); g.innerHTML="";
+  machineList().forEach(m=>{
+    const st=m.status||"run", oc=openIssueCount(m);
+    const t=document.createElement("div");
+    t.className="mtile "+st;
+    t.onclick=()=>openSheet(m.no);
+    t.innerHTML =
+      (oc?'<span class="badge">'+oc+'</span>':'')+
+      '<div class="n">'+m.no+'</div>'+
+      '<div class="sn">'+(m.sub?m.sub+' · 호기':'호기')+(m.type?' · '+m.type:'')+'</div>'+
+      '<div class="st">'+STLABEL[st]+'</div>'+
+      ((st!=="run" && m.eta)?'<div class="eta">▸ '+m.eta+'</div>':'');
+    g.appendChild(t);
+  });
+  renderSummary();
+}
+function render(){ renderGridOnly(); if(openNo && DATA[openNo]) renderSheet(); }
+
+/* ---------- 상세 시트 ---------- */
+function openSheet(no){ openNo=no; curKind="fix"; $("mask").classList.add("open"); renderSheet(); }
+function closeSheet(){ openNo=null; $("mask").classList.remove("open"); }
+
+function renderSheet(){
+  const m = DATA[openNo]; if(!m) return closeSheet();
+  $("d-no").textContent = m.no;
+  $("d-type").textContent = (m.sub?m.sub+' · ':'')+(m.type||'')+' 타입';
+  // 상태 버튼
+  [...$("d-stbtns").children].forEach(b=>b.classList.toggle("sel", b.dataset.s===(m.status||"run")));
+  const showEta = (m.status||"run")!=="run";
+  $("d-etarow").classList.toggle("show", showEta);
+  $("d-eta").value = m.eta||"";
+  // 이슈
+  const box=$("d-issues"); box.innerHTML="";
+  const issues = m.issues ? Object.entries(m.issues) : [];
+  issues.sort((a,b)=>(a[1].done?1:0)-(b[1].done?1:0) || (b[1].ts||"").localeCompare(a[1].ts||""));
+  if(!issues.length){ box.innerHTML='<div class="empty">등록된 이슈 없음</div>'; }
+  issues.forEach(([id,it])=>{
+    if(!it) return;
+    const d=document.createElement("div");
+    d.className="issue"+(it.done?" done":"");
+    d.innerHTML =
+      '<div class="ck">✓</div>'+
+      '<div class="body"><div><span class="tag '+(it.kind||"fix")+'">'+KINDLABEL[it.kind||"fix"]+'</span>'+
+        '<span class="txt">'+esc(it.text||"")+'</span></div>'+
+        '<div class="sub">'+(it.by?it.by+' · ':'')+(it.ts||'')+(it.done?' · ✓해결':'')+'</div></div>'+
+      '<button class="del">🗑</button>';
+    d.querySelector(".ck").onclick=()=>toggleIssue(id,!it.done);
+    d.querySelector(".del").onclick=()=>delIssue(id);
+    box.appendChild(d);
+  });
+  // 종류 선택 초기화
+  [...$("d-kinds").children].forEach(b=>b.classList.toggle("sel", b.dataset.k===curKind));
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- 쓰기 액션 ---------- */
+async function setStatus(no, st){
+  DATA[no].status=st; DATA[no].updated=now(); DATA[no].by=WHO||DATA[no].by;
+  render();
+  try{ await fbPatch(mpath(no), {status:st, updated:DATA[no].updated, by:WHO||""}); toast(no+"호기 → "+STLABEL[st]); load(); }
+  catch(e){ toast("저장 실패 — 와이파이 확인"); }
+}
+async function setEta(no, eta){
+  DATA[no].eta=eta; DATA[no].updated=now();
+  try{ await fbPatch(mpath(no), {eta:eta, updated:DATA[no].updated}); load(); }catch(e){ toast("저장 실패"); }
+}
+async function addIssue(no, text, kind){
+  const it={text:text, kind:kind, done:false, ts:now(), by:WHO||""};
+  if(!DATA[no].issues) DATA[no].issues={};
+  try{
+    const res=await fbPost(mpath(no)+"/issues", it);  // push
+    DATA[no].issues[res.name]=it;
+    DATA[no].updated=now(); await fbPatch(mpath(no),{updated:DATA[no].updated});
+    renderSheet(); renderGridOnly(); toast("이슈 추가됨"); load();
+  }catch(e){ toast("저장 실패 — 와이파이 확인"); }
+}
+async function fbPost(path, val){
+  const r=await fetch(path+".json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(val)});
+  if(!r.ok) throw new Error(r.status); return r.json();   // {name: pushId}
+}
+async function toggleIssue(id, done){
+  DATA[openNo].issues[id].done=done; renderSheet(); renderGridOnly();
+  try{ await fbPatch(mpath(openNo)+"/issues/"+id,{done:done}); load(); }catch(e){ toast("저장 실패"); }
+}
+async function delIssue(id){
+  delete DATA[openNo].issues[id]; renderSheet(); renderGridOnly();
+  try{ await fbDel(mpath(openNo)+"/issues/"+id); load(); }catch(e){ toast("삭제 실패"); }
+}
+
+/* ---------- 이벤트 ---------- */
+$("d-stbtns").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b&&openNo) setStatus(openNo,b.dataset.s); });
+$("d-eta").addEventListener("change", e=>{ if(openNo) setEta(openNo, e.target.value); });
+$("d-kinds").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b){ curKind=b.dataset.k;
+  [...$("d-kinds").children].forEach(x=>x.classList.toggle("sel",x===b)); } });
+$("d-save").addEventListener("click", ()=>{
+  const t=$("d-text").value.trim(); if(!t||!openNo) return;
+  $("d-text").value=""; addIssue(openNo,t,curKind);
+});
+$("d-close").addEventListener("click", closeSheet);
+$("mask").addEventListener("click", e=>{ if(e.target===$("mask")) closeSheet(); });
+$("who").addEventListener("click", ()=>{
+  const v=prompt("기록자 이름 (현황 변경 시 함께 저장됩니다)", WHO);
+  if(v!==null){ WHO=v.trim(); localStorage.setItem("kk_who",WHO); $("who").textContent=WHO||"이름"; }
+});
+
+/* ---------- 시작 ---------- */
+$("who").textContent = WHO || "이름";
+load();
+setInterval(load, 5000);   // 5초 실시간 폴링
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) load(); });
+</script>
+</body>
+</html>
