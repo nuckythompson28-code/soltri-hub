@@ -70,6 +70,11 @@ body{font-family:'맑은 고딕','Pretendard',sans-serif;background:#f4f6fa;colo
 @keyframes discPulse{0%,100%{box-shadow:0 6px 18px rgba(220,38,38,.4)}50%{box-shadow:0 6px 26px rgba(220,38,38,.75)}}
 .result.is-discontinue{border-color:#dc2626 !important}
 
+/* 0갭 안내 배너 (RS20·RS40 · 폭≤8 · 살두께≤1.5) */
+.gap-banner{background:linear-gradient(135deg,#4338ca,#6366f1);color:#fff;padding:16px 22px;border-radius:14px;
+  margin-bottom:18px;font-size:26px;font-weight:800;text-align:center;box-shadow:0 6px 18px rgba(67,56,202,.4)}
+.gap-banner .gap-sub{font-size:15px;font-weight:600;margin-top:7px;opacity:.95;font-family:Consolas,monospace}
+
 .r-history{margin-top:14px}
 .r-history h4{font-size:13px;color:#1f2937;font-weight:700;margin-bottom:8px}
 .r-history table{width:100%;font-size:12px;border-collapse:collapse;background:rgba(255,255,255,.6);border-radius:8px;overflow:hidden}
@@ -1436,6 +1441,20 @@ function scanViaServer(code){
   }
   refreshCoverage();   // 구독이 곧 갱신하지만 즉시 반영
 }
+// 0갭 판정 — RS20·RS40 소재 AND 폭 ≤ 8mm AND (외경-내경)/2 ≤ 1.5mm → 0갭 (2026-06-25)
+// spec = '내경*외경*폭'. 오파싱(내경>외경, 음수 살두께)은 제외.
+function zeroGap(spec, material){
+  var m = ScannerCore.normCompany(ScannerCore.baseMat(material));   // 'RS20'/'RS40' 정규화
+  if(m !== 'RS20' && m !== 'RS40') return null;
+  var parts = ScannerCore.normSpec(spec).split('*').filter(function(p){ return p !== ''; });
+  if(parts.length < 3) return null;
+  var inner = parseFloat(parts[0]), outer = parseFloat(parts[1]), width = parseFloat(parts[2]);
+  if(!isFinite(inner) || !isFinite(outer) || !isFinite(width)) return null;
+  var wall = (outer - inner) / 2;
+  if(wall > 0 && wall <= 1.5 && width <= 8) return { wall: wall, width: width };
+  return null;
+}
+
 function renderServerResult(code, r){
   const el = $('result');
   var _re = $('result-empty'); if(_re) _re.style.display = 'none';
@@ -1567,9 +1586,13 @@ function renderServerResult(code, r){
       + '</div>'; }).join('');
   }
   var prod = (DATA.detail_index && DATA.detail_index[r.detail_no]) ? (DATA.detail_index[r.detail_no].product || '') : '';
+  var gap = zeroGap(r.spec, r.material);   // 0갭 대상 여부 (RS20·RS40 · 폭≤8 · 살두께≤1.5)
   el.className = 'result show verdict-' + verd + (disc ? ' is-discontinue' : '');
   el.innerHTML =
-    (disc ? '<div class="disc-banner">🚫 '
+    (gap ? '<div class="gap-banner">⚙️ 0갭 — <b>갭 없이 가공</b>'
+        + '<div class="gap-sub">' + r.material + ' · ' + r.spec
+        + ' · 폭 ' + ScannerCore.fmtNum(gap.width) + 'mm · 살두께 ' + gap.wall.toFixed(2) + 'mm (≤1.5)</div></div>' : '')
+    + (disc ? '<div class="disc-banner">🚫 '
         + (discCustKnown
             ? (disc.customer||'')+' '+(disc.label||'단종예정')+' — <b>정수량만 생산</b> (여분·선생산 금지)'
             : '<b>'+(disc.customer||'')+' 발주면 정수량만 생산</b> ('+(disc.label||'단종예정')+' · 여분·선생산 금지)')
