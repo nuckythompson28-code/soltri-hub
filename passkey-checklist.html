@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>통행권 가드 입력 체크리스트</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Pretendard","Malgun Gothic",sans-serif;
+    background:#f4f6f9; color:#1a2233; line-height:1.55;
+    padding:16px 12px 90px; max-width:680px; margin:0 auto;
+  }
+  h1 { font-size:22px; }
+  .sub { color:#5a6b85; font-size:14px; margin:4px 0 14px; }
+  .box {
+    background:#fff; border-radius:14px; padding:16px 18px;
+    box-shadow:0 1px 4px rgba(20,40,80,.08); margin-bottom:16px;
+  }
+  h2 { font-size:17px; margin-bottom:10px; }
+  ol { margin-left:22px; font-size:15.5px; }
+  li { margin-bottom:8px; }
+  code {
+    background:#eef2f8; border:1px solid #d7e0ee; border-radius:5px;
+    padding:1px 6px; font-family:Consolas,monospace; font-size:14px; color:#1d4ed8;
+  }
+  .warn {
+    background:#fdeeee; border:2px solid #d33; border-radius:10px;
+    padding:9px 13px; font-size:14.5px; font-weight:700; color:#b02; margin-top:10px;
+  }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+  .mc {
+    background:#f8fafd; border:2px solid #e3eaf4; border-radius:12px;
+    padding:10px; text-align:center; cursor:pointer; user-select:none;
+  }
+  .mc .name { font-size:17px; font-weight:800; }
+  .mc .st { font-size:12.5px; color:#8fa0ba; margin-top:3px; font-weight:700; }
+  .mc.done { background:#eafaf0; border-color:#34a866; }
+  .mc.done .st { color:#1a7a45; }
+  .steps4 { font-size:13.5px; color:#5a6b85; margin-top:8px; }
+  .progress {
+    position:fixed; left:0; right:0; bottom:0; background:#0f1826; color:#fff;
+    padding:13px 20px; font-size:16px; font-weight:800; text-align:center;
+  }
+  .progress span { color:#7ee2a8; }
+</style>
+</head>
+<body>
+
+<h1>🛡️ 통행권 가드 — 기계 입력 체크리스트</h1>
+<div class="sub">중간시작 오작동 방지 · O8000(6호기) 완료 → 이제 852 / 400 차례 · 2026-07-23</div>
+
+<div class="box">
+  <h2>📄 준비물 (구글드라이브 CNC_CODES)</h2>
+  <ol>
+    <li><b>O0852_정비완본.txt</b> — 기존 O0852에 <b>삽입 8줄만</b> 추가 (줄 수정 없음)</li>
+    <li><b>O0400_정비완본.txt</b> — O0410/O7001~7005 삭제 후 O9020~9025 통째 등록</li>
+  </ol>
+</div>
+
+<div class="box">
+  <h2>✍️ O0852 삽입 3군데 (호기당 5분)</h2>
+  <ol>
+    <li><code>N10(INPUT_DATA_START);</code> 바로 다음 줄에<br><code>#149=852 (SAFETY KEY - DO NOT DELETE);</code></li>
+    <li><code>([4] SETUP: MACHINE SET);</code> 바로 윗줄에<br><code>#148=#149+1 (KEY CONFIRM - DO NOT DELETE);</code></li>
+    <li><code>O9001(MAIN LOGIC - PROTECTED);</code> 바로 다음에 6줄:<br>
+      <code>(SAFETY GUARD 2026-07-23);</code><br>
+      <code>IF[#148 EQ 853] GOTO 1;</code><br>
+      <code>#3000=25 (RESTART FROM TOP);</code><br>
+      <code>N1;</code><br>
+      <code>#148=0;</code><br>
+      <code>#149=0;</code></li>
+  </ol>
+</div>
+
+<div class="box">
+  <h2>✅ 호기별 4단계 (전부 해야 완료)</h2>
+  <ol>
+    <li>삽입/등록 완료</li>
+    <li><b>시운전 A</b>: 커서를 <code>N20</code>에 두고 START → <b>알람 25 뜨면 정상</b></li>
+    <li><b>시운전 B</b>: 맨 위에서 START → 정상 가공 확인</li>
+    <li>파라미터 <code>3202#4 (NE9) = 1</code> 잠금 → 9000번대 숨김/편집금지 확인</li>
+  </ol>
+  <div class="warn">NE8(3202#0)은 절대 켜지 말 것 — 8000번대 메인까지 잠겨버린다. 잠금 후 파라메터 쓰기 0 복귀.</div>
+</div>
+
+<div class="box">
+  <h2>🏭 852 입력 현황 (터치로 완료 표시)</h2>
+  <div class="grid" id="grid852"></div>
+  <div class="steps4">완료 기준: 삽입 + 시운전 A·B + NE9 잠금까지 끝난 호기만 터치</div>
+</div>
+
+<div class="box">
+  <h2>🏭 400 입력 현황 (정비완본 통째 등록)</h2>
+  <div class="grid" id="grid400"></div>
+  <div class="steps4">400 쓰는 호기 확인 후 해당 없는 칸은 무시. 6호기(O8000)는 완료됨.</div>
+</div>
+
+<div class="progress"><span id="cnt">0</span> 호기 완료</div>
+
+<script>
+var M852 = ['1호기','4호기','5호기','7호기','8호기','9호기','10호기','13호기','14호기'];
+var M400 = ['1호기','4호기','5호기','7호기','8호기','9호기','10호기','13호기','14호기'];
+function build(id, list, prefix){
+  var g = document.getElementById(id);
+  list.forEach(function(name,i){
+    var d = document.createElement('div'); d.className='mc';
+    d.innerHTML = '<div class="name">'+name+'</div><div class="st">대기</div>';
+    var key = prefix+i;
+    if (localStorage.getItem(key)==='1'){ d.classList.add('done'); d.querySelector('.st').textContent='완료 ✓'; }
+    d.addEventListener('click', function(){
+      var on = !d.classList.contains('done');
+      d.classList.toggle('done', on);
+      d.querySelector('.st').textContent = on ? '완료 ✓' : '대기';
+      localStorage.setItem(key, on?'1':'0');
+      refresh();
+    });
+    g.appendChild(d);
+  });
+}
+build('grid852', M852, 'guard852_');
+build('grid400', M400, 'guard400_');
+function refresh(){
+  var n = document.querySelectorAll('.mc.done').length;
+  document.getElementById('cnt').textContent = n;
+}
+refresh();
+</script>
+</body>
+</html>

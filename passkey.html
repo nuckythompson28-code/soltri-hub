@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>통행권 가드 — 원리와 적용</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Pretendard","Malgun Gothic",sans-serif;
+    background:#f4f6f9; color:#1a2233; line-height:1.7;
+    padding:24px 14px 80px; max-width:820px; margin:0 auto;
+  }
+  h1 { font-size:26px; }
+  .sub { color:#5a6b85; font-size:14.5px; margin:5px 0 20px; }
+  section {
+    background:#fff; border-radius:14px; padding:22px 24px;
+    box-shadow:0 1px 4px rgba(20,40,80,.08); margin-bottom:18px;
+  }
+  h2 { font-size:20px; margin-bottom:10px; }
+  h3 { font-size:16.5px; color:#1d4ed8; margin:14px 0 6px; }
+  p, li { font-size:16px; }
+  ul, ol { margin:6px 0 10px 22px; }
+  li { margin-bottom:6px; }
+  code {
+    background:#eef2f8; border:1px solid #d7e0ee; border-radius:5px;
+    padding:1px 6px; font-family:Consolas,monospace; font-size:14.5px; color:#1d4ed8;
+  }
+  pre {
+    background:#0f1826; color:#7ee2a8; border-radius:10px; padding:14px 16px;
+    font-family:Consolas,monospace; font-size:14px; line-height:1.6;
+    overflow-x:auto; margin:10px 0;
+  }
+  pre .c { color:#8fa0ba; }
+  pre .k { color:#ffd76e; font-weight:700; }
+  .hl { background:#fff3c4; padding:1px 5px; border-radius:4px; font-weight:700; }
+  .red { color:#d33; font-weight:700; }
+  table { border-collapse:collapse; width:100%; margin:10px 0; font-size:15px; }
+  th, td { border:1px solid #cdd7e4; padding:8px 12px; text-align:left; }
+  th { background:#eef2f8; }
+  .warn {
+    background:#fdeeee; border:2px solid #d33; border-radius:10px;
+    padding:11px 15px; font-size:15.5px; margin:12px 0;
+  }
+  .warn::before { content:"⚠️ "; font-weight:800; }
+  .ok { background:#eafaf0; border-left:5px solid #34a866; padding:10px 15px; border-radius:0 8px 8px 0; margin:10px 0; font-size:15.5px; }
+</style>
+</head>
+<body>
+
+<h1>🛡️ 통행권 가드 — 원리와 적용</h1>
+<div class="sub">CNC 매크로 중간시작 사고 방지 표준 · Soltri · 최초 2026-06-12 사고 후 도입 · 문서화 2026-07-23</div>
+
+<section>
+  <h2>1. 왜 필요한가 — 2026-06-12 사고</h2>
+  <p>작업자가 O8000의 <b>중간 줄에 커서를 두고 START</b> → 수량(#120) 설정 줄이 실행되지 않음 →
+  총길이 #100이 0.1로 계산 → 지난 판에서 남아 있던 스위치 변수가 길이검사를 무력화 →
+  <code>G10 L2</code>로 원점이 척 코앞에 잡힘 → <span class="red">공구가 척으로 돌진.</span></p>
+  <p>근본 원인: <b>FANUC 공통변수(#100번대·#500번대)는 프로그램이 끝나도, 리셋해도 값이 남는다.</b>
+  중간에서 시작하면 기계는 "지난 판의 찌꺼기 값"으로 그냥 달리며,
+  기계 스스로는 정상시작인지 중간시작인지 <u>구분할 방법이 없다.</u></p>
+</section>
+
+<section>
+  <h2>2. 원리 — 샌드위치 통행권</h2>
+  <p>구분 수단을 우리가 변수로 심는다. 핵심은
+  <span class="hl">"두 줄이 모두, 순서대로 실행됐음을 산수로 증명하게 만드는 것."</span></p>
+<pre>
+O0852 (메인)
+├─ N10 첫머리:  <span class="k">#149 = 852</span>        <span class="c">← 🎫 열쇠 발급</span>
+│   ... 입력 ~30줄 ...
+│   ... 검증 ~40줄 (-9999 체크) ...
+├─ 검증 끝:     <span class="k">#148 = #149 + 1</span>   <span class="c">← ✅ 도장 (= 853)</span>
+└─ M98 P9001
+     └─ O9001 머리:  IF [#148 EQ 853] → 통과
+                      아니면 → <span class="k">알람 25 (RESTART FROM TOP)</span>
+                      통과 즉시 #148=0, #149=0   <span class="c">← 🔥 표 회수 (1회용)</span>
+</pre>
+  <p>열쇠와 도장 사이에 <b>입력부와 검증 전체</b>가 끼어 있으므로,
+  표가 유효하다 = 헤더를 처음부터 끝까지 통과했다는 증명이 된다.</p>
+</section>
+
+<section>
+  <h2>3. 왜 뚫리지 않는가 — 경우의 수</h2>
+  <h3>① 가공 직전(N20 등)에 커서 두고 시작</h3>
+  <p>열쇠도 도장도 안 지나감. #148은 지난 판에서 회수돼 0. 검문 0 ≠ 853 → <b>알람 25.</b></p>
+  <h3>② 도장 줄 바로 위에서 시작 (교묘한 경우)</h3>
+  <p>도장 줄은 실행되지만 열쇠를 안 지나 #149=0 → 도장 = 0+1 = 1 ≠ 853 → <b>알람 25.</b><br>
+  도장을 상수 <code>#148=853</code>이 아니라 <span class="hl">수식 <code>#148=#149+1</code></span>로 쓰는 이유가 이것 —
+  도장이 열쇠에서 파생되므로 <b>빵 두 장을 둘 다, 이 순서로</b> 지나야만 유효한 표가 만들어진다.</p>
+  <h3>③ 정상 완주 후 다음 판을 중간부터 시작</h3>
+  <p>검문 통과 순간 표를 0으로 회수(1회용)했으므로 또 걸린다. 매 판마다 새 표가 필요.</p>
+  <h3>④ 다른 프로그램의 표로 통과 시도</h3>
+  <p>프로그램마다 키값이 다르다(아래 표). 6호기 표(#148=8001)로는 O9001(853 요구) 불통 — 교차 누수 방지.</p>
+</section>
+
+<section>
+  <h2>4. 프로그램별 키값</h2>
+  <table>
+    <tr><th>계열</th><th>열쇠 #149</th><th>도장 #148</th><th>검문 위치</th><th>상태</th></tr>
+    <tr><td>O8000 / O9010 (6호기)</td><td>8000</td><td>8001</td><td>O9010 머리</td><td>✅ 실기 입력 완료</td></tr>
+    <tr><td>O0400 / O9020~9025</td><td>400</td><td>401</td><td>O9020 머리</td><td>정비완본 완성 — 입력 대기</td></tr>
+    <tr><td>O0852 / O9001~9003</td><td>852</td><td>853</td><td>O9001 머리</td><td>정비완본 완성 — 9개 호기 입력 대기</td></tr>
+  </table>
+  <p>검문소는 항상 <b>가공으로 가는 단일 관문</b>(9000번대 로직 프로그램 머리)에 둔다. 문이 하나인 곳에 개찰구를 세우면 어떤 경로로 와도 반드시 걸린다.</p>
+</section>
+
+<section>
+  <h2>5. 개찰구 용접 — NE9 잠금</h2>
+  <p>표 검사만으로는 부족하다 — 작업자가 검문 코드 자체를 지우면 끝이므로. 그래서 로직/서브를 전부 <b>9000번대 번호로 모으고</b>
+  파라미터 <code>3202#4 (NE9) = 1</code>을 켠다 → O9000~O9999 전체가 <b>화면에서 숨겨지고 편집 금지</b>.</p>
+  <ul>
+    <li>O0400 계열의 서브 번호를 O0410/O7001~7005 → O9020~9025로 옮긴 이유가 이것</li>
+    <li>O0852 계열은 처음부터 O9001~9003이라 번호 이전 불필요</li>
+  </ul>
+  <div class="warn"><b>NE8(3202#0)은 절대 켜지 말 것</b> — 8000번대까지 잠겨 O8000 메인을 못 만지게 된다. 잠금 후 파라메터 쓰기 0 복귀.</div>
+</section>
+
+<section>
+  <h2>6. 함께 들어간 보조 가드</h2>
+  <ul>
+    <li><b>#120 절대 가드</b>: 수량이 0/빈값이면 알람 20 — 다른 스위치로도 못 끔 (O8000·O0400)</li>
+    <li><b>#124 1회용화</b> (O0400): MANUAL MODE가 켜진 채 방치되지 않도록 사이클 끝에 자동 0 복귀</li>
+    <li><b>-9999 전수검증</b> (O0852): 시작 시 전 변수를 -9999로 리셋 → 입력 누락이 하나라도 있으면 해당 번호 알람</li>
+    <li><b>#130 머신셀렉트</b> (O0852): 등록 안 된 호기번호면 알람 99. 단, <span class="red">다른 호기 번호를 잘못 넣는 것은 못 잡는다</span> — 세팅 체크리스트에서 "#130 = 지금 서 있는 호기 번호" 확인 필수</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. 관련 파일</h2>
+  <ul>
+    <li><code>CNC_CODES\O8000.txt</code> — 6호기 패치 입력본 (헤더에 패치 내역)</li>
+    <li><code>CNC_CODES\O0400_정비완본.txt</code> — 번호 이전 + 통행권 + #124 통합본</li>
+    <li><code>CNC_CODES\O0852_정비완본.txt</code> — 삽입 3군데 8줄 패치본</li>
+    <li><code>CNC_CODES\통행권가드_입력체크리스트.html</code> — 호기 순회 입력용 (삽입 원문 + 시운전 A/B + NE9)</li>
+    <li>공장집사(soltri-hub): o8000 / o0400 / o0852 입력 가이드</li>
+  </ul>
+  <div class="ok"><b>시운전 합격 기준</b>: ⓐ 커서를 가공부(N20 등)에 두고 START → 알람 25가 떠야 정상 ⓑ 맨 위에서 START → 정상 가공 ⓒ NE9=1 후 9000번대가 목록에서 안 보여야 함.</div>
+</section>
+
+</body>
+</html>
