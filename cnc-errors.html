@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CNC 오류 기록 — 김공장</title>
+  <style>
+    :root {
+      --bg: #0b1017;
+      --bg-2: #101826;
+      --header: #080d14;
+      --card: #151d2b;
+      --card-2: #1b2434;
+      --text: #e8eef6;
+      --muted: #8b97a8;
+      --line: #2a3548;
+      --line-2: #3a465c;
+      --accent: #3b82f6;
+      --accent-2: #60a5fa;
+      --cyan: #22d3ee;
+      --danger: #ef4444;
+      --warn: #f5a524;
+      --ok: #34d399;
+      --open: #f87171;
+      --progress: #fbbf24;
+      --done: #34d399;
+      --lamp-ok: #22c55e;
+      --lamp-warn: #f59e0b;
+      --lamp-open: #ef4444;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(59, 130, 246, 0.10), transparent 50%),
+        radial-gradient(900px 400px at 90% 0%, rgba(34, 211, 238, 0.06), transparent 46%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(180deg, #0c1420 0%, #0a1018 100%);
+      border-bottom: 1px solid var(--line);
+      padding: 18px max(16px, calc((100vw - 1280px) / 2));
+    }
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .home {
+      display: inline-block;
+      margin: 0 0 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-family: ui-monospace, "Consolas", monospace;
+    }
+    .home:hover { color: var(--accent-2); }
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--cyan);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+      letter-spacing: -0.02em;
+    }
+    .source {
+      margin-top: 8px;
+      color: #9aa7b8;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    .header-meta {
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+    .header-meta b { color: var(--text); font-weight: 700; }
+    main {
+      max-width: 1280px;
+      margin: 16px auto 48px;
+      padding: 0 16px 40px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-head p, .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .board { margin-bottom: 14px; }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .machine-tile {
+      background: var(--card-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 10px 9px;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      min-height: 112px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .machine-tile:hover {
+      border-color: var(--line-2);
+      transform: translateY(-1px);
+    }
+    .machine-tile:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .machine-tile.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+    }
+    .tile-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .tile-name {
+      font-weight: 800;
+      font-size: 0.92rem;
+    }
+    .lamp {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .lamp-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--lamp-ok);
+      box-shadow: 0 0 8px currentColor;
+    }
+    .lamp-ok .lamp-dot { background: var(--lamp-ok); color: var(--lamp-ok); }
+    .lamp-warn .lamp-dot { background: var(--lamp-warn); color: var(--lamp-warn); }
+    .lamp-open .lamp-dot { background: var(--lamp-open); color: var(--lamp-open); }
+    .lamp-open .lamp-dot { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lamp-open .lamp-dot { animation: none; }
+    }
+    .tile-counts {
+      display: flex;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+    .tile-counts b { color: var(--text); font-size: 0.92rem; }
+    .tile-counts .hot b { color: var(--open); }
+    .tile-error {
+      margin-top: auto;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: #d5deea;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.1em;
+    }
+    .tile-error.empty { color: var(--muted); }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 12px 10px;
+      min-height: 78px;
+    }
+    .kpi-label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .kpi-value {
+      margin-top: 6px;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .kpi.open .kpi-value { color: var(--open); }
+    .kpi.progress .kpi-value { color: var(--progress); }
+    .kpi.today .kpi-value { color: var(--accent-2); }
+    .kpi.week .kpi-value { color: var(--cyan); }
+    .kpi.done .kpi-value { color: var(--done); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      grid-column: span 3;
+    }
+    .field.wide { grid-column: span 6; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-weight: 700; font-size: 0.8rem; color: #c9d3df; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #3a465c;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font: inherit;
+      background: #0f1622;
+      color: inherit;
+    }
+    textarea { resize: vertical; min-height: 68px; }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid rgba(59, 130, 246, 0.35);
+      border-color: var(--accent);
+    }
+    .actions, .filters, .backup {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .actions { margin-top: 12px; }
+    button, .file-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 13px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2a3446;
+      color: var(--text);
+      display: inline-block;
+    }
+    button.primary { background: var(--accent); color: #fff; }
+    button.danger { background: #b91c1c; color: #fff; }
+    button.ghost { background: transparent; border: 1px solid var(--line-2); }
+    button:hover, .file-button:hover { filter: brightness(1.08); }
+    .seg {
+      display: inline-flex;
+      background: #0f1622;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .seg button {
+      border-radius: 0;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+    }
+    .seg button.active {
+      background: #1e3a5f;
+      color: #dbeafe;
+    }
+    .toolbar { margin: 14px 0; display: grid; gap: 10px; }
+    .filters > div { flex: 1; min-width: 150px; }
+    .filters .keyword { flex: 2; }
+    .period-box { min-width: 210px; flex: 0 0 auto; }
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1180px;
+    }
+    th, td {
+      padding: 10px 9px;
+      border-bottom: 1px solid #243044;
+      text-align: left;
+      vertical-align: top;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.86rem;
+    }
+    th {
+      background: #1a2333;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      font-size: 0.78rem;
+      color: #b7c2d0;
+    }
+    tbody tr:hover td { background: rgba(59, 130, 246, 0.06); }
+    .status-badge, .sev-badge, .recur-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .status-open { background: #3f1d1d; color: #fecaca; }
+    .status-progress { background: #3f2e12; color: #fde68a; }
+    .status-done { background: #133526; color: #bbf7d0; }
+    .sev-low { background: #1e293b; color: #cbd5e1; }
+    .sev-mid { background: #3f2e12; color: #fcd34d; }
+    .sev-high { background: #3f1d1d; color: #fca5a5; }
+    .recur-badge { background: #1e3a5f; color: #bfdbfe; margin-left: 6px; }
+    .row-actions { display: flex; gap: 6px; }
+    .row-actions button { padding: 6px 9px; font-size: 0.8rem; }
+    .empty { text-align: center; padding: 36px 16px; color: var(--muted); }
+    .dim { color: #6b7686; }
+    #message { min-height: 22px; margin-top: 8px; font-weight: 700; font-size: 0.86rem; }
+    .ok { color: var(--ok); }
+    .error { color: #fca5a5; }
+    .hidden { display: none; }
+    #csvImport, #jsonImport { display: none; }
+    .list-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 10px 12px 0;
+    }
+    .list-bar span { color: var(--muted); font-size: 0.8rem; }
+    @media (max-width: 1100px) {
+      .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .field, .field.wide { grid-column: 1 / -1; }
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .header, main { padding-left: 10px; padding-right: 10px; }
+      .header-meta { text-align: left; }
+      table, thead, tbody, th, td, tr { display: block; }
+      table { min-width: 0; }
+      thead { display: none; }
+      tbody tr {
+        border-bottom: 1px solid var(--line);
+        padding: 12px 12px 8px;
+      }
+      tbody td {
+        border: 0;
+        padding: 4px 0;
+      }
+      tbody td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        margin-bottom: 2px;
+      }
+      tbody td.no-label::before { display: none; }
+    }
+    @media print {
+      body { background: #fff; color: #111; }
+      .header { background: #fff; border-bottom: 1px solid #ccc; color: #111; }
+      .source, .header-meta, .eyebrow { color: #444; }
+      .card, .kpi, .machine-tile, .table-wrap { background: #fff; border-color: #ccc; box-shadow: none; color: #111; }
+      .tile-error, label, th, td, .kpi-label, .list-bar span { color: #333; }
+      button, .file-button, .actions, .backup, .row-actions, #toggleForm { display: none !important; }
+      .lamp-open .lamp-dot { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div>
+        <a class="home" href="index.html">← 김공장</a>
+        <p class="eyebrow">현장 오류 일지</p>
+        <h1>CNC 호기별 오류 기록</h1>
+        <div class="source">김공장 · 현장 기록 · CNC 1~10호기</div>
+      </div>
+      <div class="header-meta">
+        이 기기 브라우저에 저장<br>
+        저장키 <b>cncErrorRecords.v1</b>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="board card" aria-label="호기 현황판">
+      <div class="section-head">
+        <h2>1~10호기 현황판</h2>
+        <p>타일을 누르면 해당 호기로 목록이 걸러집니다. 빈 호기도 유지됩니다.</p>
+      </div>
+      <div id="machineBoard" class="tiles"></div>
+    </section>
+
+    <section class="kpis" id="kpiBoard" aria-label="요약 지표"></section>
+
+    <section class="card" aria-label="오류 기록 입력 폼">
+      <div class="section-head">
+        <h2>오류 기록 입력</h2>
+        <button type="button" id="toggleForm" class="ghost">접기</button>
+      </div>
+      <div id="formWrap">
+        <form id="recordForm">
+          <input type="hidden" id="editId">
+          <div class="grid">
+            <div class="field">
+              <label for="occurredAt">발생일시 *</label>
+              <input id="occurredAt" type="datetime-local" required>
+            </div>
+            <div class="field">
+              <label for="machine">호기 *</label>
+              <select id="machine" required>
+                <option value="">호기 선택</option>
+                <option>CNC 1호기</option>
+                <option>CNC 2호기</option>
+                <option>CNC 3호기</option>
+                <option>CNC 4호기</option>
+                <option>CNC 5호기</option>
+                <option>CNC 6호기</option>
+                <option>CNC 7호기</option>
+                <option>CNC 8호기</option>
+                <option>CNC 9호기</option>
+                <option>CNC 10호기</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="errorName">오류 코드/명칭 *</label>
+              <input id="errorName" maxlength="120" required>
+            </div>
+            <div class="field">
+              <label for="severity">심각도</label>
+              <select id="severity">
+                <option value="">선택 안 함</option>
+                <option>경미</option>
+                <option>주의</option>
+                <option>심각</option>
+              </select>
+            </div>
+            <div class="field wide">
+              <label for="symptom">증상 *</label>
+              <textarea id="symptom" required></textarea>
+            </div>
+            <div class="field wide">
+              <label for="cause">원인</label>
+              <textarea id="cause"></textarea>
+            </div>
+            <div class="field wide">
+              <label for="action">조치내용</label>
+              <textarea id="action"></textarea>
+            </div>
+            <div class="field wide">
+              <label for="note">비고</label>
+              <textarea id="note"></textarea>
+            </div>
+            <div class="field">
+              <label for="worker">작업자 *</label>
+              <input id="worker" maxlength="50" required>
+            </div>
+            <div class="field">
+              <label for="status">상태 *</label>
+              <select id="status" required>
+                <option>미조치</option>
+                <option>조치중</option>
+                <option>완료</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" type="submit" id="submitBtn">기록 추가</button>
+            <button type="button" id="cancelBtn" class="hidden">수정 취소</button>
+            <button type="reset">초기화</button>
+          </div>
+        </form>
+      </div>
+      <div id="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="toolbar">
+      <div class="card filters">
+        <div>
+          <label for="filterMachine">호기 필터</label>
+          <select id="filterMachine">
+            <option value="">전체</option>
+            <option>CNC 1호기</option>
+            <option>CNC 2호기</option>
+            <option>CNC 3호기</option>
+            <option>CNC 4호기</option>
+            <option>CNC 5호기</option>
+            <option>CNC 6호기</option>
+            <option>CNC 7호기</option>
+            <option>CNC 8호기</option>
+            <option>CNC 9호기</option>
+            <option>CNC 10호기</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterStatus">상태 필터</label>
+          <select id="filterStatus">
+            <option value="">전체</option>
+            <option>미조치</option>
+            <option>조치중</option>
+            <option>완료</option>
+          </select>
+        </div>
+        <div class="keyword">
+          <label for="filterKeyword">키워드 필터</label>
+          <input id="filterKeyword" placeholder="코드, 증상, 원인, 조치내용, 작업자 포함 검색">
+        </div>
+        <div class="period-box">
+          <label>기간</label>
+          <div class="seg" id="periodFilter">
+            <button type="button" data-period="" class="active">전체</button>
+            <button type="button" data-period="today">오늘</button>
+            <button type="button" data-period="7d">7일</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card backup">
+      <button type="button" id="exportCsv">CSV 내보내기</button>
+      <label class="file-button" for="csvImport">CSV 가져오기</label>
+      <input type="file" id="csvImport" accept=".txt,.csv,text/csv">
+      <button type="button" id="backupJson">JSON 백업</button>
+      <label class="file-button" for="jsonImport">JSON 복원</label>
+      <input type="file" id="jsonImport" accept="application/json,.json">
+      <p class="hint">가져오기와 복원은 현재 기록을 모두 덮어씁니다. CSV는 한글 BOM과 따옴표 이스케이프를 유지합니다.</p>
+    </section>
+
+    <section class="table-wrap" aria-label="오류 기록 목록">
+      <div class="list-bar">
+        <h2>기록 목록</h2>
+        <span id="listCount"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>발생일시</th>
+            <th>호기</th>
+            <th>오류 코드/명칭</th>
+            <th>증상</th>
+            <th>원인</th>
+            <th>조치내용</th>
+            <th>작업자</th>
+            <th>상태</th>
+            <th>심각도</th>
+            <th>비고</th>
+            <th>작업</th>
+          </tr>
+        </thead>
+        <tbody id="recordBody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    "use strict";
+    (function () {
+      var STORAGE_KEY = "cncErrorRecords.v1";
+      var MACHINES = ["CNC 1호기", "CNC 2호기", "CNC 3호기", "CNC 4호기", "CNC 5호기", "CNC 6호기", "CNC 7호기", "CNC 8호기", "CNC 9호기", "CNC 10호기"];
+      var STATUSES = ["미조치", "조치중", "완료"];
+      var SEVERITIES = ["경미", "주의", "심각"];
+      var FIELDS = ["occurredAt", "machine", "errorName", "symptom", "cause", "action", "worker", "status", "note"];
+      var HEADERS = ["발생일시", "호기", "오류 코드/명칭", "증상", "원인", "조치내용", "작업자", "상태", "비고"];
+      var SEED_RECORDS = [
+        {
+          id: "seed-2026-08-18-cnc10-autolink",
+          occurredAt: "2026-08-18T00:00",
+          machine: "CNC 10호기",
+          errorName: "오토링크 소재 미파지",
+          symptom: "추출 시 소재가 덜 나와 폭이 다르게 나옴",
+          cause: "오토링크 파츠가 Y축으로 더 들어가 세 발 중 안쪽 발이 소재를 잡지 못함",
+          action: "",
+          worker: "미기재",
+          status: "미조치",
+          note: "8/18 CNC 10호기. 오토링크 세 발 중 안쪽 발 미파지."
+        },
+        {
+          id: "seed-2026-08-19-cnc10-byte",
+          occurredAt: "2026-08-19T00:00",
+          machine: "CNC 10호기",
+          errorName: "절단바이트 휨 의심 / 내경 그을림",
+          symptom: "제품 내경 -5까지 내려가고 올라오는 동안 오른쪽 면이 살짝 그을림",
+          cause: "절단바이트가 휘었을 가능성",
+          action: "제품 내경을 -2까지 줄이도록 코드 변경. -2까지 간 다음 G00으로 소재 외경 +5까지 상승. 7·8·9·10호기에 적용. 약 4% 속도 향상.",
+          worker: "미기재",
+          status: "완료",
+          note: "8/19 CNC 10호기에서 확인 후 7~10호기 코드 변경."
+        }
+      ];
+      var periodFilter = "";
+      var records = load();
+      SEED_RECORDS.forEach(function (seed) {
+        if (!records.some(function (row) { return row.id === seed.id; })) {
+          records.push(seed);
+        }
+      });
+      records = records.map(hydrate).filter(validRecord);
+      records.sort(function (a, b) { return (a.occurredAt < b.occurredAt ? 1 : a.occurredAt > b.occurredAt ? -1 : 0); });
+      save();
+
+      function el(id) {
+        return document.getElementById(id);
+      }
+
+      function hydrate(row) {
+        var copy = { id: row && typeof row.id === "string" ? row.id : "" };
+        FIELDS.forEach(function (key) {
+          copy[key] = String(row && row[key] != null ? row[key] : "");
+        });
+        var sev = row && row.severity != null ? String(row.severity).trim() : "";
+        copy.severity = SEVERITIES.indexOf(sev) !== -1 ? sev : "";
+        return copy;
+      }
+
+      function load() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return [];
+          var value = JSON.parse(raw);
+          return Array.isArray(value) ? value.filter(validRecord) : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      }
+
+      function validRecord(row) {
+        return row && typeof row === "object" &&
+          typeof row.id === "string" &&
+          MACHINES.indexOf(row.machine) !== -1 &&
+          STATUSES.indexOf(row.status) !== -1 &&
+          FIELDS.every(function (key) { return typeof row[key] === "string"; });
+      }
+
+      function uid() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+      }
+
+      function setMessage(text, isError) {
+        var box = el("message");
+        box.textContent = text;
+        box.className = isError ? "error" : "ok";
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function escapeCsv(value) {
+        return '"' + String(value == null ? "" : value).replace(/"/g, '""') + '"';
+      }
+
+      function download(content, type, name) {
+        var a = document.createElement("a");
+        var url = URL.createObjectURL(new Blob([content], { type: type }));
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+      }
+
+      function pad2(n) {
+        return (n < 10 ? "0" : "") + n;
+      }
+
+      function localDateKey(date) {
+        return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate());
+      }
+
+      function todayKey() {
+        return localDateKey(new Date());
+      }
+
+      function daysAgoKey(days) {
+        var d = new Date();
+        d.setDate(d.getDate() - days);
+        return localDateKey(d);
+      }
+
+      function weekStartKey() {
+        var d = new Date();
+        var day = d.getDay();
+        var diff = day === 0 ? 6 : day - 1;
+        d.setDate(d.getDate() - diff);
+        return localDateKey(d);
+      }
+
+      function dateKey(value) {
+        return String(value || "").slice(0, 10);
+      }
+
+      function formatDate(value) {
+        var text = String(value || "").replace("T", " ");
+        if (/^\d{4}-\d{2}-\d{2} 00:00(:00)?$/.test(text)) return text.slice(0, 10);
+        return text;
+      }
+
+      function inPeriod(row) {
+        if (!periodFilter) return true;
+        var key = dateKey(row.occurredAt);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+        if (periodFilter === "today") return key === todayKey();
+        if (periodFilter === "7d") return key >= daysAgoKey(6) && key <= todayKey();
+        return true;
+      }
+
+      function formValues() {
+        return {
+          occurredAt: el("occurredAt").value.trim(),
+          machine: el("machine").value.trim(),
+          errorName: el("errorName").value.trim(),
+          symptom: el("symptom").value.trim(),
+          cause: el("cause").value.trim(),
+          action: el("action").value.trim(),
+          worker: el("worker").value.trim(),
+          status: el("status").value.trim(),
+          note: el("note").value.trim(),
+          severity: el("severity").value.trim()
+        };
+      }
+
+      function fillForm(row) {
+        el("editId").value = row ? row.id : "";
+        el("occurredAt").value = row ? row.occurredAt : "";
+        el("machine").value = row ? row.machine : "";
+        el("errorName").value = row ? row.errorName : "";
+        el("symptom").value = row ? row.symptom : "";
+        el("cause").value = row ? row.cause : "";
+        el("action").value = row ? row.action : "";
+        el("worker").value = row ? row.worker : "";
+        el("status").value = row ? row.status : "미조치";
+        el("note").value = row ? row.note : "";
+        el("severity").value = row && row.severity ? row.severity : "";
+        el("submitBtn").textContent = row ? "기록 수정" : "기록 추가";
+        el("cancelBtn").classList.toggle("hidden", !row);
+      }
+
+      function filtered() {
+        var machine = el("filterMachine").value;
+        var status = el("filterStatus").value;
+        var keyword = el("filterKeyword").value.trim().toLowerCase();
+        return records.filter(function (row) {
+          if (machine && row.machine !== machine) return false;
+          if (status && row.status !== status) return false;
+          if (!inPeriod(row)) return false;
+          if (!keyword) return true;
+          var hay = [row.errorName, row.symptom, row.cause, row.action, row.worker, row.note, row.occurredAt, row.machine, row.status, row.severity].join(" ").toLowerCase();
+          return hay.indexOf(keyword) !== -1;
+        });
+      }
+
+      function statusClass(status) {
+        if (status === "조치중") return "status-progress";
+        if (status === "완료") return "status-done";
+        return "status-open";
+      }
+
+      function severityClass(severity) {
+        if (severity === "주의") return "sev-mid";
+        if (severity === "심각") return "sev-high";
+        return "sev-low";
+      }
+
+      function recurrenceMap() {
+        var map = {};
+        records.forEach(function (row) {
+          var key = row.machine + "\0" + row.errorName;
+          map[key] = (map[key] || 0) + 1;
+        });
+        return map;
+      }
+
+      function machineStats() {
+        var stats = {};
+        MACHINES.forEach(function (name) {
+          stats[name] = { total: 0, open: 0, progress: 0, latest: null };
+        });
+        records.forEach(function (row) {
+          var item = stats[row.machine];
+          if (!item) return;
+          item.total += 1;
+          if (row.status === "미조치") item.open += 1;
+          if (row.status === "조치중") item.progress += 1;
+          if (!item.latest || row.occurredAt > item.latest.occurredAt) item.latest = row;
+        });
+        return stats;
+      }
+
+      function lampState(stat) {
+        if (stat.open > 0) return { cls: "lamp-open", text: "미조치" };
+        if (stat.progress > 0) return { cls: "lamp-warn", text: "주의" };
+        return { cls: "lamp-ok", text: "이상 없음" };
+      }
+
+      function renderBoard() {
+        var stats = machineStats();
+        var selected = el("filterMachine").value;
+        el("machineBoard").innerHTML = MACHINES.map(function (name) {
+          var stat = stats[name];
+          var lamp = lampState(stat);
+          var latest = stat.latest ? stat.latest.errorName : "기록 없음";
+          var latestCls = stat.latest ? "" : " empty";
+          var active = selected === name ? " active" : "";
+          return '<div class="machine-tile ' + lamp.cls + active + '" role="button" tabindex="0" data-machine="' + escapeHtml(name) + '">' +
+            '<div class="tile-top"><span class="tile-name">' + escapeHtml(name) + '</span>' +
+            '<span class="lamp ' + lamp.cls + '"><span class="lamp-dot"></span>' + escapeHtml(lamp.text) + "</span></div>" +
+            '<div class="tile-counts"><span class="' + (stat.open ? "hot" : "") + '">미조치 <b>' + stat.open + "</b></span>" +
+            "<span>조치중 <b>" + stat.progress + "</b></span></div>" +
+            '<div class="tile-error' + latestCls + '">' + escapeHtml(latest) + "</div></div>";
+        }).join("");
+      }
+
+      function renderKpis() {
+        var today = todayKey();
+        var weekStart = weekStartKey();
+        var total = records.length;
+        var open = 0;
+        var progress = 0;
+        var done = 0;
+        var todayCount = 0;
+        var weekCount = 0;
+        records.forEach(function (row) {
+          if (row.status === "미조치") open += 1;
+          if (row.status === "조치중") progress += 1;
+          if (row.status === "완료") done += 1;
+          var key = dateKey(row.occurredAt);
+          if (key === today) todayCount += 1;
+          if (key >= weekStart && key <= today) weekCount += 1;
+        });
+        var items = [
+          ["전체", total, ""],
+          ["미조치", open, "open"],
+          ["조치중", progress, "progress"],
+          ["오늘 발생", todayCount, "today"],
+          ["이번주", weekCount, "week"],
+          ["완료", done, "done"]
+        ];
+        el("kpiBoard").innerHTML = items.map(function (item) {
+          return '<div class="kpi ' + item[2] + '"><div class="kpi-label">' + item[0] + '</div><div class="kpi-value">' + item[1] + "</div></div>";
+        }).join("");
+      }
+
+      function renderTable() {
+        var rows = filtered();
+        var body = el("recordBody");
+        var recur = recurrenceMap();
+        el("listCount").textContent = "표시 " + rows.length + "건 / 전체 " + records.length + "건";
+        if (!rows.length) {
+          body.innerHTML = '<tr><td class="empty no-label" colspan="11">표시할 오류 기록이 없습니다.</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map(function (row) {
+          var count = recur[row.machine + "\0" + row.errorName] || 1;
+          var recurHtml = count >= 2 ? '<span class="recur-badge">재발 ' + count + "건</span>" : "";
+          var workerCls = !row.worker || row.worker === "미기재" ? " dim" : "";
+          var sevHtml = row.severity
+            ? '<span class="sev-badge ' + severityClass(row.severity) + '">' + escapeHtml(row.severity) + "</span>"
+            : '<span class="dim">-</span>';
+          return "<tr>" +
+            '<td data-label="발생일시">' + escapeHtml(formatDate(row.occurredAt)) + "</td>" +
+            '<td data-label="호기">' + escapeHtml(row.machine) + "</td>" +
+            '<td data-label="오류 코드/명칭">' + escapeHtml(row.errorName) + recurHtml + "</td>" +
+            '<td data-label="증상">' + escapeHtml(row.symptom) + "</td>" +
+            '<td data-label="원인">' + escapeHtml(row.cause) + "</td>" +
+            '<td data-label="조치내용">' + escapeHtml(row.action) + "</td>" +
+            '<td data-label="작업자" class="' + workerCls + '">' + escapeHtml(row.worker || "미기재") + "</td>" +
+            '<td data-label="상태"><span class="status-badge ' + statusClass(row.status) + '">' + escapeHtml(row.status) + "</span></td>" +
+            '<td data-label="심각도">' + sevHtml + "</td>" +
+            '<td data-label="비고">' + escapeHtml(row.note) + "</td>" +
+            '<td class="row-actions no-label">' +
+              '<button type="button" data-edit="' + escapeHtml(row.id) + '">수정</button>' +
+              '<button type="button" class="danger" data-delete="' + escapeHtml(row.id) + '">삭제</button>' +
+            "</td></tr>";
+        }).join("");
+      }
+
+      function render() {
+        renderBoard();
+        renderKpis();
+        renderTable();
+      }
+
+      function parseCsv(text) {
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        var rows = [];
+        var row = [];
+        var field = "";
+        var inQuotes = false;
+        for (var i = 0; i < text.length; i += 1) {
+          var ch = text[i];
+          var next = text[i + 1];
+          if (inQuotes) {
+            if (ch === '"' && next === '"') {
+              field += '"';
+              i += 1;
+            } else if (ch === '"') {
+              inQuotes = false;
+            } else {
+              field += ch;
+            }
+          } else if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ",") {
+            row.push(field);
+            field = "";
+          } else if (ch === "\n") {
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = "";
+          } else if (ch !== "\r") {
+            field += ch;
+          }
+        }
+        if (field.length || row.length) {
+          row.push(field);
+          rows.push(row);
+        }
+        return rows.filter(function (item) {
+          return item.some(function (cell) { return String(cell).trim() !== ""; });
+        });
+      }
+
+      function recordsFromCsv(text) {
+        var rows = parseCsv(text);
+        if (!rows.length) throw new Error("CSV에 데이터가 없습니다.");
+        var header = rows[0].map(function (cell) { return String(cell).trim(); });
+        if (header.length < HEADERS.length || HEADERS.some(function (name, idx) { return header[idx] !== name; })) {
+          throw new Error("CSV 헤더가 올바르지 않습니다. 내보내기 형식과 같아야 합니다.");
+        }
+        var hasSeverity = header[9] === "심각도";
+        return rows.slice(1).map(function (cells, index) {
+          var row = { id: uid() };
+          FIELDS.forEach(function (key, idx) {
+            row[key] = String(cells[idx] == null ? "" : cells[idx]).trim();
+          });
+          row.severity = hasSeverity ? String(cells[9] == null ? "" : cells[9]).trim() : "";
+          if (row.severity && SEVERITIES.indexOf(row.severity) === -1) {
+            throw new Error((index + 2) + "번째 행의 심각도가 올바르지 않습니다.");
+          }
+          if (!validRecord(row)) {
+            throw new Error((index + 2) + "번째 행의 호기 또는 상태가 올바르지 않습니다.");
+          }
+          return hydrate(row);
+        });
+      }
+
+      function recordsFromJson(text) {
+        var value = JSON.parse(text);
+        var list = Array.isArray(value) ? value : (value && Array.isArray(value.records) ? value.records : null);
+        if (!list) throw new Error("JSON 형식이 배열이거나 records 배열이어야 합니다.");
+        return list.map(function (item, index) {
+          var row = { id: typeof item.id === "string" && item.id ? item.id : uid() };
+          FIELDS.forEach(function (key) {
+            row[key] = String(item[key] == null ? "" : item[key]).trim();
+          });
+          row.severity = item.severity == null ? "" : String(item.severity).trim();
+          if (row.severity && SEVERITIES.indexOf(row.severity) === -1) {
+            throw new Error((index + 1) + "번째 기록의 심각도가 올바르지 않습니다.");
+          }
+          if (!validRecord(row)) {
+            throw new Error((index + 1) + "번째 기록의 필수 값이 올바르지 않습니다.");
+          }
+          return hydrate(row);
+        });
+      }
+
+      function readFile(input, handler) {
+        var file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            records = handler(String(reader.result || ""));
+            save();
+            fillForm(null);
+            render();
+            setMessage(file.name + "에서 " + records.length + "건을 불러왔습니다.");
+          } catch (err) {
+            setMessage("가져오기 오류: " + (err && err.message ? err.message : "파일을 읽을 수 없습니다."), true);
+          }
+        };
+        reader.onerror = function () {
+          setMessage("가져오기 오류: 파일을 읽을 수 없습니다.", true);
+        };
+        reader.readAsText(file, "UTF-8");
+      }
+
+      function applyMachineFilter(name) {
+        var current = el("filterMachine").value;
+        el("filterMachine").value = current === name ? "" : name;
+        render();
+      }
+
+      function expandForm() {
+        el("formWrap").classList.remove("hidden");
+        el("toggleForm").textContent = "접기";
+      }
+
+      el("recordForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var values = formValues();
+        if (!values.occurredAt || !values.machine || !values.errorName || !values.symptom || !values.worker || !values.status) {
+          setMessage("필수 항목을 모두 입력하세요.", true);
+          return;
+        }
+        if (MACHINES.indexOf(values.machine) === -1 || STATUSES.indexOf(values.status) === -1) {
+          setMessage("호기 또는 상태 값이 올바르지 않습니다.", true);
+          return;
+        }
+        if (values.severity && SEVERITIES.indexOf(values.severity) === -1) {
+          setMessage("심각도 값이 올바르지 않습니다.", true);
+          return;
+        }
+        var editId = el("editId").value;
+        if (editId) {
+          var target = records.find(function (row) { return row.id === editId; });
+          if (!target) {
+            setMessage("수정할 기록을 찾을 수 없습니다.", true);
+            return;
+          }
+          FIELDS.forEach(function (key) { target[key] = values[key]; });
+          target.severity = values.severity;
+          setMessage("기록을 수정했습니다.");
+        } else {
+          values.id = uid();
+          records.unshift(values);
+          setMessage("기록을 추가했습니다.");
+        }
+        save();
+        fillForm(null);
+        render();
+      });
+
+      el("recordForm").addEventListener("reset", function () {
+        setTimeout(function () {
+          fillForm(null);
+          setMessage("입력 내용을 초기화했습니다.");
+        }, 0);
+      });
+
+      el("cancelBtn").addEventListener("click", function () {
+        fillForm(null);
+        setMessage("수정을 취소했습니다.");
+      });
+
+      el("toggleForm").addEventListener("click", function () {
+        var wrap = el("formWrap");
+        var hidden = wrap.classList.toggle("hidden");
+        el("toggleForm").textContent = hidden ? "펼치기" : "접기";
+      });
+
+      el("filterMachine").addEventListener("change", render);
+      el("filterStatus").addEventListener("change", renderTable);
+      el("filterKeyword").addEventListener("input", renderTable);
+
+      el("periodFilter").addEventListener("click", function (event) {
+        var button = event.target.closest("button[data-period]");
+        if (!button) return;
+        periodFilter = button.getAttribute("data-period") || "";
+        var buttons = el("periodFilter").querySelectorAll("button");
+        for (var i = 0; i < buttons.length; i += 1) {
+          buttons[i].classList.toggle("active", buttons[i] === button);
+        }
+        renderTable();
+      });
+
+      el("machineBoard").addEventListener("click", function (event) {
+        var tile = event.target.closest("[data-machine]");
+        if (!tile) return;
+        applyMachineFilter(tile.getAttribute("data-machine"));
+      });
+      el("machineBoard").addEventListener("keydown", function (event) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        var tile = event.target.closest("[data-machine]");
+        if (!tile) return;
+        event.preventDefault();
+        applyMachineFilter(tile.getAttribute("data-machine"));
+      });
+
+      el("recordBody").addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+        var editId = button.getAttribute("data-edit");
+        var deleteId = button.getAttribute("data-delete");
+        if (editId) {
+          var row = records.find(function (item) { return item.id === editId; });
+          if (!row) return;
+          expandForm();
+          fillForm(row);
+          setMessage("수정할 기록을 불러왔습니다.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        if (deleteId) {
+          if (!window.confirm("이 오류 기록을 삭제할까요?")) return;
+          records = records.filter(function (item) { return item.id !== deleteId; });
+          save();
+          if (el("editId").value === deleteId) fillForm(null);
+          render();
+          setMessage("기록을 삭제했습니다.");
+        }
+      });
+
+      el("exportCsv").addEventListener("click", function () {
+        var headers = HEADERS.concat(["심각도"]);
+        var keys = FIELDS.concat(["severity"]);
+        var lines = [headers.map(escapeCsv).join(",")];
+        records.forEach(function (row) {
+          lines.push(keys.map(function (key) { return escapeCsv(row[key]); }).join(","));
+        });
+        download("\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8", "cnc-error-records.csv");
+        setMessage("CSV를 내보냈습니다. (" + records.length + "건)");
+      });
+
+      el("backupJson").addEventListener("click", function () {
+        var payload = {
+          source: "d3be1ad4-ff0f-4b1e-bebb-122ad83155d2.jsonl",
+          exportedAt: new Date().toISOString(),
+          records: records
+        };
+        download(JSON.stringify(payload, null, 2), "application/json;charset=utf-8", "cnc-error-records.json");
+        setMessage("JSON 백업을 저장했습니다. (" + records.length + "건)");
+      });
+
+      el("csvImport").addEventListener("change", function () {
+        readFile(el("csvImport"), recordsFromCsv);
+      });
+
+      el("jsonImport").addEventListener("change", function () {
+        readFile(el("jsonImport"), recordsFromJson);
+      });
+
+      fillForm(null);
+      render();
+    })();
+  </script>
+</body>
+</html>
