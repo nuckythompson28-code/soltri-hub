@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff8c42">
+<title>O2026 제일연마 — 5호기 인터랙티브 코드 분석</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;--accent:#4fb6ff;--accent2:#ffb454;--green:#7ee787;--red:#ff7b72;--purple:#d2a8ff}
+*{box-sizing:border-box}html,body{margin:0;height:100%}body{font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:15px;line-height:1.6}button,input{font:inherit}a{color:var(--accent)}button,a,input{touch-action:manipulation}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,.ln:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);height:100dvh}.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:18px 14px}.main{overflow-y:auto;padding:26px 34px 80px;scroll-behavior:smooth;min-width:0}.brand{font-size:18px;font-weight:800}.brand span{color:var(--accent)}.brand-sub{font-size:12px;color:var(--dim);margin:4px 0 18px}.nav-h{font-size:11px;color:var(--dim);letter-spacing:1px;margin:20px 0 8px}.nav a{display:block;padding:9px 12px;border-radius:8px;color:var(--txt);text-decoration:none;font-size:14px;margin-bottom:3px;border:1px solid transparent}.nav a:hover{background:var(--panel2)}.nav a.active{background:var(--panel2);border-color:var(--accent);color:#fff}.nav small{display:block;font-size:11px;color:var(--dim);margin-top:2px}.legend{font-size:12px;color:var(--dim);line-height:1.9}.legend .var,.legend .gc,.legend .mc{border:0}
+.page{max-width:1080px}.page[hidden]{display:none}h1{font-size:26px;line-height:1.3;margin:0 0 8px}h2{font-size:19px;margin:27px 0 10px}h3{font-size:15px;margin:0 0 8px;color:var(--accent2)}p{margin:8px 0 14px}.role{color:var(--accent2);font-size:14px;margin-bottom:18px}.summary,.tip,.check{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);padding:14px 18px;border-radius:10px;margin:14px 0 22px}.summary b{color:var(--accent)}.tip{border-left-color:var(--green);background:#16221b}.check{border-left-color:var(--accent2)}.muted,.cap{color:var(--dim);font-size:13px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:18px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}.card p{font-size:13px;color:var(--dim);margin:0}.stat{font-size:27px;line-height:1.2;color:var(--accent);font-weight:800;margin:4px 0 8px}.flow{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin:18px 0}.flow a{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;text-decoration:none}.flow a:hover{border-color:var(--accent)}.flow small{display:block;color:var(--dim);font-size:12px}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}.btn{display:inline-block;background:var(--panel2);color:var(--txt);border:1px solid #3b4b60;border-radius:9px;padding:9px 14px;font-size:13px;text-decoration:none}.btn:hover{border-color:var(--accent)}.btn:disabled{opacity:.5;cursor:wait}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px;margin:12px 0 22px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--panel2);color:var(--accent2);white-space:nowrap}tr:last-child td{border-bottom:0}code{font-family:"D2Coding",Consolas,monospace;color:var(--purple)}.formula{background:var(--panel2);padding:12px 15px;border-radius:8px;overflow:auto;font:13px/1.8 Consolas,monospace}.checks li{margin:12px 0;padding-left:4px}.checks{padding-left:20px}
+.codewrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:18px 0}.codehead{padding:10px 16px;background:var(--panel2);border-bottom:1px solid var(--line);font-size:13px;color:var(--dim)}.code{padding:12px 0;overflow:auto;font:13px/1.6 "D2Coding",Consolas,monospace}.ln{display:flex;width:max-content;min-width:100%;padding:2px 16px;white-space:pre;cursor:pointer}.ln:hover,.ln.selected{background:#1e2d3b}.ln.block{border-top:1px solid #294151;background:#13242f}.ln.flash{background:#433a17}.gut{width:38px;flex:none;color:#657386;text-align:right;padding-right:14px;user-select:none}.src{flex:1}.cm{color:#7d8998}.var{color:var(--purple);border-bottom:1px dotted #5a4a6e}.gc{color:var(--accent);border-bottom:1px dotted #2d4a5e}.mc{color:var(--accent2);border-bottom:1px dotted #5e4a2d}.kw{color:var(--red)}.label{color:var(--green);font-weight:700}.jump{color:var(--green);text-decoration:underline dotted}.explain{position:sticky;top:0;z-index:5;background:#14232f;border:1px solid #34556d;border-radius:10px;padding:12px 16px;margin:12px 0;font-size:13px;min-height:72px;box-shadow:0 4px 12px #0004}.explain strong{display:block;color:var(--accent2);margin-bottom:4px}#tip{position:fixed;z-index:100;max-width:min(350px,calc(100vw - 24px));background:#0a0d11;border:1px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:13px;pointer-events:none;box-shadow:0 8px 30px #0008}#tip[hidden]{display:none}#tip strong{color:var(--accent2);display:block}.varsearch{width:100%;max-width:420px;border:1px solid #3b4b60;background:var(--panel);color:var(--txt);border-radius:8px;padding:10px 12px}.part-picker{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel2);padding:16px;border-radius:10px}.part-picker input{flex:1;min-width:160px;accent-color:var(--accent)}.part-picker output{font-weight:800;color:var(--accent2)}.batch{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:15px 0}.batch div{padding:10px;text-align:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-size:12px}.batch .active{border-color:var(--accent);background:#173348}.batch small{display:block;color:var(--dim)}.svgbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin:18px 0}.svgbox svg{display:block;width:100%;height:auto;max-width:740px;margin:auto}.svgbox text{font-family:"Pretendard","맑은 고딕",sans-serif}.menu-btn{display:none;position:fixed;top:10px;left:12px;z-index:60;width:44px;height:44px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font-size:21px}.backdrop{display:none;position:fixed;inset:0;background:#0009;z-index:45}.backdrop.show{display:block}.footer{font-size:12px;color:var(--dim);margin-top:26px}.status{font-size:13px;color:var(--green)}
+@media(max-width:760px){.app{grid-template-columns:minmax(0,1fr)}.sidebar{position:fixed;top:0;left:0;bottom:0;width:248px;z-index:50;transform:translateX(-100%);transition:transform .2s}.sidebar.open{transform:none}.menu-btn{display:block}.main{padding:65px 16px 60px}h1{font-size:22px}.summary,.tip,.check{padding:12px 14px;font-size:14px}.cards{grid-template-columns:1fr}.code{font-size:12px}.ln{padding:3px 10px}.gut{width:32px;padding-right:10px}.batch{grid-template-columns:repeat(2,1fr)}.explain{font-size:12px;padding:10px 12px}.svgbox{padding:10px}th,td{padding:8px}.tablewrap{max-width:100%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media(max-width:760px){.sidebar{padding-top:64px}}
+</style>
+<script src="o2026.js" defer></script>
+</head>
+<body>
+<button class="menu-btn" id="menuBtn" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">☰</button>
+<div class="backdrop" id="backdrop"></div>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">O<span>2026</span> 제일연마</div>
+  <div class="brand-sub">Soltri · 5호기 · O2026 / O2027</div>
+  <div class="nav-h">페이지</div>
+  <nav class="nav" id="nav" aria-label="프로그램 분석">
+    <a href="#overview" data-page="overview" class="active">📊 전체 개요<small>공구 구성 · 4개씩 총 20개</small></a>
+    <a href="#O2026" data-page="O2026">① O2026 메인<small>입력 치수 · RPM · 이송</small></a>
+    <a href="#O2027" data-page="O2027">② O2027 가공<small>선가공 · 모따기 · 홈 · 절단</small></a>
+    <a href="#cycle" data-page="cycle">🔁 반복과 좌표<small>제품 번호별 Z 위치 확인</small></a>
+    <a href="#drawing" data-page="drawing">📐 도면과 치수<small>2024.06.11 개정도 대조</small></a>
+    <a href="#vars" data-page="vars">📖 변수 사전<small>설정값 · 계산값 · 검색</small></a>
+    <a href="#checks" data-page="checks">🔎 코드 확인사항<small>홈 OFF 분기 · 수량 · 보정</small></a>
+    <a href="machines.html#m5">🕹️ 5호기 M코드</a>
+    <a href="index.html">🏭 김공장 홈</a>
+  </nav>
+  <div class="nav-h">색상 안내</div>
+  <div class="legend"><span class="var">■ 변수</span> · <span class="gc">■ G코드</span><br><span class="mc">■ M코드</span> · <span class="label">■ 점프</span><br><br>코드를 누르면 줄 설명이 표시됩니다.<br>PC에서는 변수·코드에 마우스를 올려도 설명을 볼 수 있습니다.</div>
+</aside>
+<main class="main" id="main">
+  <section class="page" id="page-overview">
+    <h1>O2026 제일연마 <span class="muted">— 5호기</span></h1>
+    <div class="role">CN10 링 · T1 내·외경 동시 가공 → 홈가공 → 아래쪽 T2 절단</div>
+    <div class="summary">O2026에서 치수와 절삭조건을 정하고 <b>M98 P2027</b>로 가공을 호출합니다. T1으로 <b>4개 분량을 선가공</b>한 뒤, 제품마다 오른쪽 모따기·홈가공·T2 절단을 반복합니다. 현재 입력값은 <b>4개 × 5묶음 = 총 20개</b>입니다.</div>
+    <div class="cards">
+      <div class="card"><h3>제품당 소모 길이</h3><div class="stat">11.84 <small>mm</small></div><p>제품 9.87 + 절단날 폭 1.97<br><code>#505 = #105 + #106</code></p></div>
+      <div class="card"><h3>한 묶음 선가공</h3><div class="stat">4 <small>개 / 47.36 mm</small></div><p>FIX[(55 − 1) ÷ 11.84]<br>공구 길이 설정으로 묶음 수량 계산</p></div>
+      <div class="card"><h3>한 번의 프로그램 수량</h3><div class="stat">20 <small>개</small></div><p>FIX[(246 − 5) ÷ 11.84]<br>프로그램상 남는 길이 9.20 mm</p></div>
+    </div>
+    <div class="flow" aria-label="가공 순서">
+      <a href="#O2026"><b>O2026</b><small>치수·조건 입력</small></a>
+      <a href="#O2027"><b>N100 → N130</b><small>단면 → 4개 분량 선가공</small></a>
+      <a href="#cycle"><b>N150 → N180</b><small>모따기 → 홈 → 절단</small></a>
+      <a href="#cycle"><b>N190 / N200</b><small>반복·잔량 → 종료</small></a>
+    </div>
+    <h2>5호기 공구 구성</h2>
+    <div class="cards">
+      <div class="card"><h3>T01 · 복합 보링바</h3><p>위·아래에 바이트가 달려 있어 외경과 내경을 한 번에 가공합니다. 모따기와 홈가공도 T1으로 진행합니다.</p></div>
+      <div class="card"><h3>T02 · 아래쪽 절단 바이트</h3><p>소재 아래에서 위로 올라오며 절단합니다. X−140 → X−122.2처럼 음수 X의 절댓값이 줄어드는 방향으로 절입합니다.</p></div>
+      <div class="card"><h3>T03 · 이 품목에서 미사용</h3><p>5호기의 T3는 오토링크이지만 제일연마 가공에는 사용하지 않습니다. 종료는 M99로 메인 복귀 후 M30입니다.</p></div>
+    </div>
+    <div class="tip"><b>도면과 맞는 설정</b><br>제품 길이 9.87은 도면 허용범위 9.85~9.90 안에 있습니다. 홈 지름 감소량 3.70은 반경 깊이 1.85에 해당합니다. 내경·벽 두께·홈 바닥 폭은 <a href="#drawing">도면과 치수</a>에서 공구 세팅과 함께 확인합니다.</div>
+    <h2>회전수와 이송</h2>
+    <p>현재 T1·T2 최저/최고 회전수가 모두 1200이므로 회전수 증가량은 0입니다. 아래 값은 mm 단위, G98 분당 이송 기준입니다.</p>
+    <div class="tablewrap"><table><thead><tr><th>가공</th><th>계산</th><th>지령 이송</th></tr></thead><tbody>
+      <tr><td>T1 선가공 / 홈 폭 방향</td><td>1200 × 0.12</td><td>F144 mm/min</td></tr>
+      <tr><td>T1 모따기</td><td>1200 × 0.11</td><td>F132 mm/min</td></tr>
+      <tr><td>T1 홈 깊이 방향</td><td>1200 × 0.025</td><td>F30 mm/min</td></tr>
+      <tr><td>T2 단면 / 절단</td><td>1200 × 0.10</td><td>F120 mm/min</td></tr>
+    </tbody></table></div>
+    <div class="actions"><a class="btn" href="programs/o2026-o2027-jeil-unit5.nc" download>↓ O2026 + O2027 원문 받기</a><button class="btn" id="copy-source" disabled>원문 전체 복사</button><span class="status" id="copy-status" role="status"></span></div>
+    <p class="footer">등록 기준: 사용자 제공 프로그램 · 5호기 공구 구성 확인 · 도면 127.35X140X10 제일연마(20240611).pdf.<br>코드 원문과 해설을 함께 수록했습니다. 도면 개정에 따른 치수 확인사항은 별도로 표시합니다.</p>
+  </section>
+  <section class="page" id="page-O2026" hidden><h1>① O2026 메인 프로그램</h1><p>원문을 불러오는 중입니다.</p></section>
+  <section class="page" id="page-O2027" hidden><h1>② O2027 가공 프로그램</h1><p>원문을 불러오는 중입니다.</p></section>
+  <section class="page" id="page-cycle" hidden>
+    <h1>반복과 제품별 좌표</h1><div class="role">현재 등록된 입력값 · X/U 지름 지령, Z 절대값 / W 증분값 기준</div>
+    <div class="summary"><b>#520</b>은 이번 묶음의 진행 수량, <b>#521</b>은 전체 진행 수량, <b>#522</b>는 누적 피치 위치입니다. N170에서 수량과 #522를 먼저 올린 뒤 N180에서 절단합니다.</div>
+    <label class="part-picker" for="part-number">제품 번호 <input id="part-number" type="range" min="1" max="20" value="1" step="1" disabled><output id="part-output" for="part-number">1 / 20개</output></label>
+    <div class="batch" id="batches"></div>
+    <div class="tablewrap"><table><thead><tr><th>동작</th><th>해당 제품의 지령 좌표</th></tr></thead><tbody id="coordinates"><tr><td colspan="2">원문 입력값을 불러오는 중입니다.</td></tr></tbody></table></div>
+    <p class="cap">표는 공구 기준점의 지령 좌표입니다. 실제 제품 끝면은 T2 날 폭과 Z 보정 기준에 따라 결정됩니다. 완성 길이와 절단 피치 11.84를 구분합니다.</p>
+    <h2>묶음 가공의 분기</h2>
+    <div class="tablewrap"><table><thead><tr><th>구간</th><th>조건과 동작</th></tr></thead><tbody>
+      <tr><td>N120</td><td>한 묶음 수량이 총 가공 수량보다 크면 총 수량으로 줄입니다.</td></tr>
+      <tr><td>N130</td><td>T1으로 묶음 길이를 선가공하고 #520을 0으로 초기화합니다.</td></tr>
+      <tr><td>N150 → N180</td><td>오른쪽 모따기 → 홈 ON일 때 홈가공 → 카운터 갱신 → 왼쪽 외경 모따기·절단.</td></tr>
+      <tr><td>N190 첫 IF</td><td>#520 &lt; #515이면 N150으로 돌아가 같은 묶음의 다음 제품을 가공합니다.</td></tr>
+      <tr><td>N190 두 번째 IF</td><td>다음 묶음까지 넣으면 총 수량을 넘는 경우 N200, 아니면 N130으로 이동합니다.</td></tr>
+      <tr><td>N200</td><td>남은 길이로 묶음 수량을 다시 계산합니다. 1개 이상이면 N130, 없으면 N250으로 종료합니다.</td></tr>
+    </tbody></table></div>
+    <div class="check">N100에는 첫 단면 절삭 전 <b>M00</b>가 있습니다. 현재 코드는 자동 소재 인출을 하지 않으며, 새로 시작하면 이 정지 구간을 다시 거칩니다.</div>
+  </section>
+  <section class="page" id="page-drawing" hidden>
+    <h1>도면과 프로그램 치수</h1><div class="role">127.35X140X10 제일연마(20240611).pdf · CN10 · 2024.06.11</div>
+    <p>개정란: <b>내경 치수 변경 (Ø127.2 → Ø127.35)</b>. 도면의 내경은 괄호로 표시된 참고치수이며, 벽 두께에는 별도의 상·하한 공차가 있습니다.</p>
+    <div class="svgbox">
+      <h3>링 단면의 치수 관계</h3><p class="cap">도면 치수 설명용 개략도 · 비례 축척 아님 · 홈 경사면의 각도는 이 도면에 별도 표기 없음</p>
+      <svg viewBox="0 0 720 330" role="img" aria-labelledby="drawing-title drawing-desc">
+        <title id="drawing-title">제일연마 링의 외주 홈과 벽 두께</title><desc id="drawing-desc">외경 140, 제품 길이 9.85에서 9.90, 홈 바닥 폭 2.5, 반경 깊이 1.85, 벽 두께 6.255에서 6.295인 링 단면 설명도.</desc>
+        <defs><pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#173348"/><path d="M0 0V9" stroke="#4fb6ff" stroke-width="1"/></pattern><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#8a97a6"/></marker></defs>
+        <path d="M150 120H235L280 180H410L455 120H540V255H150Z" fill="url(#hatch)" stroke="#4fb6ff" stroke-width="2"/>
+        <g stroke="#8a97a6" fill="none"><path d="M150 110V38M540 110V38M280 170V88M410 170V88M140 120H60M270 180H60M550 120H645M550 255H645"/><path d="M155 48H535M285 100H405M80 125V175M625 125V250" marker-start="url(#arrow)" marker-end="url(#arrow)"/></g>
+        <g fill="#d7dee8" font-size="18" text-anchor="middle"><text x="345" y="30">제품 길이 9.85~9.90</text><text x="345" y="85">홈 바닥 폭 2.5</text><text x="48" y="156" transform="rotate(-90 48 156)">깊이 1.85</text><text x="660" y="190" transform="rotate(-90 660 190)">벽 두께 6.255~6.295</text><text x="345" y="295">외경 Ø140 · 참고 내경 (Ø127.35)</text></g>
+      </svg>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>항목</th><th>도면</th><th>프로그램</th><th>해석</th></tr></thead><tbody>
+      <tr><td>외경</td><td>Ø140</td><td>#103 = 140</td><td>명목값 일치</td></tr>
+      <tr><td>제품 길이</td><td>10 −0.10 / −0.15<br>9.85~9.90</td><td>#105 = 9.87</td><td>설정값은 공차 안에 있음</td></tr>
+      <tr><td>홈 반경 깊이</td><td>1.85</td><td>#120 = 3.70<br>X140 → X136.3</td><td>지름 감소량의 절반이므로 일치</td></tr>
+      <tr><td>홈 바닥 폭</td><td>2.5</td><td>#121 = 2.0<br>Z 이동거리</td><td>T1 날끝 유효 폭·Z 기준점 확인</td></tr>
+      <tr><td>참고 내경</td><td>(Ø127.35)</td><td>#104 = 127.20</td><td>개정 전 명목값. T1 내경 지령에 직접 사용되지 않음</td></tr>
+      <tr><td>벽 두께</td><td>6.325 −0.03 / −0.07<br>6.255~6.295</td><td>직접 지정 변수 없음</td><td>T1 바이트 세팅·보정 및 실측으로 관리</td></tr>
+    </tbody></table></div>
+    <h2>참고 내경과 벽 두께 공차</h2>
+    <div class="formula">내경 = 외경 − 2 × 벽 두께<br>외경이 정확히 140일 때:<br>140 − 2 × 6.295 = 127.410<br>140 − 2 × 6.255 = 127.490<br>벽 두께 공차 중앙 6.275 → 내경 127.450</div>
+    <p>127.410~127.490은 <b>외경을 정확히 140으로 놓은 환산 범위</b>입니다. 도면에 직접 지정된 내경 공차가 아니며, 실제 외경과 벽 두께를 함께 확인합니다. 파일명의 127.35만을 완성 내경 목표로 단정하지 않습니다.</p>
+    <div class="check"><b>#104만 바꿔도 T1 내경 치수는 바뀌지 않습니다.</b><br>이 변수는 <code>#504 = #104 − 5.0</code>을 거쳐 T2 절단 종료 X값에만 사용됩니다. 실제 내경은 복합 보링바의 바이트 세팅과 보정에 달려 있습니다.</div>
+    <h2>홈 폭 2.5와 이동거리 2.0</h2>
+    <p>T1 날끝의 유효 바닥 폭이 0.5라면 Z 2.0 이동으로 바닥 폭 2.5가 나올 수 있습니다. 이는 가능한 설명이며 실제 날 폭을 확인한 값은 아닙니다. <b>#121을 곧바로 2.5로 바꾸지 않고</b>, 날끝 폭과 Z 보정 기준점을 함께 확인합니다.</p>
+    <p><code>#555 = (9.87 − 2.0) / 2 = 3.935</code>는 지령 이동 구간의 양쪽 여유입니다. 완성 홈 폭이 2.5이고 중앙에 있다면 완성품 양쪽 폭은 각각 3.685가 됩니다. 도면의 (3.75)는 명목 길이 10을 기준으로 한 참고치수입니다.</p>
+    <p class="cap">오른쪽 내경 1.20 · 오른쪽 외경 0.45 · 왼쪽 외경 0.60의 단면 모따기 설정은 이 도면에 대응 치수가 별도로 표시되지 않아 도면만으로 확정할 수 없습니다.</p>
+  </section>
+  <section class="page" id="page-vars" hidden>
+    <h1>변수 사전</h1><p class="role">입력값과 계산·반복 변수를 구분해서 읽습니다.</p>
+    <label for="var-search">변수 번호 또는 설명 검색</label><p><input class="varsearch" id="var-search" type="search" placeholder="#104, 홈, 회전수, 수량…"></p>
+    <div class="tablewrap"><table><thead><tr><th>변수</th><th>이름</th><th>설정값 / 초기 계산값</th><th>설명</th></tr></thead><tbody id="variable-rows"></tbody></table></div>
+    <p id="var-empty" hidden>일치하는 변수가 없습니다.</p>
+  </section>
+  <section class="page" id="page-checks" hidden>
+    <h1>코드 확인사항</h1><div class="role">원문에서 확인한 분기·변수의 동작</div>
+    <ol class="checks">
+      <li><b>홈 OFF일 때 후퇴와 T1 회전수 갱신도 생략됩니다.</b><br><code>IF [#119 EQ 0] GOTO 170</code>은 홈가공뿐 아니라 <code>G00 Z[-#522+20.0]</code>, <code>#513=#513+#511</code>도 건너뜁니다. 현재 증가량은 0이지만 후퇴 경로 차이는 남습니다.</li>
+      <li><b>가공 수량 0을 막는 진입 조건이 없습니다.</b><br>현재는 #517=20, #515=4로 정상적인 수량 반복입니다. 치수가 바뀌어 #517 또는 #515가 0이 되어도 처음부터 가공을 종료하지 않습니다. #505가 0이면 나눗셈도 성립하지 않습니다.</li>
+      <li><b>회전수 증가량과 실제 수량의 기준 길이가 다릅니다.</b><br>#549는 안전거리 제외 전 246, #517은 제외 후 241로 계산합니다. 지금은 둘 다 20이지만 다른 치수에서는 달라질 수 있습니다.</li>
+      <li><b>#109와 #518은 이후에 사용되지 않습니다.</b><br>#109를 바꿔도 왼쪽 내경 모따기 동작은 달라지지 않습니다. #518은 총 소모 길이를 계산하지만 이후 참조하지 않습니다.</li>
+      <li><b>치수 변수와 완성 치수를 구분합니다.</b><br>#104는 T2 절단 종료 좌표에 사용됩니다. 홈 폭 #121은 Z 이동거리이며, T2 날 폭 #106은 소모 피치 계산에 사용됩니다. 실제 날끝 형상과 보정 기준을 함께 봅니다.</li>
+    </ol>
+    <h2>5호기에서 사용하는 M코드</h2>
+    <p class="cap">출처: 김공장 <a href="machines.html#m5">기계별 M코드 · 5호기</a>. 다른 호기의 의미를 가져오지 않고 기존 5호기 표를 적용했습니다.</p>
+    <div class="tablewrap"><table><thead><tr><th>코드</th><th>5호기 표의 의미</th><th>이 프로그램에서</th></tr></thead><tbody>
+      <tr><td>M03</td><td>주축 역회전</td><td>T1·T2 절삭에 사용</td></tr>
+      <tr><td>M51 / M52</td><td>에어 ON / OFF</td><td>절단 종료 및 후퇴 구간</td></tr>
+      <tr><td>M53 / M54</td><td>보링바 UP / DOWN</td><td>선가공 진입·완료, 최종 후퇴</td></tr>
+      <tr><td>M55</td><td>면취 후진</td><td>초기 G30 복귀 블록</td></tr>
+      <tr><td>M12</td><td>카운팅</td><td>제품 절단 후 1회씩, 총 20회</td></tr>
+      <tr><td>M00</td><td>프로그램 정지</td><td>첫 단면 절삭 전 정지</td></tr>
+      <tr><td>M98 / M99</td><td>서브프로그램 호출 / 복귀</td><td>O2026 ↔ O2027</td></tr>
+    </tbody></table></div>
+    <div class="tip">제일연마에서는 <b>T03 오토링크를 사용하지 않습니다.</b> T3 호출이나 자동 소재 인출이 없는 것은 이 품목의 가공 구성과 일치합니다.</div>
+  </section>
+  <noscript><div class="check">코드 해설과 제품별 좌표를 보려면 JavaScript를 켜 주세요. <a href="programs/o2026-o2027-jeil-unit5.nc">프로그램 원문 받기</a>는 바로 사용할 수 있습니다.</div></noscript>
+</main>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+</body>
+</html>
