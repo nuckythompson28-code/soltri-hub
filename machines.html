@@ -114,7 +114,7 @@ const MACHINES = [
  {no:"2", type:"HA", prog:"O0400", file:"o0400.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:null,clClose:null,airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
  {no:"3", type:"HA", prog:"O8000", file:"o8000.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M08",airOff:"M09",cw:"M04",ccw:"M03"},
  {no:"4", type:"AL", prog:null,    file:null,         boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M52",clClose:"M51",airOn:null,airOff:null,cw:"M04",ccw:"M03"},
- {no:"5", type:"AL", prog:"O2026 · 제일연마", file:"o2026.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:"M171",clClose:"M170",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
+ {no:"5", type:"AL", prog:"O0500", file:"o0500.html", extraProg:"O2026 · 제일연마", extraFile:"o2026.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:"M171",clClose:"M170",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"6", type:"HA", prog:"O8000", file:"o8000.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M51",airOff:"M52",cw:"M03",ccw:"M04",std:true},
  {no:"7", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M53",boringDn:"M54",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"8", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
@@ -175,6 +175,7 @@ function showDetail(m){
   const slot = document.getElementById('linkSlot');
   if(m.file){
     slot.innerHTML = '<a class="linkbtn" href="'+m.file+'">📄 '+m.prog+' 분석 보기 →</a>';
+    if(m.extraFile) slot.innerHTML += '<a class="linkbtn" style="margin-top:12px" href="'+m.extraFile+'">📄 '+m.extraProg+' 분석 보기 →</a>';
   } else {
     slot.innerHTML = '<div class="nolink">분석 자료 준비중 — M코드 자료 들어오면 연결됩니다</div>';
   }
