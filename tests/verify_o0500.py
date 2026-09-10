@@ -174,8 +174,10 @@ class PortTests(unittest.TestCase):
                 self.assertEqual(archive.read(name).decode('ascii').replace('\r\n','\n'),expected)
             self.assertEqual(archive.read('README.md'),(ROOT/'docs/o0500-unit5-port.md').read_bytes())
 
-    def test_default_four_chamfer(self):
+    def test_default_three_chamfer(self):
         nc=NC().run()
+        self.assertEqual(nc.vars[121],3)
+        self.assertEqual(sum(m['program']==9034 and 'U' in m['words'] for m in nc.moves),13)
         self.assertEqual(nc.vars[521],13)
         self.assertAlmostEqual(nc.offsets[0],224.7)
         self.assertEqual(nc.offsets[-1],0)
@@ -221,7 +223,7 @@ class PortTests(unittest.TestCase):
                                     self.assertGreaterEqual(move['oldz']+move['done']*move['pitch'],10-1e-8)
 
     def test_face_mark_and_four_chamfer_geometry(self):
-        nc=NC().run()
+        nc=NC(overrides={121:4}).run()
         marking=[m for m in nc.moves if m['program']==9031 and m['stage']==202 and m['mode']=='G01']
         self.assertEqual(len(marking),1)
         self.assertAlmostEqual(marking[0]['x'],-74.9)
