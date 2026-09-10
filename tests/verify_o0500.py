@@ -54,7 +54,7 @@ class NC:
         value = re.sub(r'#(\d+)', lambda m: repr(self.vars.get(int(m[1]), 0)), source)
         value = value.replace('[', '(').replace(']', ')')
         for word, replacement in {'EQ':'==','NE':'!=','LT':'<','LE':'<=','GT':'>','GE':'>=','AND':'and','OR':'or'}.items():
-            value = re.sub(r'(?<![A-Z])'+word+r'(?![A-Z])', replacement, value)
+            value = re.sub(r'\b'+word+r'\b', replacement, value)
         def read(node):
             if isinstance(node, ast.Constant) and isinstance(node.value, (int,float)): return node.value
             if isinstance(node, ast.UnaryOp):
@@ -88,9 +88,7 @@ class NC:
             if line[i].isspace() or line[i]==';': i+=1; continue
             letter=line[i]
             assert letter in 'GMXYZUWSFTPL', ('unknown NC word',line[i:],line)
-            i+=1
-            while i<len(line) and line[i].isspace():i+=1
-            begin=i; depth=0
+            i+=1; begin=i; depth=0
             while i<len(line):
                 c=line[i]
                 if c=='[': depth+=1
@@ -110,16 +108,16 @@ class NC:
             label=re.match(r'N(\d+)\b\s*(.*)',raw)
             if label: stage=int(label[1]); raw=label[2]
             if not raw: continue
-            conditional=re.match(r'IF\s*(.+?)\s*(GOTO\s*\d+|THEN\s+.+)$',raw)
+            conditional=re.match(r'IF\s+(.+)\s+(GOTO\s+\d+|THEN\s+.+)$',raw)
             if conditional:
                 if not self.expr(conditional[1]): continue
                 raw=re.sub(r'^THEN\s+','',conditional[2])
-            jump=re.fullmatch(r'GOTO\s*(\d+)',raw)
+            jump=re.fullmatch(r'GOTO\s+(\d+)',raw)
             if jump: pc=self.labels[program][int(jump[1])]; continue
             assignment=re.fullmatch(r'#(\d+)\s*=\s*(.+)',raw)
             if assignment:
                 key=int(assignment[1]); value=self.expr(assignment[2])
-                if program in (500,2026,8000) and key in self.overrides: value=self.overrides[key]
+                if program in (500,2026) and key in self.overrides: value=self.overrides[key]
                 if key==3000: raise Alarm(value)
                 self.vars[key]=value
                 continue
@@ -135,10 +133,8 @@ class NC:
                 program,pc,stage=stack.pop(); continue
             if 30 in ms: return self
             if 10 in gs:
-                old_offset=self.offset
                 if 'Z' in values: self.offset=values['Z']
                 if 'W' in values: self.offset+=values['W']
-                if self.z is not None:self.z+=old_offset-self.offset
                 self.offsets.append(self.offset)
                 continue
             if 30 in gs:
@@ -160,134 +156,128 @@ class NC:
             if any(word in values for word in ('X','Z','U','W')):
                 self.moves.append({'program':program,'stage':stage,'raw':raw,'mode':self.motion,'tool':self.tool,'oldtool':oldtool,
                   'oldx':oldx,'oldz':oldz,'x':self.x,'z':self.z,'offset':self.offset,'feed':self.feed,
-                  'rpm':self.rpm,'done':self.vars.get(523,0),'pitch':self.vars.get(505,0),'words':values})
+                  'done':self.vars.get(521,0),'pitch':self.vars.get(505,0),'words':values})
             for m in ms:
-                if m==12: self.vars[3901]=self.vars.get(3901,0)+1
                 self.events.append({'m':m,'program':program,'stage':stage,'x':self.x,'z':self.z})
         raise AssertionError('execution did not terminate')
 
 
 class PortTests(unittest.TestCase):
-    def cuts(self,nc):
-        return [m for m in nc.moves if m['tool']==2 and m['raw']=='G01 X-[#504] M51']
+    def test_packaged_files_match_canonical_source(self):
+        blocks=[b.strip() for b in SOURCE.split('%') if b.strip()]
+        with zipfile.ZipFile(ROOT/'programs/o0500-unit5-package.zip') as archive:
+            self.assertEqual(len(archive.namelist()),13)
+            for block in blocks:
+                name=re.match(r'O\d+',block)[0]+'.nc'
+                expected='%\n'+block+'\n%\n'
+                self.assertEqual((ROOT/'programs/o0500'/name).read_text(encoding='ascii'),expected)
+                self.assertEqual(archive.read(name).decode('ascii').replace('\r\n','\n'),expected)
+                txt=name.replace('.nc','.txt')
+                self.assertEqual((ROOT/'programs/o0500'/txt).read_bytes(),archive.read(name))
+                self.assertEqual(archive.read(txt),archive.read(name))
+            self.assertEqual(archive.read('README.md'),(ROOT/'docs/o0500-unit5-port.md').read_bytes())
 
-    def test_default_o8000_cycle_and_unit5_coordinates(self):
+    def test_default_three_chamfer(self):
         nc=NC().run()
-        self.assertEqual(nc.vars[523],13)
+        self.assertEqual(nc.vars[121],3)
+        self.assertEqual(sum(m['program']==9034 and 'U' in m['words'] for m in nc.moves),13)
+        self.assertEqual(nc.vars[521],13)
         self.assertAlmostEqual(nc.offsets[0],224.7)
         self.assertEqual(nc.offsets[-1],0)
-        bores=[m for m in nc.moves if m['raw']=='G98 G01 Z-[#507] F[#514*#110]']
-        self.assertEqual(len(bores),5)
-        for m,depth in zip(bores,[51.2,51.2,51.2,51.2,17.4]): self.assertAlmostEqual(m['z'],-depth)
-        cuts=self.cuts(nc)
-        self.assertEqual(len(cuts),13)
-        for i,m in enumerate(cuts,1):
-            self.assertAlmostEqual(m['x'],-65)
-            self.assertAlmostEqual(m['offset']+m['z'],224.7-i*16.9)
-            self.assertAlmostEqual(m['feed'],144)
-        faces=[m for m in nc.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
-        self.assertEqual(len(faces),13)
-        for i,m in enumerate(faces):
-            self.assertAlmostEqual(m['x'],-72.45)
-            self.assertAlmostEqual(m['offset']+m['z'],224.7-i*16.9)
-        self.assertEqual(sum(e['m']==56 for e in nc.events),13)
-        self.assertEqual(sum(e['m']==12 for e in nc.events),13)
+        self.assertEqual(len(nc.offsets),2, 'Only setup and cleanup change the work offset')
+        self.assertEqual([int(v[515]) for p,v in nc.calls if p==9032],[3,3,3,3,1])
+        self.assertAlmostEqual([v[516] for p,v in nc.calls if p==9032][-1],17.4)
+        self.assertEqual(nc.vars[124],0)
 
-    def test_quantity_group_and_switch_combinations(self):
-        for qty in [1,2,3,4,13,20]:
+    def test_modes_quantities_and_batch_boundaries(self):
+        for qty in [1,2,3,4,13,20,21,40]:
             for group in [1,2,3]:
-                for skip in [0,1]:
-                    for install in [0,1]:
-                        for retract in [0,1]:
-                            with self.subTest(qty=qty,group=group,skip=skip,install=install,retract=retract):
-                                nc=NC(overrides={120:qty,107:group,117:install,118:retract,121:1,122:skip}).run()
-                                self.assertEqual(nc.vars[523],qty)
-                                self.assertEqual(len(self.cuts(nc)),qty)
-                                self.assertEqual(sum(e['m']==12 for e in nc.events),qty)
-                                self.assertEqual(sum(e['m']==56 for e in nc.events),qty)
-                                self.assertEqual(sum(e['m']==0 for e in nc.events),1+install)
-                                self.assertEqual(sum(e['m']=='G30' for e in nc.events),2+qty*retract)
-                                self.assertEqual(len([m for m in nc.moves if m['stage']==202 and m['mode']=='G01']),1-skip)
-                                self.assertEqual(len([m for m in nc.moves if m['stage']==201 and m['mode']=='G01']),1-skip)
-                                self.assertTrue(any(m['stage']==203 and m['mode']=='G01' for m in nc.moves))
-                                for i,m in enumerate(self.cuts(nc),1):
-                                    self.assertAlmostEqual(m['offset']+m['z'],(qty-i)*16.9+5)
-                                for m in nc.moves:
-                                    if m['tool'] in (2,3) and m['x'] is not None:self.assertLess(m['x'],0)
-                                    if m['tool']!=m['oldtool'] and m['oldtool'] and m['oldz'] is not None:
-                                        # All tool changes occur at least 20 mm ahead of the current remaining face.
-                                        self.assertGreaterEqual(m['offset']+m['oldz']-((qty-m['done'])*16.9+5),20-1e-8)
+                for mode in [3,4]:
+                    for rough in [0,1]:
+                        with self.subTest(qty=qty,group=group,mode=mode,rough=rough):
+                            nc=NC(overrides={120:qty,123:group,121:mode,122:rough,124:1}).run()
+                            self.assertEqual(nc.vars[521],qty)
+                            self.assertEqual(sum(e['m']==12 for e in nc.events),qty)
+                            self.assertEqual(sum(p==9031 for p,_ in nc.calls),1)
+                            self.assertEqual(sum(p==9033 for p,_ in nc.calls),qty)
+                            self.assertEqual(sum(p==9034 for p,_ in nc.calls),qty)
+                            self.assertEqual(sum(p==9032 for p,_ in nc.calls),math.ceil(qty/group))
+                            cuts=[m for m in nc.moves if m['program']==9034 and 'X-[#504]' in m['raw']]
+                            self.assertEqual(len(cuts),qty)
+                            for n,cut in enumerate(cuts,1):
+                                self.assertEqual(cut['tool'],2)
+                                self.assertEqual(cut['mode'],'G01')
+                                self.assertAlmostEqual(cut['x'],-65)
+                                self.assertAlmostEqual(cut['z'],-n*16.9)
+                                self.assertGreaterEqual(cut['offset']+cut['z'],5-1e-8)
+                                self.assertAlmostEqual(cut['feed'],144)
+                            diagonals=[m for m in nc.moves if m['program']==9034 and 'U' in m['words']]
+                            self.assertEqual(len(diagonals),qty if mode==3 else 0)
+                            for diagonal in diagonals:
+                                self.assertAlmostEqual(diagonal['x']-diagonal['oldx'],0.6)
+                                self.assertAlmostEqual(diagonal['z']-diagonal['oldz'],-0.3)
+                            step_finishes=[m for m in nc.moves if m['program']==9032 and m['mode']=='G01' and 'Z-[#522+#516]' in m['raw']]
+                            per_group=int(bool(rough))+int(mode==3)
+                            self.assertEqual(len(step_finishes),math.ceil(qty/group)*per_group)
+                            for move in nc.moves:
+                                self.assertNotEqual(move['tool'],3)
+                                if move['tool']==2 and move['x'] is not None: self.assertLess(move['x'],0)
+                                if move['tool']!=move['oldtool'] and move['oldtool'] and move['oldz'] is not None:
+                                    self.assertGreaterEqual(move['oldz']+move['done']*move['pitch'],10-1e-8)
 
-    def test_rpm_ramps_and_single_quantity(self):
-        nc=NC(overrides={108:900,109:1300,111:1000,112:1600,114:1100,115:1700}).run()
-        bores=[m for m in nc.moves if m['raw']=='G98 G01 Z-[#507] F[#514*#110]']
-        self.assertEqual([m['rpm'] for m in bores],[900,1000,1100,1200,1300])
-        faces=[m for m in nc.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
-        for i,m in enumerate(faces):self.assertAlmostEqual(m['rpm'],1000+i*50)
-        for i,m in enumerate(self.cuts(nc)):self.assertAlmostEqual(m['rpm'],1100+i*50)
-        one=NC(overrides={120:1,121:1,108:900,109:1300,111:1000,112:1600,114:1100,115:1700}).run()
-        self.assertEqual([one.vars[n] for n in [511,512,513]],[0,0,0])
-        self.assertEqual(self.cuts(one)[0]['rpm'],1100)
+    def test_face_mark_and_four_chamfer_geometry(self):
+        nc=NC(overrides={121:4}).run()
+        marking=[m for m in nc.moves if m['program']==9031 and m['stage']==202 and m['mode']=='G01']
+        self.assertEqual(len(marking),1)
+        self.assertAlmostEqual(marking[0]['x'],-74.9)
+        self.assertAlmostEqual(marking[0]['z'],16.9/3)
+        face=[m for m in nc.moves if m['program']==9031 and m['stage']==203 and m['mode']=='G01']
+        self.assertAlmostEqual(face[0]['x'],-64.5)
+        self.assertEqual(face[0]['z'],0)
+        first=[m for m in nc.moves if m['program']==9033 and m['done']==0 and m['mode']=='G01']
+        self.assertTrue(any(abs(m['x']-72.1)<1e-8 and m['z']==1 for m in first))
+        self.assertTrue(any(abs(m['x']-77.7)<1e-8 and m['z']==1 for m in first))
+        self.assertTrue(any(abs(m['x']-74.3)<1e-8 and m['z']==-15 for m in first))
+        self.assertTrue(any(abs(m['x']-75.5)<1e-8 and m['z']==-15 for m in first))
 
-    def test_invalid_inputs_entry_and_counter_option(self):
-        cases=[({120:0},20),({120:1.5},20),({107:0},21),({107:2.5},21),({104:5},22),({105:0},22),
-               ({117:2},23),({118:2},23),({121:3},23),({122:2},23),({119:-1},23),({126:2},23),
-               ({109:1000},24),({113:0},24),({120:1},2),({105:16.1},1)]
-        for overrides,code in cases:
-            nc=NC(overrides=overrides)
-            with self.subTest(overrides=overrides),self.assertRaises(Alarm) as error:nc.run()
-            self.assertEqual(error.exception.number,code)
-            self.assertFalse(nc.moves);self.assertFalse(nc.offsets)
-        for preset in [{},{148:501,149:500}]:
-            with self.assertRaises(Alarm) as error:NC().run(program=9050,preset=preset)
-            self.assertEqual(error.exception.number,25)
-        # Counter option is OFF by default; these cases model #3901 advancing on M12.
-        for preset,code in [({3901:0,3902:0},27),({3901:90,3902:100},11)]:
-            nc=NC(overrides={126:1})
-            with self.assertRaises(Alarm) as error:nc.run(preset=preset)
-            self.assertEqual(error.exception.number,code);self.assertFalse(nc.moves)
-        nc=NC(overrides={126:1}).run(preset={3901:80,3902:100})
-        self.assertEqual(nc.vars[3901],93)
-        nc=NC(overrides={126:1})
-        with self.assertRaises(Alarm) as error:nc.run(preset={3901:87,3902:100})
-        self.assertEqual(error.exception.number,11);self.assertEqual(nc.vars[523],13)
+    def test_reference_unit5_parting_geometry(self):
+        ref=(ROOT/'programs/o2026-o2027-jeil-unit5.nc').read_text(encoding='ascii')
+        original=NC(ref).run(program=2026)
+        migrated=NC(overrides={101:145,102:126,103:140,104:127.2,105:9.87,106:1.97,107:1.2,108:.45,109:0,110:.6,
+            111:.12,112:.12,113:.11,114:.10,115:1200,116:1200,120:20,121:3,122:0,123:4}).run()
+        def cuts(nc,program):
+            return [m for m in nc.moves if m['program']==program and m['tool']==2 and 'X-[#504]' in m['raw']]
+        expected=cuts(original,2027); actual=cuts(migrated,9034)
+        self.assertEqual(len(actual),len(expected))
+        for a,b in zip(actual,expected):
+            for key in ('x','z','feed'): self.assertAlmostEqual(a[key],b[key])
 
-    def test_reference_o8000_paths(self):
-        import json
-        embedded=(ROOT/'simulator-samples.js').read_text(encoding='utf-8')
-        original=json.loads(re.search(r'const O8000_SRC = (".*");',embedded)[1])
-        # Resolve G100's documented O9010 call and semicolon-separated blocks for this interpreter.
-        original=re.sub(r'\([^)]*\)','',original).replace('G100','M98 P9010').replace(';','\n')
-        old=NC(original).run(program=8000,preset={3901:0,3902:999999})
-        new=NC().run()
-        oldfaces=[m for m in old.moves if m['tool']==2 and m['mode']=='G01' and m['stage'] in [320,420]]
-        newfaces=[m for m in new.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
-        self.assertEqual(len(oldfaces),13);self.assertEqual(len(newfaces),13)
-        for a,b in zip(oldfaces,newfaces):
-            self.assertAlmostEqual(a['x'],b['x']);self.assertAlmostEqual(a['feed'],b['feed'])
-            self.assertAlmostEqual(a['z']+a['offset']-old.offsets[0],b['z']+b['offset']-new.offsets[0])
-        oldcuts=[m for m in old.moves if m['tool']==3 and m['raw']=='X-[#504] M51']
-        self.assertEqual(len(oldcuts),13)
-        for a,b in zip(oldcuts,self.cuts(new)):
-            self.assertAlmostEqual(a['z']+a['offset']-old.offsets[0],b['z']+b['offset']-new.offsets[0])
-            self.assertAlmostEqual(a['feed'],b['feed'])
-            self.assertAlmostEqual(b['x'],a['x']+3) # Unit 5 ID-5 vs unit 6 ID-2, on negative X.
+    def test_invalid_input_stops_before_offsets_and_motion(self):
+        cases=[({120:0},20),({120:-1},20),({120:1.5},20),({123:0},21),({123:2.5},21),
+            ({105:0},22),({106:0},22),({103:60},22),({104:5},22),({102:2},22),
+            ({121:2},23),({122:2},23),({124:2},23),({110:-1},23),({115:0},24),({114:0},24),
+            ({120:1,124:0},2),({105:17,123:3},1),({120:3,123:4,105:16.1,124:1},1)]
+        for settings,alarm in cases:
+            with self.subTest(settings=settings):
+                nc=NC(overrides=settings)
+                with self.assertRaises(Alarm) as result: nc.run()
+                self.assertEqual(result.exception.number,alarm)
+                self.assertFalse(nc.moves)
+                self.assertFalse(nc.offsets)
+        self.assertEqual(NC(overrides={120:3,123:3,105:16.1,124:1}).run().vars[521],3)
 
-    def test_package_and_no_autolink_commands(self):
-        blocks=[b.strip() for b in SOURCE.split('%') if b.strip()]
-        self.assertEqual(len(blocks),2)
-        self.assertNotRegex(SOURCE,r'\b(?:M170|M171|M68|M69|G100)\b|G30 P3')
-        expected_names={'O0500.nc','O9050.nc','O0500.txt','O9050.txt','README.txt'}
-        with zipfile.ZipFile(ROOT/'programs/o0500-unit5-package.zip') as archive:
-            self.assertEqual(set(archive.namelist()),expected_names)
-            for block in blocks:
-                program=re.match(r'O\d+',block)[0]
-                expected=('%\n'+block+'\n%\n').replace('\n','\r\n').encode('ascii')
-                for ext in ['nc','txt']:
-                    name=program+'.'+ext
-                    self.assertEqual((ROOT/'programs/o0500'/name).read_bytes(),expected)
-                    self.assertEqual(archive.read(name),expected)
-            self.assertEqual(archive.read('README.txt'),(ROOT/'docs/o0500-unit5-port.md').read_bytes())
+    def test_entry_keys_and_direct_subprogram_calls(self):
+        for program in range(9030,9035):
+            nc=NC()
+            with self.assertRaises(Alarm) as result: nc.run(program=program)
+            self.assertEqual(result.exception.number,25 if program==9030 else 26)
+            self.assertFalse(nc.moves)
+            self.assertFalse(nc.offsets)
+        nc=NC(); start=next(i for i,line in enumerate(nc.programs[500]) if line.startswith('#103='))
+        with self.assertRaises(Alarm) as result: nc.run(start=start)
+        self.assertEqual(result.exception.number,25)
+        self.assertFalse(nc.moves)
+
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

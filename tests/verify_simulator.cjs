@@ -4,9 +4,9 @@ const root=path.resolve(__dirname,'..'),context=vm.createContext({console});
 for(const file of ['simulator-samples.js','simulator-engine.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 function run(source){context.source=source;return vm.runInContext('runProgram(source,2000)',context);}
 function sample(key){return vm.runInContext(`SAMPLES[${JSON.stringify(key)}]`,context);}
-const source=fs.readFileSync(path.join(root,'programs/o0500-unit5.nc'),'utf8');
+const source=fs.readFileSync(path.join(root,'programs/o0600-unit5.nc'),'utf8');
 for(const [name,text,parts] of [
- ['O0500',source,13],['O2026',fs.readFileSync(path.join(root,'programs/o2026-o2027-jeil-unit5.nc'),'utf8'),20],
+ ['O0600',source,13],['O0500',fs.readFileSync(path.join(root,'programs/o0500-unit5.nc'),'utf8'),13],['O2026',fs.readFileSync(path.join(root,'programs/o2026-o2027-jeil-unit5.nc'),'utf8'),20],
  ['O0400',sample('O0400'),13],['O8000',sample('O8000'),13],['O0852',sample('O0852'),50],
  ...['basic','idod','step'].map(k=>[k,sample(k),0])]){
  const result=run(text);assert.equal(result.info.alarm,null,name);assert.equal(result.info.endReason,'M30',name);assert.equal(result.trace.at(-1).state.parts,parts,name);
@@ -34,5 +34,5 @@ console.log('T3 chamfer, T2 parting, skip/retract options, machine 5 directions,
 
 const legacy=fs.readFileSync(path.join(root,'programs/archive/o0500-o0400-20260910/o0500-unit5.nc'),'utf8');
 assert.equal(run(legacy).trace.at(-1).state.parts,13);
-context.source=legacy;assert.equal(vm.runInContext('programVariant(source)',context),'500-v1');
+context.source=legacy;assert.equal(vm.runInContext('programVariant(source)',context),'500');
 context.source=source;assert.equal(vm.runInContext('machineProfile(source).tools[3][2]',context),'chamfer');

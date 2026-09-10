@@ -4,16 +4,16 @@ import re
 import zipfile
 
 root=Path(__file__).resolve().parents[1]
-source=(root/'programs/o0500-unit5.nc').read_text(encoding='ascii')
+source=(root/'programs/o0600-unit5.nc').read_text(encoding='ascii')
 blocks=[block.strip() for block in source.split('%') if block.strip()]
-expected={'O0500','O9030','O9031','O9032','O9033','O9034'}
+expected={'O0600','O9050'}
 assert {re.match(r'O\d+',block)[0] for block in blocks}==expected
 assert len(blocks)==len(expected)
-destination=root/'programs/o0500'
+destination=root/'programs/o0600'
 destination.mkdir(exist_ok=True)
-guide=(root/'docs/o0500-unit5-port.md').read_bytes()
+guide=(root/'docs/o0600-unit5-port.md').read_bytes()
 (destination/'README.txt').write_bytes(guide)
-with zipfile.ZipFile(root/'programs/o0500-unit5-package.zip','w',compression=zipfile.ZIP_DEFLATED) as package:
+with zipfile.ZipFile(root/'programs/o0600-unit5-package.zip','w',compression=zipfile.ZIP_DEFLATED) as package:
     for block in blocks:
         program=re.match(r'O\d+',block)[0]
         data=('%\n'+block+'\n%\n').replace('\n','\r\n').encode('ascii')
@@ -21,5 +21,5 @@ with zipfile.ZipFile(root/'programs/o0500-unit5-package.zip','w',compression=zip
             name=program+'.'+ext
             (destination/name).write_bytes(data)
             package.writestr(name,data)
-    package.writestr('README.md',guide)
-print('Packaged 6 programs as ASCII NC/TXT and README.md')
+    package.writestr('README.txt',guide)
+print('Packaged O0600 + O9050 as ASCII NC/TXT and README.txt')

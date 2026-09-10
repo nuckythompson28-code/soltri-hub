@@ -21,7 +21,7 @@ with sync_playwright() as p:
     page=context.new_page()
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'simulator.html')
-    expect(page.locator('#loadStatus')).to_contain_text('O0500 불러옴')
+    expect(page.locator('#loadStatus')).to_contain_text('O0600 불러옴')
     expect(page.locator('#codePanel')).to_be_hidden()
     expect(page.locator('#btnNextPull')).to_be_hidden()
     assert page.evaluate('stockInfo.rawO')==80
@@ -52,12 +52,15 @@ with sync_playwright() as p:
     expect(page.locator('#editor')).to_be_visible()
     page.locator('#editToggle').click()
     page.locator('#codeToggle').click()
-    for key,main,raw,count in [('O2026','2026',145,20),('O0400','400',80,13),('O8000','8000',80,13),('O0852','852',70,50)]:
+    for key,main,raw,count in [('O0500','500',80,13),('O2026','2026',145,20),('O0400','400',80,13),('O8000','8000',80,13),('O0852','852',70,50)]:
         page.locator('#sampleSel').select_option(key)
         page.wait_for_function('(k)=>mainKey===k&&document.querySelector("#loadStatus").textContent.includes("불러옴")',arg=main)
         assert page.evaluate('stockInfo.rawO')==raw,(key,page.evaluate('stockInfo'))
         assert page.evaluate('cutEvents.length')==count,(key,page.evaluate('cutEvents.length'))
         page.locator('#btnNextCut').click()
+        if key=='O0500':
+            assert page.evaluate('trace.find(s=>s.kv[121]!=null).kv[121]')==3
+            assert page.evaluate('profile.tools[3]==null')
         if key=='O8000':
             expect(page.locator('#tool-2')).to_contain_text('면취')
             expect(page.locator('#tool-3')).to_contain_text('절단')
@@ -67,24 +70,24 @@ with sync_playwright() as p:
             expect(page.locator('#btnNextPull')).to_be_visible()
             page.locator('#btnNextPull').click()
             expect(page.locator('#stepTitle')).to_contain_text('인출')
-    # The user can select the two V2 files in any order.
-    files=[str(root/'programs/o0500'/f'{name}.nc') for name in ['O9050','O0500']]
+    # The user can select the two O0600 files in any order.
+    files=[str(root/'programs/o0600'/f'{name}.nc') for name in ['O9050','O0600']]
     page.locator('#fileIn').set_input_files(files)
-    page.wait_for_function("mainKey==='500'&&cutEvents.length===13")
-    page.locator('#fileIn').set_input_files(str(root/'programs/o0500/O0500.nc'))
+    page.wait_for_function("mainKey==='600'&&cutEvents.length===13")
+    page.locator('#fileIn').set_input_files(str(root/'programs/o0600/O0600.nc'))
     expect(page.locator('#loadStatus')).to_contain_text('서브 파일이 없습니다')
-    page.locator('#sampleSel').select_option('O0500')
+    page.locator('#sampleSel').select_option('O0600')
     page.wait_for_function("cutEvents.length===13")
     page.evaluate('navigator.serviceWorker.ready')
     page.wait_for_function('navigator.serviceWorker.controller!==null')
     context.set_offline(True)
     page.reload()
-    expect(page.locator('#loadStatus')).to_contain_text('O0500 불러옴')
+    expect(page.locator('#loadStatus')).to_contain_text('O0600 불러옴')
     context.set_offline(False)
     phone=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     mobile=phone.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
     mobile.goto(base+'simulator.html')
-    expect(mobile.locator('#loadStatus')).to_contain_text('O0500 불러옴')
+    expect(mobile.locator('#loadStatus')).to_contain_text('O0600 불러옴')
     expect(mobile.locator('#btnCoord')).to_have_attribute('aria-pressed','true')
     mobile.locator('#btnNextCut').click()
     mobile.screenshot(path=str(out/'mobile-cut.png'),full_page=True)
@@ -99,4 +102,4 @@ with sync_playwright() as p:
     browser.close()
 server.shutdown()
 assert not errors,errors
-print(json.dumps({'passed':['5 machine presets','correct stock dimensions','lower parting','M00 pause','code drawer','focus view','two-file V2 import','missing subprogram','offline reload','390px mobile'], 'errors':errors,'screenshots':str(out)},ensure_ascii=False))
+print(json.dumps({'passed':['6 machine presets','correct stock dimensions','lower parting','M00 pause','code drawer','focus view','two-file O0600 import','missing subprogram','offline reload','390px mobile'], 'errors':errors,'screenshots':str(out)},ensure_ascii=False))

@@ -1,8 +1,8 @@
 'use strict';
 const $=id=>document.getElementById(id), cv=$('cv'), ctx=cv.getContext('2d');
 const COLORS={1:'#66e0d1',2:'#ffc16c',3:'#c7a5ff',5:'#80baff'};
-const SOURCE_URLS={O0500:'programs/o0500-unit5.nc',O2026:'programs/o2026-o2027-jeil-unit5.nc'};
-let profile=MACHINE_PROFILES['500'], mainKey='500', trace=[],programLines=[],cur=-1,playing=false,animT=1,rafId=null;
+const SOURCE_URLS={O0600:'programs/o0600-unit5.nc',O0500:'programs/o0500-unit5.nc',O2026:'programs/o2026-o2027-jeil-unit5.nc'};
+let profile=MACHINE_PROFILES['600'], mainKey='600', trace=[],programLines=[],cur=-1,playing=false,animT=1,rafId=null;
 let stockInfo=null,cutEvents=[],referenceOffset=0,CW=0,CH=0,SC=1,OAX=0,OBY=0,view={minA:-100,maxA:30,minB:-50,maxB:50};
 let focusView=matchMedia('(max-width:650px)').matches,loadSerial=0,sourceText='',fieldCache=null;
 const sx=z=>OAX+z*SC,sy=r=>OBY-r*SC;
@@ -36,7 +36,7 @@ function buildStockInfo(){
   if(!input){rawO=Math.max(20,...feeds.flatMap(s=>[Math.abs(s.seg.x0),Math.abs(s.seg.x1)]));rawI=0;finO=rawO;finI=0;finLen=10;tip=2;}
   const minCut=Math.min(0,...feeds.flatMap(s=>plotPts(s.seg).map(p=>p[0])));
   const chuckFaceZ=referenceOffset>0?-referenceOffset:minCut-8;
-  const target=mainKey==='500'||mainKey==='400'||mainKey==='8000'?trace.find(s=>s.kv[120]>0)?.kv[120]:mainKey==='2026'?trace.find(s=>s.kv[517]>0)?.kv[517]:null;
+  const target=mainKey==='600'||mainKey==='500'||mainKey==='400'||mainKey==='8000'?trace.find(s=>s.kv[120]>0)?.kv[120]:mainKey==='2026'?trace.find(s=>s.kv[517]>0)?.kv[517]:null;
   stockInfo={rawO,rawI,finO,finI,finLen,tip,unitLen:finLen+tip,chuckFaceZ,z0:chuckFaceZ,z1:0,target};
   cutEvents=[];let lastCount=0,lastIndex=-1;
   for(let i=0;i<trace.length;i++){
@@ -220,7 +220,7 @@ function recompute(text){
   buildStockInfo();renderMachine();renderLineList();computeBounds();resize();updateAll();
   $('cntInfo').textContent=`${Object.keys(r.programs).length}개 프로그램 · ${programLines.length}줄 · ${r.info.moves}회 이동`;
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
-  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='500'?(r.programs['9050']?'V2 · T3 면취 · ':trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · '):''}화면 재생 준비`,error);
+  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T3 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
   for(const id of ['btnPlay','btnNextMove','btnReset','btnPrev','btnNext'])$(id).disabled=!trace.length;
   syncViewButton();return r;
 }
@@ -236,7 +236,7 @@ $('fileIn').onchange=async e=>{
   const files=Array.from(e.target.files);if(!files.length)return;const serial=++loadSerial;pause();
   try{const chunks=await Promise.all(files.map(f=>f.text()));if(serial!==loadSerial)return;
     const headers=chunks.flatMap(t=>[...t.matchAll(/^\s*O\s*(\d+)/gmi)].map(m=>String(Number(m[1]))));if(new Set(headers).size!==headers.length)throw new Error('같은 프로그램 번호가 중복됩니다. 통합 파일 또는 개별 파일 한 세트만 선택하세요.');
-    const mains=['500','2026','400','8000','852'];chunks.sort((a,b)=>Number(!mains.includes(parsePrograms(a).mainKey))-Number(!mains.includes(parsePrograms(b).mainKey)));
+    const mains=['600','500','2026','400','8000','852'];chunks.sort((a,b)=>Number(!mains.includes(parsePrograms(a).mainKey))-Number(!mains.includes(parsePrograms(b).mainKey)));
     const text=chunks.join('\n\n');$('editor').value=text;$('sampleSel').selectedIndex=-1;recompute(text);
   }catch(error){setStatus(error.message,true);}e.target.value='';
 };
@@ -252,4 +252,4 @@ $('showRapid').onchange=draw;$('showHistory').onchange=draw;
 document.addEventListener('keydown',e=>{if(/TEXTAREA|INPUT|SELECT|BUTTON/.test(e.target.tagName))return;if(e.code==='Space'){e.preventDefault();playing?pause():play();}else if(e.key==='ArrowRight'){e.preventDefault();nextMove();}else if(e.key==='ArrowLeft'){e.preventDefault();gotoStep(cur-1);}else if(e.key==='Home')gotoStep(-1);});
 window.addEventListener('resize',()=>{computeBounds();resize();});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-const initial=new URLSearchParams(location.search).get('program')||'O0500';$('sampleSel').value=initial;loadSample(SOURCE_URLS[initial]||SAMPLES[initial]?initial:'O0500');
+const initial=new URLSearchParams(location.search).get('program')||'O0600';$('sampleSel').value=initial;loadSample(SOURCE_URLS[initial]||SAMPLES[initial]?initial:'O0600');
