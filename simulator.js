@@ -175,7 +175,7 @@ function describeStep(s){
     if(Math.abs(seg.z1-seg.z0)>.01)return [s.state.brakeUp?'내·외경 동시 가공':'황삭 · 축방향 이동',`T1 ${s.state.brakeUp?'UP':'DOWN'} · Z ${fmt(seg.z0)} → ${fmt(seg.z1)} · F ${fmt(s.state.feed)} ${s.state.fmode}`];
     return ['T1 면취 · 직경 방향 가공',`X ${fmt(seg.x0)} → ${fmt(seg.x1)} · Z ${fmt(seg.z1)} · 보링바 ${s.state.brakeUp?'UP':'DOWN'}`];
   }
-  if(seg&&kind==='chamfer')return ['T2 면취 가공',`면취 바이트 Z ${fmt(seg.z0)} → ${fmt(seg.z1)}`];
+  if(seg&&kind==='chamfer')return [`T${s.state.toolNo} 면취 가공`,`면취 바이트 Z ${fmt(seg.z0)} → ${fmt(seg.z1)}`];
   if(s.act==='park')return ['공구 위치 설정',s.desc];
   if(s.act==='offset')return ['가공 원점 설정',s.desc];
   if(s.act==='assign')return ['치수 · 가공값 계산',s.desc];
@@ -220,7 +220,7 @@ function recompute(text){
   buildStockInfo();renderMachine();renderLineList();computeBounds();resize();updateAll();
   $('cntInfo').textContent=`${Object.keys(r.programs).length}개 프로그램 · ${programLines.length}줄 · ${r.info.moves}회 이동`;
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
-  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='500'?(trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · '):''}화면 재생 준비`,error);
+  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='500'?(r.programs['9050']?'V2 · T3 면취 · ':trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · '):''}화면 재생 준비`,error);
   for(const id of ['btnPlay','btnNextMove','btnReset','btnPrev','btnNext'])$(id).disabled=!trace.length;
   syncViewButton();return r;
 }

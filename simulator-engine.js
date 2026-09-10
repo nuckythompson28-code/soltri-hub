@@ -78,7 +78,8 @@ const PROGVARS={
    lbl:{101:'소재OD',102:'소재ID',103:'완성OD',104:'완성ID',105:'절단길이',106:'톱폭',123:'그룹수',121:'면취타입',107:'ID우면취',108:'OD우면취',100:'총길이',500:'원점시프트',505:'단위장',506:'그룹장',508:'면취X',520:'스텝',522:'누적Z',530:'잔여장',531:'잔여수',532:'잔여보정'}},
 };
 let KEYVARS=PROGVARS['852'].keys, VARLBL=PROGVARS['852'].lbl;
-function applyProgVars(text){ const mk=parsePrograms(text).mainKey; const p=PROGVARS[mk]||PROGVARS['852']; KEYVARS=p.keys; VARLBL=p.lbl; }
+function programVariant(text){const p=parsePrograms(text);return p.mainKey==='500'&&!p.programs['9050']?'500-v1':p.mainKey;}
+function applyProgVars(text){const p=PROGVARS[programVariant(text)]||PROGVARS['852'];KEYVARS=p.keys;VARLBL=p.lbl;}
 
 function parsePrograms(text){
   const lines=text.split(/\r?\n/);
@@ -102,19 +103,21 @@ function gname(t){ return t===0?'G00 급속이송':t===1?'G01 직선절삭':t===
 function fmt(v){ if(v==null||!isFinite(v))return'—'; if(Math.abs(v)<1e-9)return'0'; return (+v.toFixed(3)).toString(); }
 
 const MACHINE_PROFILES={
- '500':{name:'5호기 · AL',note:'T1 내·외경 동시 가공 · T2 아래에서 위로 절단',link:'o0500.html',up:53,down:54,airOn:51,airOff:52,cw:4,partTool:2,tools:{1:['복합 보링바','내·외경 동시 가공','compound'],2:['아래쪽 절단','X 음수 · 위로 절입 ↑','part']}},
+ '500-v1':{name:'5호기 · 이전 O0500',note:'T1 내·외경 동시 가공 · T2 아래에서 위로 절단',link:'o0500.html',up:53,down:54,airOn:51,airOff:52,cw:4,partTool:2,tools:{1:['복합 보링바','내·외경 동시 가공','compound'],2:['아래쪽 절단','X 음수 · 위로 절입 ↑','part']}},
  '2026':{name:'5호기 · AL · 제일연마',note:'T1 내·외경·홈 가공 · T2 아래에서 위로 절단',link:'o2026.html',up:53,down:54,airOn:51,airOff:52,cw:4,partTool:2,tools:{1:['복합 보링바','내·외경·홈 가공','compound'],2:['아래쪽 절단','X 음수 · 위로 절입 ↑','part']}},
  '400':{name:'2호기 · HA',note:'T1 내·외경 동시 가공 · T2 위쪽 절단',link:'o0400.html',up:54,down:53,airOn:57,airOff:58,cw:4,partTool:2,tools:{1:['복합 보링바','내·외경 동시 가공','compound'],2:['위쪽 절단','X 양수 · 아래로 절입 ↓','part']}},
  '8000':{name:'6호기 · HA',note:'T1 내·외경 · T2 면취 · T3 아래쪽 절단',link:'o8000.html',up:53,down:54,airOn:51,airOff:52,cw:3,partTool:3,tools:{1:['복합 보링바','내·외경 동시 가공','compound'],2:['면취 바이트','전진 M56 / 후진 M55','chamfer'],3:['아래쪽 절단','X 음수 · 위로 절입 ↑','part']}},
  '852':{name:'10호기 · AL',note:'T1 내·외경 · T2 절단 · T3 오토링크 인출',link:'o0852.html',up:54,down:53,airOn:51,airOff:52,cw:4,partTool:2,pullTool:3,tools:{1:['복합 보링바','내·외경 동시 가공','compound'],2:['위쪽 절단','X 양수 · 아래로 절입 ↓','part'],3:['오토링크','소재를 잡고 +Z 인출 →','pull']}},
  generic:{name:'일반 선반 예제',note:'프로그램의 X·Z 지령을 기준으로 표시',link:null,tools:{1:['외경 바이트','일반 선삭','od'],3:['외경 바이트','일반 선삭','od'],5:['내경 보링바','내경 선삭','id']}}
 };
-PROGVARS['500']={keys:[100,101,102,103,104,105,106,107,108,109,110,115,116,120,121,122,123,124,505,515,516,517,518,520,521,522,531,542],lbl:{...PROGVARS['400'].lbl,100:'원점 길이',120:'목표 수량',121:'면취 수',122:'황삭 선택',123:'묶음 수량',515:'이번 묶음',516:'선가공 길이',517:'총 수량',518:'총 소모 길이',520:'묶음 완료',521:'전체 완료',522:'누적 Z',531:'남은 수량',542:'척 기준 여유'}};
+PROGVARS['500-v1']={keys:[100,101,102,103,104,105,106,107,108,109,110,115,116,120,121,122,123,124,505,515,516,517,518,520,521,522,531,542],lbl:{...PROGVARS['400'].lbl,100:'원점 길이',120:'목표 수량',121:'면취 수',122:'황삭 선택',123:'묶음 수량',515:'이번 묶음',516:'선가공 길이',517:'총 수량',518:'총 소모 길이',520:'묶음 완료',521:'전체 완료',522:'누적 Z',531:'남은 수량',542:'척 기준 여유'}};
+MACHINE_PROFILES['500']={"name":"5호기 · O0500 V2","note":"O8000 방식 · T1 보링 → T3 면취기 → T2 아래쪽 절단","link":"o0500.html","up":53,"down":54,"airOn":51,"airOff":52,"cw":4,"partTool":2,"tools":{"1":["복합 보링바","내·외경 묶음 선가공","compound"],"3":["면취기","M56 전진 / M55 후진","chamfer"],"2":["아래쪽 절단","X 음수 · 위로 절입 ↑","part"]}};
+PROGVARS['500']={"keys":[100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,126,505,507,508,511,512,513,514,515,516,517,518,520,521,522,523,524,525,531,532,534,542],"lbl":{"100":"원점 길이","101":"소재 OD","102":"소재 ID","103":"완성 OD","104":"완성 ID","105":"길이","106":"T2 날 폭","107":"묶음 수량","108":"T1 시작 rpm","109":"T1 끝 rpm","110":"T1 이송","111":"T3 시작 rpm","112":"T3 끝 rpm","113":"T3 이송","114":"T2 시작 rpm","115":"T2 끝 rpm","116":"T2 이송","117":"소재 세팅","118":"제품별 후퇴","119":"뒤 외경 C","120":"목표 수량","121":"짧은 소재","122":"마킹 생략","126":"시스템 수량 검사","505":"피치","507":"선가공 길이","508":"T3 중심 직경","511":"T1 rpm 증분","512":"T3 rpm 증분","513":"T2 rpm 증분","514":"현재 T1 rpm","515":"현재 T3 rpm","516":"현재 T2 rpm","517":"전체 목표","518":"전체 소모 길이","520":"묶음 완료","521":"면취 위치","522":"절단 위치","523":"전체 완료","524":"이번 묶음","525":"완료 묶음","531":"남은 수량","532":"이번 묶음 길이","534":"총 묶음","542":"척 기준 여유"}};
 PROGVARS['2026']={keys:[100,101,102,103,104,105,106,107,108,109,110,111,116,119,120,121,505,515,516,517,518,520,521,522,530,555],lbl:{...PROGVARS['400'].lbl,100:'척 기준 길이',119:'홈 가공',120:'홈 직경 감소',121:'홈 이동 폭',515:'묶음 수량',517:'총 수량',521:'가공 카운트',530:'척 여유',555:'홈 시작 폭'}};
 PROGVARS['400'].keys.push(120,122,124);
 PROGVARS['400'].lbl[120]='목표 수량';
 PROGVARS['852'].keys.push(130);
-function machineProfile(text){return MACHINE_PROFILES[parsePrograms(text).mainKey]||MACHINE_PROFILES.generic;}
+function machineProfile(text){return MACHINE_PROFILES[programVariant(text)]||MACHINE_PROFILES.generic;}
 
 function runProgram(text, maxMoves){
   applyProgVars(text);
@@ -209,7 +212,7 @@ function runProgram(text, maxMoves){
     for(const c of Mc){ if(c===3||c===4)spin=machine.cw?(c===machine.cw?'정회전 CW':'역회전 CCW'):'회전'; else if(c===5)spin='정지';
       if(c===(vars[133]||machine.up))brakeUp=true; if(c===(vars[134]||machine.down))brakeUp=false;
       if(vars[131]>0&&c===vars[131])alClamp='open'; if(vars[132]>0&&c===vars[132])alClamp='closed'; // 오토링크 클램프
-      if(c===12)parts++;
+      if(c===12){parts++;vars[3901]++;}
       if(c===machine.airOn)air=true; if(c===machine.airOff)air=false;
       if(c===69)mainChuck='open'; if(c===68)mainChuck='closed'; } // 메인척 개폐
 

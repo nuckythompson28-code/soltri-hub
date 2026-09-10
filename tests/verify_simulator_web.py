@@ -27,7 +27,9 @@ with sync_playwright() as p:
     assert page.evaluate('stockInfo.rawO')==80
     assert page.evaluate('stockInfo.rawI')==68
     assert page.evaluate('cutEvents.length')==13
-    assert page.evaluate('trace.find(s=>s.kv[121]>0).kv[121]')==3
+    assert page.evaluate('trace.find(s=>s.kv[121]!=null).kv[121]')==0
+    expect(page.locator('#tool-3')).to_contain_text('면취기')
+    assert page.evaluate("role(3)")=="chamfer"
     page.screenshot(path=str(out/'desktop-ready.png'),full_page=True)
     page.locator('#btnPlay').click()
     page.wait_for_function("trace[cur]?.act==='stop'&&!playing")
@@ -65,8 +67,8 @@ with sync_playwright() as p:
             expect(page.locator('#btnNextPull')).to_be_visible()
             page.locator('#btnNextPull').click()
             expect(page.locator('#stepTitle')).to_contain_text('인출')
-    # The user can select six separate TXT/NC files in any order.
-    files=[str(root/'programs/o0500'/f'{name}.nc') for name in ['O9034','O9032','O0500','O9030','O9033','O9031']]
+    # The user can select the two V2 files in any order.
+    files=[str(root/'programs/o0500'/f'{name}.nc') for name in ['O9050','O0500']]
     page.locator('#fileIn').set_input_files(files)
     page.wait_for_function("mainKey==='500'&&cutEvents.length===13")
     page.locator('#fileIn').set_input_files(str(root/'programs/o0500/O0500.nc'))
@@ -97,4 +99,4 @@ with sync_playwright() as p:
     browser.close()
 server.shutdown()
 assert not errors,errors
-print(json.dumps({'passed':['5 machine presets','correct stock dimensions','lower parting','M00 pause','code drawer','focus view','six-file import','missing subprogram','offline reload','390px mobile'], 'errors':errors,'screenshots':str(out)},ensure_ascii=False))
+print(json.dumps({'passed':['5 machine presets','correct stock dimensions','lower parting','M00 pause','code drawer','focus view','two-file V2 import','missing subprogram','offline reload','390px mobile'], 'errors':errors,'screenshots':str(out)},ensure_ascii=False))
