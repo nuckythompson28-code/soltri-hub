@@ -217,8 +217,12 @@ class PortTests(unittest.TestCase):
                                     if m['stage']==320:self.assertEqual(m['tool'],2)
                                     if m['tool'] in (2,3) and m['x'] is not None:self.assertLess(m['x'],0)
                                     if m['tool']!=m['oldtool'] and m['oldtool'] and m['oldz'] is not None:
-                                        # All tool changes occur at least 20 mm ahead of the current remaining face.
-                                        self.assertGreaterEqual(m['offset']+m['oldz']-((qty-m['done'])*16.9+5),20-1e-8)
+                                        # Commanded clearance: O8000 uses W10 after T2 chamfer.
+                                        # This compares NC coordinates, not actual holder clearance.
+                                        clearance=m['offset']+m['oldz']-((qty-m['done'])*16.9+5)
+                                        if m['oldtool']==2 and m['tool']==3 and m['stage']==330:
+                                            self.assertAlmostEqual(clearance,10)
+                                        else:self.assertGreaterEqual(clearance,20-1e-8)
 
     def test_rpm_ramps_and_single_quantity(self):
         nc=NC(overrides={108:900,109:1300,111:1000,112:1600,114:1100,115:1700}).run()
@@ -262,6 +266,15 @@ class PortTests(unittest.TestCase):
         original=re.sub(r'\([^)]*\)','',original).replace('G100','M98 P9010').replace(';','\n')
         old=NC(original).run(program=8000,preset={3901:0,3902:999999})
         new=NC().run()
+        # Compare every chamfer-stage move with O8000, including the retreat.
+        # An extra rapid after W10 must fail even if all cutting coordinates match.
+        old_chamfer=[m for m in old.moves if m['tool']==2 and m['stage'] in [320,420]]
+        new_chamfer=[m for m in new.moves if m['tool']==2 and m['stage']==320]
+        self.assertEqual(len(old_chamfer),len(new_chamfer))
+        for a,b in zip(old_chamfer,new_chamfer):
+            self.assertEqual(a['mode'],b['mode'])
+            self.assertAlmostEqual(a['x'],b['x'])
+            self.assertAlmostEqual(a['z']+a['offset']-old.offsets[0],b['z']+b['offset']-new.offsets[0])
         oldfaces=[m for m in old.moves if m['tool']==2 and m['mode']=='G01' and m['stage'] in [320,420]]
         newfaces=[m for m in new.moves if m['tool']==2 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
         self.assertEqual(len(oldfaces),13);self.assertEqual(len(newfaces),13)
