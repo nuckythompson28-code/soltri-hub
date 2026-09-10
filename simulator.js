@@ -220,7 +220,7 @@ function recompute(text){
   buildStockInfo();renderMachine();renderLineList();computeBounds();resize();updateAll();
   $('cntInfo').textContent=`${Object.keys(r.programs).length}개 프로그램 · ${programLines.length}줄 · ${r.info.moves}회 이동`;
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
-  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T3 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
+  setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T2 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
   for(const id of ['btnPlay','btnNextMove','btnReset','btnPrev','btnNext'])$(id).disabled=!trace.length;
   syncViewButton();return r;
 }

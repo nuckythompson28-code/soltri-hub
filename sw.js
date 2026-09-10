@@ -1,5 +1,5 @@
 ﻿// 김공장 서비스워커 — 앱 셸 캐시(오프라인) + 백그라운드 갱신
-const CACHE = 'soltri-hub-v39-o0500-o0600-20260910';
+const CACHE = 'soltri-hub-v40-o0600-t2-chamfer-20260910';
 const ASSETS = ['./', 'index.html', 'status.html', 'cnc-errors.html', 'dorm.html', 'machines.html', 'mtest.html', 'cfbackup.html', 'o0852.html', 'o0400.html', 'o8000.html', 'o8000-guide.html', 'o0400-guide.html', 'o0852-guide.html', 'simulator.html', 'firststep.html', 'cheatsheet.html', 'quiz.html', 'taehyung.html',
   'simulator.css', 'simulator-samples.js', 'simulator-engine.js', 'simulator.js',
   'o2026.html', 'o2026.js', 'programs/o2026-o2027-jeil-unit5.nc',

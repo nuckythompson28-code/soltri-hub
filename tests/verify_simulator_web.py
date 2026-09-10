@@ -28,8 +28,9 @@ with sync_playwright() as p:
     assert page.evaluate('stockInfo.rawI')==68
     assert page.evaluate('cutEvents.length')==13
     assert page.evaluate('trace.find(s=>s.kv[121]!=null).kv[121]')==0
-    expect(page.locator('#tool-3')).to_contain_text('면취기')
-    assert page.evaluate("role(3)")=="chamfer"
+    expect(page.locator('#tool-2')).to_contain_text('면취기')
+    expect(page.locator('#tool-3')).to_contain_text('절단')
+    assert page.evaluate("role(2)")=="chamfer"
     page.screenshot(path=str(out/'desktop-ready.png'),full_page=True)
     page.locator('#btnPlay').click()
     page.wait_for_function("trace[cur]?.act==='stop'&&!playing")
@@ -37,6 +38,7 @@ with sync_playwright() as p:
     page.locator('#btnNextCut').click()
     expect(page.locator('#hStock')).to_have_text('1 / 13')
     expect(page.locator('#stepDetail')).to_contain_text('아래에서 위로')
+    assert page.evaluate('trace[cur].seg.tool')==3
     assert page.evaluate('sy(currentToolPlot()[1])>sy(0)')
     assert page.evaluate('computeStockField().freeEnd')<0
     assert page.evaluate('Math.max(...computeStockField().outer)')>30

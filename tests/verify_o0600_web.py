@@ -6,7 +6,7 @@ from threading import Thread
 import tempfile,json
 from playwright.sync_api import sync_playwright,expect
 root=Path(__file__).resolve().parents[1]
-out=Path(tempfile.gettempdir())/'codex_o0600_v2_review';out.mkdir(exist_ok=True)
+out=Path(tempfile.gettempdir())/'codex_o0600_t2_review';out.mkdir(exist_ok=True)
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(root)))
@@ -18,7 +18,7 @@ with sync_playwright() as p:
     context=browser.new_context(viewport={'width':1440,'height':1000},permissions=['clipboard-read','clipboard-write'])
     page=context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'o0600.html');expect(page.locator('#copy-source')).to_be_enabled()
-    expect(page.locator('#page-overview')).to_contain_text('T3 면취기')
+    expect(page.locator('#page-overview')).to_contain_text('T2 면취기')
     page.locator('#copy-source').click();expect(page.locator('#copy-status')).to_contain_text('2개 프로그램')
     assert page.evaluate('navigator.clipboard.readText()').replace('\r\n','\n')==(root/'programs/o0600-unit5.nc').read_text(encoding='ascii')
     page.screenshot(path=str(out/'desktop.png'))
@@ -26,8 +26,8 @@ with sync_playwright() as p:
     page.locator('#page-O0600 .jump[href="#O9050"]').click()
     expect(page.locator('#page-O9050')).to_be_visible()
     page.locator('#page-O9050 .jump[href="#O9050:N320"]').first.click()
-    expect(page.locator('#page-O9050 .explain')).to_contain_text('T03')
-    page.locator('#page-O9050 [data-code="T03"]').first.click()
+    expect(page.locator('#page-O9050 .explain')).to_contain_text('T02')
+    page.locator('#page-O9050 [data-code="T02"]').first.click()
     expect(page.locator('#page-O9050 .explain')).to_contain_text('면취기')
     expect(page.locator('#page-O9050 a[href="programs/o0600/O9050.txt"]')).to_be_visible()
     page.locator('#nav a[href="#vars"]').click();page.locator('#var-search').fill('#121')
@@ -46,4 +46,4 @@ with sync_playwright() as p:
     browser.close()
 server.shutdown()
 assert not errors,errors
-print(json.dumps({'passed':['V2 source/copy','2 program pages','T3 explanation','TXT link','variable search','offline','mobile'], 'screenshots':str(out),'errors':errors},ensure_ascii=False))
+print(json.dumps({'passed':['V2 source/copy','2 program pages','T2 explanation','TXT link','variable search','offline','mobile'], 'screenshots':str(out),'errors':errors},ensure_ascii=False))

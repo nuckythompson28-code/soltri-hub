@@ -169,7 +169,7 @@ class NC:
 
 class PortTests(unittest.TestCase):
     def cuts(self,nc):
-        return [m for m in nc.moves if m['tool']==2 and m['raw']=='G01 X-[#504] M51']
+        return [m for m in nc.moves if m['tool']==3 and m['raw']=='G01 X-[#504] M51']
 
     def test_default_o8000_cycle_and_unit5_coordinates(self):
         nc=NC().run()
@@ -185,7 +185,7 @@ class PortTests(unittest.TestCase):
             self.assertAlmostEqual(m['x'],-65)
             self.assertAlmostEqual(m['offset']+m['z'],224.7-i*16.9)
             self.assertAlmostEqual(m['feed'],144)
-        faces=[m for m in nc.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
+        faces=[m for m in nc.moves if m['tool']==2 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
         self.assertEqual(len(faces),13)
         for i,m in enumerate(faces):
             self.assertAlmostEqual(m['x'],-72.45)
@@ -213,6 +213,8 @@ class PortTests(unittest.TestCase):
                                 for i,m in enumerate(self.cuts(nc),1):
                                     self.assertAlmostEqual(m['offset']+m['z'],(qty-i)*16.9+5)
                                 for m in nc.moves:
+                                    if m['stage'] in [100,200,202,203,330]:self.assertEqual(m['tool'],3)
+                                    if m['stage']==320:self.assertEqual(m['tool'],2)
                                     if m['tool'] in (2,3) and m['x'] is not None:self.assertLess(m['x'],0)
                                     if m['tool']!=m['oldtool'] and m['oldtool'] and m['oldz'] is not None:
                                         # All tool changes occur at least 20 mm ahead of the current remaining face.
@@ -222,7 +224,7 @@ class PortTests(unittest.TestCase):
         nc=NC(overrides={108:900,109:1300,111:1000,112:1600,114:1100,115:1700}).run()
         bores=[m for m in nc.moves if m['raw']=='G98 G01 Z-[#507] F[#514*#110]']
         self.assertEqual([m['rpm'] for m in bores],[900,1000,1100,1200,1300])
-        faces=[m for m in nc.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
+        faces=[m for m in nc.moves if m['tool']==2 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
         for i,m in enumerate(faces):self.assertAlmostEqual(m['rpm'],1000+i*50)
         for i,m in enumerate(self.cuts(nc)):self.assertAlmostEqual(m['rpm'],1100+i*50)
         one=NC(overrides={120:1,121:1,108:900,109:1300,111:1000,112:1600,114:1100,115:1700}).run()
@@ -261,7 +263,7 @@ class PortTests(unittest.TestCase):
         old=NC(original).run(program=8000,preset={3901:0,3902:999999})
         new=NC().run()
         oldfaces=[m for m in old.moves if m['tool']==2 and m['mode']=='G01' and m['stage'] in [320,420]]
-        newfaces=[m for m in new.moves if m['tool']==3 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
+        newfaces=[m for m in new.moves if m['tool']==2 and m['raw']=='G98 G01 Z-[#521] F[#515*#113]']
         self.assertEqual(len(oldfaces),13);self.assertEqual(len(newfaces),13)
         for a,b in zip(oldfaces,newfaces):
             self.assertAlmostEqual(a['x'],b['x']);self.assertAlmostEqual(a['feed'],b['feed'])
