@@ -36,3 +36,12 @@ const legacy=fs.readFileSync(path.join(root,'programs/archive/o0500-o0400-202609
 assert.equal(run(legacy).trace.at(-1).state.parts,13);
 context.source=legacy;assert.equal(vm.runInContext('programVariant(source)',context),'500');
 context.source=source;assert.equal(vm.runInContext('machineProfile(source).tools[2][2]',context),'chamfer');
+// Pneumatics use executed M words (including variables), independent of tool selection and comments.
+const pneumatic=run('O0600\nG00 X-72 Z20 T02\nM55\nG00 Z20 (M56 COMMENT)\n#101=56\nM#101\nG01 Z0 F10\nT03\nM55\nM30').trace;
+assert.equal(pneumatic.find(s=>s.act==='motion').state.chamferExtended,false);
+assert.equal(pneumatic.find(s=>s.act==='motion'&&s.seg.type===1).state.chamferExtended,true);
+assert.equal(pneumatic.find(s=>s.act==='tool').state.chamferExtended,true);
+assert.equal(pneumatic.at(-1).state.chamferExtended,false);
+assert.equal(run('O0500\nM56\nM30').trace.at(-1).state.chamferExtended,null);
+assert.ok(run(source).trace.filter(s=>s.seg?.tool===2&&s.seg.type===1).every(s=>s.state.chamferExtended===true));
+console.log('5호기 T2 M56/M55 state, comments, variable M codes and extended cutting: OK');

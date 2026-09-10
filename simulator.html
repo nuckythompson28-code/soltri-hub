@@ -10,7 +10,7 @@
 <header>
   <a class="home" href="index.html">← 김공장</a>
   <div class="brand">쏠트리 <span>CNC 가공 보기</span><small>장비별 공구 · 소재 단면 · 한 동작씩 확인</small></div>
-  <div class="header-actions"><label class="file">TXT / NC 열기<input type="file" id="fileIn" accept=".txt,.nc,.min,.cnc" multiple></label><button id="codeToggle" aria-expanded="false" aria-controls="codePanel">코드 보기</button></div>
+  <div class="header-actions"><label class="file">TXT / NC 열기<input type="file" id="fileIn" accept=".txt,.nc,.min,.cnc" multiple></label><button id="codeToggle" aria-expanded="true" aria-controls="codePanel">프로그램 숨기기</button></div>
 </header>
 <main>
   <section class="setup" aria-label="장비와 프로그램">
@@ -24,7 +24,7 @@
     <a id="analysisLink" href="o0600.html">프로그램 설명 ↗</a>
   </section>
   <div id="loadStatus" class="load-status" role="status" aria-live="polite">O0600을 불러오는 중입니다.</div>
-  <div class="app">
+  <div class="app with-code">
     <section class="right" aria-label="가공 화면">
       <div class="tool-strip" id="toolStrip"></div>
       <div class="readouts">
@@ -34,7 +34,8 @@
         <div class="readout process"><span id="hT">공구 대기</span><b id="hMove">준비</b><small id="hS">주축 정지</small></div>
       </div>
       <div class="view-tools"><div class="view-buttons"><button id="btnGang" aria-pressed="true" hidden>공구대 함께 보기</button><button id="btnCoord" aria-pressed="false">가공부 확대</button><button id="btnFit">전체 보기</button></div><label><input id="showRapid" type="checkbox">급속 경로</label><label><input id="showHistory" type="checkbox">이전 경로</label></div>
-      <p class="gang-help" id="gangHelp" hidden>사진의 배치처럼 T1·T2·T3가 한 공구대에서 함께 움직입니다. 밝은 공구가 선택된 공구이며, 간격은 실측값이 아닌 개략도입니다.</p>
+      <p class="gang-help" id="gangHelp" hidden>T1·T2·T3는 한 공구대에서 함께 이동합니다. T2 헤드만 M56에서 돌출되어 면취하고 M55에서 복귀합니다. 전진 시 T3보다 약 2mm 앞이며, 후진 위치와 나머지 간격은 개략도입니다.<strong id="t2PneumaticStatus">T2 공압 · 지령 대기</strong></p>
+      <div class="running-code" aria-label="현재 프로그램 줄"><span>현재 프로그램 <b id="runningLocation">프로그램 실행 전</b></span><code id="runningSource">재생 또는 다음 이동을 누르세요.</code></div>
       <div class="stage"><canvas id="cv" aria-label="척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도"></canvas></div>
       <div class="drawing-caption"><span id="stockDimensions">소재 치수 확인 중</span><span id="legend"></span></div>
       <div class="now" aria-live="polite"><span class="now-label">지금 동작</span><strong id="stepTitle">준비</strong><p id="stepDetail">재생하거나 다음 이동을 눌러 확인하세요.</p></div>
@@ -46,9 +47,10 @@
       <details class="varbar"><summary>현재 코드 · 변수 · 이송 확인 <span id="hF"></span></summary><div class="act" id="actLine"></div><div class="vchips" id="vchips"></div></details>
       <p class="scope-note">소재 제거와 공구 모양은 이해를 돕는 개략도입니다. 지령 경로를 표시하며, 실제 공구 보정·홀더 간섭·PLC 동작을 검증하는 화면은 아닙니다.</p>
     </section>
-    <aside class="left" id="codePanel" hidden>
-      <div class="codehead"><b>NC 프로그램</b><button id="editToggle">편집</button></div><div id="cntInfo"></div>
-      <textarea id="editor" spellcheck="false" aria-label="NC 프로그램 편집" hidden></textarea><div id="lineList"></div>
+    <aside class="left" id="codePanel" aria-label="가공 위치와 함께 보는 NC 프로그램">
+      <div class="codehead"><b>NC 프로그램 · 현재 줄 따라가기</b><button id="editToggle">편집</button></div><div id="cntInfo"></div>
+      <div class="code-position" id="codePosition">프로그램 실행 전</div>
+      <textarea id="editor" spellcheck="false" aria-label="NC 프로그램 편집" hidden></textarea><div id="lineList" tabindex="0" aria-label="NC 코드. 강조된 줄이 현재 가공 위치입니다."></div>
       <div class="code-controls"><button id="btnPrev">← 한 줄</button><button id="btnNext">한 줄 →</button><button id="loadBtn">다시 계산</button></div>
       <label class="limit">최대 이동 <input type="number" id="maxMoves" value="2000" min="10" max="50000" step="50"></label>
       <p class="file-help">분리한 TXT는 메인과 서브 파일을 함께 선택하세요. 편집 내용은 이 화면에만 적용됩니다.</p>

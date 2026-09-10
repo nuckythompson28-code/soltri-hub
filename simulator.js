@@ -23,7 +23,7 @@ function segPlotPts(seg){
 }
 function plotPts(seg){return segPlotPts(seg).map(([z,r])=>[zPlot(z,seg.zOff),r]);}
 function pointAt(points,fraction){let length=0;const lengths=[];for(let i=1;i<points.length;i++){const d=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);lengths.push(d);length+=d;}let remaining=length*fraction;for(let i=1;i<points.length;i++){if(remaining<=lengths[i-1]&&lengths[i-1]>0){const t=remaining/lengths[i-1];return [points[i-1][0]+(points[i][0]-points[i-1][0])*t,points[i-1][1]+(points[i][1]-points[i-1][1])*t];}remaining-=lengths[i-1];}return points.at(-1);}
-function currentToolPlot(){const s=trace[cur];if(!s)return null;if(s.seg)return pointAt(plotPts(s.seg),playing?animT:1);if(s.state.X==null||s.state.Z==null)return null;return [zPlot(s.state.Z,s.state.zOff),s.state.X/2];}
+function currentToolPlot(){const s=trace[cur];if(!s)return null;if(s.seg)return pointAt(plotPts(s.seg),motionFraction());if(s.state.X==null||s.state.Z==null)return null;return [zPlot(s.state.Z,s.state.zOff),s.state.X/2];}
 function completed(){return cutEvents.filter(c=>c.index<cur||(c.index===cur&&(!playing||animT>=1))).length;}
 
 function buildStockInfo(){
@@ -75,7 +75,7 @@ function drawGrid(){
 }
 function computeStockField(){
   if(!stockInfo)return null;
-  const frac=playing?Math.round(animT*60)/60:1,key=`${cur}:${frac}`;if(fieldCache?.key===key)return fieldCache.field;
+  const frac=playing?Math.round(motionFraction()*60)/60:1,key=`${cur}:${frac}`;if(fieldCache?.key===key)return fieldCache.field;
   const {rawO,rawI,finI,finO,tip,z0}=stockInfo,nz=Math.max(80,Math.min(650,Math.ceil(-z0/.4))),dz=-z0/nz;
   const outer=new Float64Array(nz+1).fill(rawO/2),inner=new Float64Array(nz+1).fill(rawI/2);let freeEnd=0,start=0;
   for(let k=0;k<cur;k++)if(trace[k].pull){start=k+1;}
@@ -121,8 +121,8 @@ function drawSegments(){
   let start=0;if(!history){const previous=cutEvents.filter(c=>c.index<cur).at(-1);start=previous?previous.countIndex+1:0;}
   ctx.save();ctx.beginPath();ctx.rect(25,28,CW-40,CH-62);ctx.clip();
   for(let k=start;k<=cur;k++){const s=trace[k],seg=s.seg;if(!seg||(!showRapid&&seg.type===0))continue;
-    const pts=plotPts(seg),end=pointAt(pts,k===cur&&playing?animT:1);ctx.strokeStyle=seg.type===0?'#c88482':color(seg.tool);ctx.globalAlpha=k===cur?1:.45;ctx.lineWidth=k===cur?3:1.5;ctx.setLineDash(seg.type===0?[5,5]:[]);
-    ctx.beginPath();ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));if(seg.type<2)ctx.lineTo(sx(end[0]),sy(end[1]));else {const n=Math.max(1,Math.ceil((pts.length-1)*(k===cur&&playing?animT:1)));for(let j=1;j<n;j++)ctx.lineTo(sx(pts[j][0]),sy(pts[j][1]));ctx.lineTo(sx(end[0]),sy(end[1]));}ctx.stroke();
+    const fraction=k===cur?motionFraction():1,pts=plotPts(seg),end=pointAt(pts,fraction);ctx.strokeStyle=seg.type===0?'#c88482':color(seg.tool);ctx.globalAlpha=k===cur?1:.45;ctx.lineWidth=k===cur?3:1.5;ctx.setLineDash(seg.type===0?[5,5]:[]);
+    ctx.beginPath();ctx.moveTo(sx(pts[0][0]),sy(pts[0][1]));if(seg.type<2)ctx.lineTo(sx(end[0]),sy(end[1]));else {const n=Math.max(1,Math.ceil((pts.length-1)*fraction));for(let j=1;j<n;j++)ctx.lineTo(sx(pts[j][0]),sy(pts[j][1]));ctx.lineTo(sx(end[0]),sy(end[1]));}ctx.stroke();
   }ctx.restore();ctx.setLineDash([]);
 }
 function drawInsert(x,y,up,col){const d=up?-1:1;ctx.fillStyle=col;ctx.strokeStyle='#0b151f';ctx.lineWidth=1.5;ctx.fillRect(x-3,y+d*34,6,-d*22);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7,y+d*10);ctx.lineTo(x,y+d*18);ctx.lineTo(x+7,y+d*10);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();}
@@ -150,9 +150,22 @@ function draw(){
 }
 
 function renderLineList(){const fragment=document.createDocumentFragment();for(const pl of programLines){const el=document.createElement('div');el.className='ln'+(/^\s*[%(]/.test(pl.raw)?' cmt':'');el.dataset.line=pl.idx;el.innerHTML=`<span class="gut">${pl.idx+1}</span><span class="src">${esc(pl.raw)||' '}</span>`;el.onclick=()=>{const next=trace.findIndex((s,k)=>k>cur&&s.lineIdx===pl.idx),first=trace.findIndex(s=>s.lineIdx===pl.idx);if(next>=0||first>=0)gotoStep(next>=0?next:first);};fragment.append(el);}$('lineList').replaceChildren(fragment);}
+function syncProgramPosition(s=trace[cur]){
+  const location=s?`O${s.prog.padStart(4,'0')} · ${s.lineIdx+1}행`:'프로그램 실행 전';
+  $('runningLocation').textContent=location;$('codePosition').textContent=location;
+  $('runningSource').textContent=s?programLines[s.lineIdx].raw.trim():'재생 또는 다음 이동을 누르세요.';
+  const previous=$('lineList').querySelector('.cur');previous?.classList.remove('cur');previous?.removeAttribute('aria-current');
+  const el=s?$('lineList').querySelector(`[data-line="${s.lineIdx}"]`):null;
+  if(!el){if(!s)$('lineList').scrollTop=0;return;}
+  el.classList.add('cur');el.setAttribute('aria-current','step');
+  if($('codePanel').hidden||$('lineList').hidden)return;
+  const box=$('lineList'),row=el.getBoundingClientRect(),bounds=box.getBoundingClientRect();
+  // Scroll only the code list, so following a subprogram never moves the page.
+  if(row.top<bounds.top+24||row.bottom>bounds.bottom-24)box.scrollTop+=row.top-bounds.top-box.clientHeight*.4;
+}
 function renderMachine(){
   const gang=hasUnit5Gang();$('btnGang').hidden=!gang;$('gangHelp').hidden=!gang;document.querySelector('.right').classList.toggle('gang-machine',gang);
-  $('cv').setAttribute('aria-label',gang?'5호기 공구대 개략도. 위쪽 T1 보링바, 가운데 T2 면취기, 아래쪽으로 돌출된 T3 절단바이트가 한 공구대에서 함께 이동합니다.':'척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도');
+  $('cv').setAttribute('aria-label',gang?'5호기 공구대 개략도. T1 보링바, T2 면취기, T3 절단바이트가 함께 이동하며, T2 헤드는 M56 전진 시 T3보다 약 2mm 앞까지 돌출되고 M55에서 복귀합니다.':'척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도');
   $('machineName').textContent=profile.name;$('machineNote').textContent=profile.note;$('analysisLink').hidden=!profile.link;if(profile.link)$('analysisLink').href=profile.link;
   if(mainKey==='852'){const no=trace.find(s=>s.kv[130]>0)?.kv[130];if(no)$('machineName').textContent=`${no}호기 · O0852 설정`;}
   $('toolStrip').innerHTML=Object.entries(profile.tools).map(([n,t])=>`<div class="tool-card" id="tool-${n}" style="--tool-color:${color(n)}"><span class="tool-state">대기</span><b>T${n} ${esc(t[0])}</b><span>${esc(t[1])}</span></div>`).join('');
@@ -167,6 +180,7 @@ function describeStep(s){
   if(s.act==='stop')return ['M00 · 일시정지',s.desc];
   if(s.act==='end')return ['프로그램 종료',`${completed()}개 절단 확인 · ${s.desc}`];
   if(s.pull)return ['오토링크 소재 인출',`T3가 소재를 잡고 +Z로 ${fmt(s.pull)} mm 끌어당깁니다.`];
+  if(isGangActuator(cur))return gangFrames[cur].extensionTo===1?['T2 공압 전진 · M56','면취 헤드가 T3 날끝보다 약 2mm 앞으로 돌출됩니다.'+(s.seg?' 전진한 상태로 공구대가 접근합니다.':'')]:['T2 공압 복귀 · M55',(s.seg?'공구대가 후퇴하고 ':'')+'면취 헤드가 공압으로 복귀합니다.'];
   if(isGangTransition(cur))return ['공구대 이동 · '+s.state.tool+' 선택','세 공구가 붙어 있는 공구대 전체를 이동해 선택 공구를 맞춥니다. 전환 모습과 공구 간격은 개략도입니다.'];
   const kind=role(s.state.toolNo),seg=s.seg;
   if(seg&&seg.type===0)return ['공구 접근 · 후퇴',`${s.state.tool} 급속 이동 · X ${fmt(s.state.X)} / Z ${fmt(s.state.Z)}`];
@@ -190,16 +204,16 @@ function describeStep(s){
 }
 function updateReadouts(){
   const s=trace[cur],st=s?.state||{};let x=st.X,z=st.Z;
-  if(playing&&s?.seg){const p=pointAt(segPlotPts(s.seg),animT);x=p[1]*2;z=p[0];}
+  if(playing&&s?.seg){const p=pointAt(segPlotPts(s.seg),motionFraction());x=p[1]*2;z=p[0];}
   $('hX').textContent=fmt(x);$('hZ').textContent=fmt(z);$('hStock').textContent=`${completed()} / ${stockInfo?.target??'—'}`;
   $('hT').textContent=st.tool?`${st.tool} · ${profile.tools[st.toolNo]?.[0]||'공구'}`:'공구 대기';
   $('hMove').textContent=s?.seg?(s.seg.type===0?'급속 이동':s.seg.type===1?'절삭 이송':'원호 가공'):st.toolNo===1?(st.brakeUp?'보링바 UP':'보링바 DOWN'):s?.act==='end'?'종료':'준비 · 전환';
   $('hS').textContent=(st.spin||'정지')+(st.rpm?` · S${fmt(st.rpm)}`:'');$('hF').textContent=st.feed?`F ${fmt(st.feed)} ${st.fmode}`:'';
+  if(hasUnit5Gang()){$('t2PneumaticStatus').textContent=gangAirLabel();$('tool-2').querySelector('.tool-state').textContent=gangAirLabel().replace(/^T2 /,'').split(' · ')[0];}
 }
 function updateAll(){
   const s=trace[cur];$('seek').max=trace.length;$('seek').value=cur+1;$('prog').textContent=`${cur+1} / ${trace.length}`;
-  document.querySelector('.ln.cur')?.classList.remove('cur');
-  if(s&&!$('codePanel').hidden){const el=document.querySelector(`.ln[data-line="${s.lineIdx}"]`);if(el){el.classList.add('cur');const box=$('lineList');if(el.offsetTop<box.scrollTop||el.offsetTop>box.scrollTop+box.clientHeight-28)box.scrollTop=el.offsetTop-box.clientHeight/2;}}
+  syncProgramPosition(s);
   for(const n of Object.keys(profile.tools)){const el=$(`tool-${n}`),active=Number(n)===s?.state.toolNo;el.classList.toggle('active',active);el.querySelector('.tool-state').textContent=active?(n==='1'?(s.state.brakeUp?'UP':'DOWN'):'선택됨'):hasUnit5Gang()?'함께 이동':'대기';}
   updateReadouts();const [title,detail]=describeStep(s);$('stepTitle').textContent=title;$('stepDetail').textContent=detail;
   $('actLine').textContent=s?`O${s.prog} · ${s.lineIdx+1}행  ${programLines[s.lineIdx].raw}`:'아직 실행 전입니다.';
@@ -208,13 +222,13 @@ function updateAll(){
 }
 function pause(){playing=false;if(rafId)cancelAnimationFrame(rafId);rafId=null;$('btnPlay').textContent='▶ 재생';}
 function gotoStep(i){pause();cur=Math.max(-1,Math.min(trace.length-1,i));animT=1;updateAll();}
-function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
+function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&!isGangActuator(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
 function play(){if(playing||!trace.length)return;if(cur>=trace.length-1)cur=-1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance();}
 function advance(){
   if(!playing)return;if(cur>=trace.length-1){pause();return;}cur++;
-  while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;
+  while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!isGangActuator(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;
   const s=trace[cur];animT=0;updateAll();if(['end','alarm','cap','stop'].includes(s.act)){animT=1;pause();updateAll();return;}
-  const speed=+$('speed').value,duration=isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now();
+  const speed=+$('speed').value,duration=isGangActuator(cur)?1500*4/speed:isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now();
   function frame(now){if(!playing)return;animT=Math.min(1,(now-start)/duration);draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(advance);}}
   rafId=requestAnimationFrame(frame);
 }
@@ -245,8 +259,8 @@ $('fileIn').onchange=async e=>{
     const text=chunks.join('\n\n');$('editor').value=text;$('sampleSel').selectedIndex=-1;recompute(text);
   }catch(error){setStatus(error.message,true);}e.target.value='';
 };
-$('codeToggle').onclick=()=>{const open=$('codePanel').hidden;$('codePanel').hidden=!open;$('codeToggle').textContent=open?'코드 닫기':'코드 보기';$('codeToggle').setAttribute('aria-expanded',String(open));document.querySelector('.app').classList.toggle('with-code',open);resize();updateAll();};
-$('editToggle').onclick=()=>{const editing=$('editor').hidden;$('editor').hidden=!editing;$('lineList').hidden=editing;$('editToggle').textContent=editing?'코드 보기':'편집';};
+$('codeToggle').onclick=()=>{const open=$('codePanel').hidden;$('codePanel').hidden=!open;$('codeToggle').textContent=open?'프로그램 숨기기':'프로그램 함께 보기';$('codeToggle').setAttribute('aria-expanded',String(open));document.querySelector('.app').classList.toggle('with-code',open);resize();updateAll();};
+$('editToggle').onclick=()=>{const editing=$('editor').hidden;if(editing)pause();$('editor').hidden=!editing;$('lineList').hidden=editing;$('editToggle').textContent=editing?'코드 보기':'편집';if(!editing)syncProgramPosition();};
 $('loadBtn').onclick=()=>recompute($('editor').value);$('maxMoves').onchange=()=>recompute($('editor').value);
 $('btnReset').onclick=()=>gotoStep(-1);$('btnPrev').onclick=()=>gotoStep(cur-1);$('btnNext').onclick=()=>gotoStep(cur+1);$('btnNextMove').onclick=nextMove;$('btnPlay').onclick=()=>playing?pause():play();
 $('btnNextCut').onclick=()=>{const c=cutEvents.find(c=>c.index>cur);if(c)gotoStep(c.index);else gotoStep(trace.length-1);};

@@ -1,29 +1,44 @@
-/* Photo-based schematic spacing, NOT machine tool offsets or measured dimensions. */
+/* Photo-based schematic spacing, NOT machine tool offsets. Only T2's extended
+   lead over T3 (about 2 mm) was supplied by the user; retraction is illustrative. */
 const UNIT5_GANG=Object.freeze({
-  tips:Object.freeze({1:Object.freeze({z:0,r:92}),2:Object.freeze({z:40,r:-16}),3:Object.freeze({z:0,r:-42})}),
+  // Working references: T2 is calibrated to its extended cutting position.
+  tips:Object.freeze({1:Object.freeze({z:0,r:92}),2:Object.freeze({z:-2,r:-16}),3:Object.freeze({z:0,r:-42})}),
+  t2RetractedZ:40,
   extent:Object.freeze({left:-8,right:127,bottom:-83,top:128})
 });
 let gangFrames=[],gangPreview=null,gangView=false;
 function hasUnit5Gang(){return mainKey==='600'&&role(2)==='chamfer'&&role(3)==='part';}
 function buildGangFrames(){
   gangFrames=[];gangPreview=null;if(!hasUnit5Gang())return;
-  let last={z:30,r:-stockInfo.rawO/2-25-UNIT5_GANG.tips[3].r},lastTool=0,located=false,origin=0;
-  gangPreview={from:last,to:last,active:0,located:false,transition:false,origin:0};
+  let last={z:30,r:-stockInfo.rawO/2-25-UNIT5_GANG.tips[3].r},lastTool=0,located=false,origin=0,extension=0;
+  gangPreview={from:last,to:last,active:0,located:false,transition:false,origin:0,extensionFrom:0,extensionTo:0,actuator:false,airKnown:false};
   gangFrames=trace.map(s=>{
     const st=s.state,tip=UNIT5_GANG.tips[st.toolNo],known=tip&&st.X!=null&&st.Z!=null;
-    if(!known){located=false;return {from:last,to:last,active:st.toolNo,located:false,transition:false,origin};}
+    const extensionTo=st.chamferExtended===true?1:0;
+    const pneumatic={extensionFrom:extension,extensionTo,actuator:extension!==extensionTo,airKnown:st.chamferExtended!=null};extension=extensionTo;
+    if(!known){located=false;return {from:last,to:last,active:st.toolNo,located:false,transition:false,origin,...pneumatic};}
     const to={z:zPlot(st.Z,st.zOff)-tip.z,r:st.X/2-tip.r},transition=located&&lastTool!==st.toolNo;
-    const frame={from:located?last:to,to,active:st.toolNo,located:true,transition,origin:st.zOff-referenceOffset};
+    const frame={from:located?last:to,to,active:st.toolNo,located:true,transition,origin:st.zOff-referenceOffset,...pneumatic};
     last=to;lastTool=st.toolNo;located=true;origin=frame.origin;return frame;
   });
+}
+// A same-block M/axis sequence is explanatory, not a measured PLC timeline.
+function motionFraction(index=cur,fraction=playing?animT:1){
+  const f=hasUnit5Gang()?gangFrames[index]:null;
+  if(!f?.actuator||!trace[index]?.seg)return fraction;
+  return f.extensionTo===1?Math.max(0,(fraction-.35)/.65):Math.min(1,fraction/.65);
 }
 function gangSnapshot(index=cur,fraction=playing?animT:1){
   if(!hasUnit5Gang())return null;
   const frame=gangFrames[index]||gangPreview;if(!frame)return null;
   const s=trace[index],tip=UNIT5_GANG.tips[frame.active];let pose=frame.to;
-  if(s?.seg&&tip){const p=pointAt(plotPts(s.seg),fraction);pose={z:p[0]-tip.z,r:p[1]-tip.r};}
+  if(s?.seg&&tip){const p=pointAt(plotPts(s.seg),motionFraction(index,fraction));pose={z:p[0]-tip.z,r:p[1]-tip.r};}
   else if(frame.transition){pose={z:frame.from.z+(frame.to.z-frame.from.z)*fraction,r:frame.from.r+(frame.to.r-frame.from.r)*fraction};}
-  return {...frame,pose,tools:Object.fromEntries(Object.entries(UNIT5_GANG.tips).map(([n,p])=>[n,{z:pose.z+p.z,r:pose.r+p.r}]))};
+  const airFraction=frame.actuator&&s?.seg?(frame.extensionTo===1?Math.min(1,fraction/.35):Math.max(0,(fraction-.65)/.35)):fraction;
+  const extension=frame.extensionFrom+(frame.extensionTo-frame.extensionFrom)*airFraction;
+  const tools=Object.fromEntries(Object.entries(UNIT5_GANG.tips).map(([n,p])=>[n,{z:pose.z+p.z,r:pose.r+p.r}]));
+  tools[2].z=pose.z+UNIT5_GANG.t2RetractedZ+(UNIT5_GANG.tips[2].z-UNIT5_GANG.t2RetractedZ)*extension;
+  return {...frame,pose,extension,tools};
 }
 function gangBounds(full=false){
   const f=gangSnapshot(),{rawO,finO,finI,chuckFaceZ}=stockInfo,R=rawO/2;
@@ -33,6 +48,12 @@ function gangBounds(full=false){
     minB:Math.min(-R*1.5,Math.min(...nominalR)-95),maxB:Math.max(R*1.5,Math.max(...nominalR)+145)};
 }
 function isGangTransition(index){return hasUnit5Gang()&&!!gangFrames[index]?.transition;}
+function isGangActuator(index){return hasUnit5Gang()&&!!gangFrames[index]?.actuator;}
+function gangAirLabel(f=gangSnapshot()){
+  if(!f?.airKnown)return 'T2 공압 · 지령 대기';
+  if(f.extension>0&&f.extension<1)return f.extensionTo===1?'T2 공압 전진 중 · M56':'T2 공압 복귀 중 · M55';
+  return f.extension===1?'T2 전진 · T3보다 약 2mm 앞':'T2 후진 · M55';
+}
 function drawUnit5Gang(){
   const f=gangSnapshot();if(!f)return;
   const x=z=>sx(f.pose.z+z),y=r=>sy(f.pose.r+r),active=n=>f.active===n&&f.located;
@@ -49,10 +70,13 @@ function drawUnit5Gang(){
   ctx.globalAlpha=active(1)?1:.64;
   block(24,115,54,43,'#425667',color(1));block(0,101,39,17,'#738697',color(1));
   diamond(0,92,1);diamond(0,92-(stockInfo.finO-stockInfo.finI)/2,1);
-  // T2: shorter chamfer head sits farther right than the long T3 cutter.
-  ctx.globalAlpha=active(2)?1:.64;
-  block(54,3,24,35,'#425667',color(2));block(40,-6,18,20,'#8193a3',color(2));
-  diamond(40,-12,2);diamond(40,-20,2);
+  // T2: fixed cylinder base; piston and insert head extend toward the stock.
+  const t2z=f.tools[2].z-f.pose.z;
+  ctx.globalAlpha=active(2)||f.actuator?1:.64;
+  block(54,3,24,35,'#425667',color(2));
+  block(t2z+18,-11,Math.max(0,54-t2z-18),10,'#c1cdd5','#71889a');
+  block(t2z+3,-6,18,20,'#8193a3',color(2));
+  diamond(t2z+3,-12,2);diamond(t2z+3,-20,2);
   // T3: lower projecting shaft and upright parting insert.
   ctx.globalAlpha=active(3)?1:.64;
   block(7,-47,70,11,'#8396a6',color(3));block(-2,-42,9,20,'#4b6275',color(3));
@@ -71,5 +95,5 @@ function drawUnit5Gang(){
   }
   label('공구대',x(77),y(128),'#bdcddd','left',11);
   ctx.restore();
-  label(f.transition?'공구 선택 전환 · 배치 개략도':f.located?'T1 · T2 · T3 공구대 함께 이동':'공구대 배치 미리보기 · 기준점 위치 생략',CW/2,CH-42,'#b9cedd','center',CW<500?10:12);
+  label(f.transition?'공구 선택 전환 · 배치 개략도':!f.located?'공구대 배치 미리보기 · 기준점 위치 생략':gangAirLabel(f),CW/2,CH-42,'#b9cedd','center',CW<500?10:12);
 }

@@ -22,7 +22,7 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'simulator.html')
     expect(page.locator('#loadStatus')).to_contain_text('O0600 불러옴')
-    expect(page.locator('#codePanel')).to_be_hidden()
+    expect(page.locator('#codePanel')).to_be_visible()
     expect(page.locator('#btnNextPull')).to_be_hidden()
     assert page.evaluate('stockInfo.rawO')==80
     assert page.evaluate('stockInfo.rawI')==68
@@ -46,6 +46,8 @@ with sync_playwright() as p:
     page.locator('#btnCoord').click()
     expect(page.locator('#btnCoord')).to_have_attribute('aria-pressed','true')
     page.screenshot(path=str(out/'desktop-focus.png'),full_page=True)
+    page.locator('#codeToggle').click()
+    expect(page.locator('#codePanel')).to_be_hidden()
     page.locator('#codeToggle').click()
     expect(page.locator('#codePanel')).to_be_visible()
     page.locator('#btnNext').click()
@@ -95,6 +97,8 @@ with sync_playwright() as p:
     mobile.screenshot(path=str(out/'mobile-cut.png'),full_page=True)
     assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert mobile.locator('#cv').bounding_box()['height']>=300
+    mobile.locator('#codeToggle').click()
+    expect(mobile.locator('#codePanel')).to_be_hidden()
     mobile.locator('#codeToggle').click()
     expect(mobile.locator('#codePanel')).to_be_visible()
     assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth')
