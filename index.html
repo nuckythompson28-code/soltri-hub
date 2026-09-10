@@ -41,6 +41,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="김공장">
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});}</script>
+<link rel="stylesheet" href="machine-programs.css">
 </head>
 <body>
   <div class="wrap">
@@ -49,6 +50,13 @@
       <h1>김<span>공장</span></h1>
       <p class="tag">쏠트리 현장 도구함 · CNC 코드 레퍼런스</p>
     </div>
+
+    <section aria-labelledby="machine-heading">
+      <div class="assignment-top"><h2 class="assignment-heading" id="machine-heading">호기별 프로그램</h2><a href="machines.html">배정표·M코드 →</a></div>
+      <p class="assignment-help">작업할 호기를 먼저 고르세요. 5호기는 최신 O0600을 열고, 품목 전용·보관용 프로그램은 별도로 보여줍니다.</p>
+      <div class="assignment-grid" data-machine-directory></div>
+      <noscript><a href="machines.html">호기별 프로그램 보기</a></noscript>
+    </section>
 
     <div class="sec">🏭 공장현황 (실시간)</div>
     <div class="cards">
@@ -66,55 +74,19 @@
       </a>
     </div>
 
-    <div class="sec">CNC 프로그램 분석</div>
+    <div class="sec">CNC 도구·분석</div>
     <div class="cards">
       <a class="card" href="machines.html">
         <span class="emoji">🕹️</span>
-        <span class="t">기계별 M코드</span>
-        <span class="b">호기를 골라 누르면 그 기계 M코드·전용 프로그램 (1~14호기)</span>
-        <span class="tagbadge">아케이드</span>
+        <span class="t">호기별 프로그램·M코드</span>
+        <span class="b">호기별 배정 프로그램 · 등록 세트 · 품목 전용·보관본</span>
+        <span class="tagbadge">12대 배정표</span>
       </a>
       <a class="card" href="simulator.html">
         <span class="emoji">🎬</span>
         <span class="t">쏠트리 CNC 가공 보기</span>
-        <span class="b">5호기 O0600·O0500 선택 · 장비별 공구·절단 방향</span>
+        <span class="b">호기별 기준 원문 · 공구·절단 방향 · 한 동작씩 보기</span>
         <span class="tagbadge">시뮬레이터</span>
-      </a>
-      <a class="card" href="o0852.html">
-        <span class="emoji">📐</span>
-        <span class="t">O0852 매크로</span>
-        <span class="b">봉 소재 자동 연속가공 · 오토링크</span>
-        <span class="tagbadge">4개 프로그램</span>
-      </a>
-      <a class="card" href="o0400.html">
-        <span class="emoji">🪚</span>
-        <span class="t">O0400 반토막</span>
-        <span class="b">파이프 파팅(절단) · 묶음 보링</span>
-        <span class="tagbadge">7개 프로그램</span>
-      </a>
-      <a class="card" href="o8000.html">
-        <span class="emoji">🛡️</span>
-        <span class="t">O8000 풀커팅</span>
-        <span class="b">파이프 링 절단 (6호기) · 통행권 안전 가드 적용판</span>
-        <span class="tagbadge">2개 프로그램</span>
-      </a>
-      <a class="card" href="o2026.html">
-        <span class="emoji">⚙️</span>
-        <span class="t">O2026 제일연마</span>
-        <span class="b">5호기 · 내·외경 동시 가공 → 홈 → 아래쪽 절단 · 도면 비교</span>
-        <span class="tagbadge">2개 프로그램</span>
-      </a>
-      <a class="card" href="o0500.html">
-        <span class="emoji">🔧</span>
-        <span class="t">O0500 5호기</span>
-        <span class="b">O0400 방식 · T1 복합 보링바 + T2 아래쪽 절단 · 3면취 기본</span>
-        <span class="tagbadge">6개 프로그램 · 기존 원문 유지</span>
-      </a>
-      <a class="card" href="o0600.html">
-        <span class="emoji">⚙️</span>
-        <span class="t">O0600 5호기</span>
-        <span class="b">O8000 방식 · T1 보링 → T2 면취기 → T3 아래쪽 절단</span>
-        <span class="tagbadge">2개 프로그램 · 실기 검증 전</span>
       </a>
       <a class="card" href="passkey.html">
         <span class="emoji">🎫</span>
@@ -183,5 +155,7 @@
       회사 전용 · 검색 노출 차단(noindex)
     </p>
   </div>
+<script src="machine-programs.js"></script>
+<script src="machine-programs-ui.js"></script>
 </body>
 </html>

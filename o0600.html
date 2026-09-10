@@ -7,7 +7,8 @@
 @media(max-width:760px){.app{grid-template-columns:minmax(0,1fr)}.sidebar{position:fixed;top:0;left:0;bottom:0;width:248px;z-index:50;transform:translateX(-100%);transition:transform .2s}.sidebar.open{transform:none}.menu-btn{display:block}.main{padding:65px 16px 60px}h1{font-size:22px}.summary,.tip,.check{padding:12px 14px;font-size:14px}.cards{grid-template-columns:1fr}.code{font-size:12px}.ln{padding:3px 10px}.gut{width:32px;padding-right:10px}.batch{grid-template-columns:repeat(2,1fr)}.explain{font-size:12px;padding:10px 12px}.svgbox{padding:10px}th,td{padding:8px}.tablewrap{max-width:100%}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 @media(max-width:760px){.sidebar{padding-top:64px}}
-</style></head><body>
+</style><link rel="stylesheet" href="machine-programs.css">
+</head><body>
 <button class="menu-btn" id="menuBtn" aria-label="메뉴" aria-expanded="false" aria-controls="sidebar">☰</button><div class="backdrop" id="backdrop"></div>
 <div class="app"><aside class="sidebar" id="sidebar"><div class="brand">O0600 · 5호기</div><div class="brand-sub">O8000 방식 · 메인 + 서브 1개</div><nav class="nav" id="nav" aria-label="O0600 분석">
 <a href="#overview" data-page="overview" class="active">📊 개요·공구 구성</a><a href="#setup" data-page="setup">📝 입력과 가공 순서</a><a href="#O0600" data-page="O0600">O0600 · 메인 입력</a><a href="#O9050" data-page="O9050">O9050 · 풀커팅 로직</a><a href="#vars" data-page="vars">📖 변수 사전</a><a href="#validation" data-page="validation">🔎 검증과 변경점</a><a href="simulator.html?program=O0600">🎬 가공 시뮬레이터</a><a href="o0500.html">↔ O0500 · O0400 방식</a><a href="o8000.html">← 6호기 O8000 원본</a><a href="o2026.html">← 5호기 O2026 참고</a><a href="machines.html#m5">🕹️ 5호기 M코드</a><a href="index.html">🏭 김공장 홈</a></nav></aside>
@@ -34,4 +35,6 @@
 <ul><li>O8000의 13개 면취·절단 위치와 이송을 공구 번호에 대응하여 비교했습니다.</li><li>T1은 묶음별, T2/T3는 제품별 회전수 변화. 1개·1묶음에서 0으로 나누지 않습니다.</li><li>지정 수량과 M12 횟수가 일치하며, 잔량에 척 여유 5 mm를 포함하지 않습니다.</li><li>보링 길이는 +0.5 포함 54 mm 이하로 검사합니다.</li><li>T3 단면 끝은 소재 ID−3.5, 절단 끝은 완성 ID−5를 적용했습니다.</li><li>제품별 후퇴는 5호기 G30 U0 W0 → U150입니다. 6호기 G30 P3 / W60 / U100을 복사하지 않았습니다.</li><li>메인과 서브, NC와 TXT, ZIP 파일이 같은 원문인지 확인합니다.</li></ul>
 <div class="check"><b>5호기 실기 검증 전</b><br>위치를 바꾼 T02 면취기와 T03 절단바이트의 보정, 실제 면취기 형상, G30 기준점, 기계 스트로크, 홀더 간섭, PLC 완료 신호는 계산 검사 범위 밖입니다. 장비에 전송하거나 실행하지 않았습니다.</div>
 <p>절단 끝 기준 여유는 5 mm지만 선가공 +0.5의 끝은 4.5 mm 기준까지 갑니다. 실제 날끝·홀더와 척의 간격을 보증하는 값은 아닙니다.</p>
-</section></main></div><div class="tooltip" id="tip" hidden></div><script src="o0600.js"></script></body></html>
+</section></main></div><div class="tooltip" id="tip" hidden></div><script src="o0600.js"></script><script src="machine-programs.js"></script>
+<script src="machine-programs-ui.js"></script>
+</body></html>

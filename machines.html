@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🕹️ 기계별 M코드 — 김공장</title>
+<title>호기별 프로그램 — 김공장</title>
 <style>
   :root{--bg:#0f1216;--panel:#161b22;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;
     --accent:#ff8c42;--cyan:#7df9ff;--gold:#ffd23f;}
@@ -75,6 +75,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff8c42">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="machine-programs.css">
 </head>
 <body>
 <div class="wrap">
@@ -83,10 +84,10 @@
   <section id="select">
     <div class="top">
       <a class="home" href="index.html">◀ 김공장</a>
-      <h1>🕹️ SELECT MACHINE</h1>
+      <h1>호기별 프로그램</h1>
     </div>
-    <p class="sub">기계(호기)를 누르면 그 기계의 <b>M코드</b>와 <b>전용 프로그램</b>이 나옵니다. 같은 기능도 기계마다 M코드가 달라요.</p>
-    <div class="grid" id="grid"></div>
+    <p class="sub">호기를 선택하면 <b>배정 프로그램</b>을 먼저 보여줍니다. 품목 전용·보관용 자료와 호기별 M코드도 함께 볼 수 있습니다.</p>
+    <div class="assignment-grid" id="grid"></div><noscript><p>호기별 목록을 표시하려면 JavaScript를 켜 주세요.</p></noscript>
     <p class="foot">Soltri · 김공장 · 기계 M코드 대조표 기준</p>
   </section>
 
@@ -99,46 +100,25 @@
       <span class="dtype" id="dType">HA</span>
     </div>
     <p class="dprog" id="dProg"></p>
-    <div class="mc" id="mc"></div>
     <div id="linkSlot"></div>
-    <div class="note" id="dNote"></div>
+    <details class="assignment-group" id="machine-codes"><summary>이 호기의 M코드 보기</summary>
+      <div class="mc" id="mc" style="margin-top:12px"></div>
+      <div class="note" id="dNote"></div>
+    </details>
   </section>
 
 </div>
 
+<script src="machine-programs.js"></script>
+<script src="machine-programs-ui.js"></script>
 <script>
 /* ===== 기계 데이터 (출처: 기계 M코드 대조표) =====
    null = 해당 기능 M코드 없음. spin: 정회전(cw)/역회전(ccw). */
-const MACHINES = [
- {no:"1", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
- {no:"2", type:"HA", prog:"O0400", file:"o0400.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:null,clClose:null,airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
- {no:"3", type:"HA", prog:"O8000", file:"o8000.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M08",airOff:"M09",cw:"M04",ccw:"M03"},
- {no:"4", type:"AL", prog:null,    file:null,         boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M52",clClose:"M51",airOn:null,airOff:null,cw:"M04",ccw:"M03"},
- {no:"5", type:"AL", prog:"O0600", file:"o0600.html", morePrograms:[{prog:"O0500 · O0400 방식",file:"o0500.html"},{prog:"O2026 · 제일연마",file:"o2026.html"}], boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:"M171",clClose:"M170",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
- {no:"6", type:"HA", prog:"O8000", file:"o8000.html", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M51",airOff:"M52",cw:"M03",ccw:"M04",std:true},
- {no:"7", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M53",boringDn:"M54",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
- {no:"8", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
- {no:"9", type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
- {no:"10",type:"AL", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
- {no:"13",sub:"S3", type:"HA", prog:"O0400", file:"o0400.html", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
- {no:"14",sub:"S4", type:"HA", prog:"O0852", file:"o0852.html", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
-];
-
-const byNo = {};
-MACHINES.forEach(m=>byNo[m.no]=m);
+const byNo = SoltriPrograms.byNo;
 
 /* ---- 선택 그리드 렌더 ---- */
 const grid = document.getElementById('grid');
-MACHINES.forEach(m=>{
-  const t = document.createElement('div');
-  t.className = 'tile ' + (m.prog ? 'has' : 'none');
-  t.onclick = ()=>{ location.hash = 'm'+m.no; };
-  t.innerHTML =
-    '<span class="n">'+m.no+'</span>'+
-    '<span class="sn">'+(m.sub ? m.sub+' · 호기' : '호기')+'</span>'+
-    '<span class="pl">'+(m.prog || '전용없음')+'</span>';
-  grid.appendChild(t);
-});
+SoltriProgramUI.tiles(grid);
 
 /* ---- 상세 렌더 ---- */
 function esc(v){ return v==null ? null : v; }
@@ -154,8 +134,9 @@ function showDetail(m){
   document.getElementById('dNo').textContent = m.no;
   document.getElementById('dType').textContent = m.type + (m.sub ? ' · '+m.sub : '') + ' 타입';
   const dProg = document.getElementById('dProg');
-  if(m.prog){ dProg.className='dprog'; dProg.innerHTML='▶ '+m.prog+' 전용'; }
-  else { dProg.className='dprog no'; dProg.textContent='▷ 연결된 분석 프로그램 없음'; }
+  dProg.className='dprog'+(m.program?'':' no');
+  dProg.textContent=m.program?'배정 프로그램 · '+m.program:'프로그램 미배정';
+  document.title=m.no+'호기 · '+(m.program||'미배정')+' — 김공장';
 
   const spinOpt = m.std ? 'std' : null;
   document.getElementById('mc').innerHTML =
@@ -170,15 +151,10 @@ function showDetail(m){
     row('주축 정회전(CW)', m.cw, spinOpt) +
     row('주축 역회전(CCW)', m.ccw, spinOpt) +
     row('카운팅', 'M12') +
-    row('시작점 복귀', 'M30');
+    row('프로그램 종료', 'M30');
 
   const slot = document.getElementById('linkSlot');
-  if(m.file){
-    slot.innerHTML = '<a class="linkbtn" href="'+m.file+'">📄 '+m.prog+' 분석 보기 →</a>';
-    for(const p of m.morePrograms||[]) slot.innerHTML += '<a class="linkbtn" style="margin-top:12px" href="'+p.file+'">📄 '+p.prog+' 분석 보기 →</a>';
-  } else {
-    slot.innerHTML = '<div class="nolink">분석 자료 준비중 — M코드 자료 들어오면 연결됩니다</div>';
-  }
+  SoltriProgramUI.renderPrograms(m,slot);
 
   const note = document.getElementById('dNote');
   if(m.std){
@@ -192,12 +168,15 @@ function showDetail(m){
 }
 
 function showSelect(){
+  document.title='호기별 프로그램 — 김공장';
   if(location.hash){ history.pushState('', document.title, location.pathname); }
   document.getElementById('detail').style.display='none';
   document.getElementById('select').style.display='block';
 }
 
 function route(){
+  document.title='호기별 프로그램 — 김공장';
+  document.getElementById('machine-codes').open=false;
   const h = location.hash.replace('#m','');
   if(h && byNo[h]) showDetail(byNo[h]);
   else { document.getElementById('detail').style.display='none';

@@ -15,12 +15,9 @@
 <main>
   <section class="setup" aria-label="장비와 프로그램">
     <label class="select-label" for="sampleSel">장비 · 프로그램<select id="sampleSel">
-      <option value="O0600">5호기 · O0600 · T2 면취</option>
-      <option value="O0500">5호기 · O0500 · 3면취 기본</option>
-      <option value="O2026">5호기 · O2026 / O2027 · 제일연마</option>
-      <option value="O0400">2호기 · O0400 · 묶음 가공</option>
-      <option value="O8000">6호기 · O8000 · 풀커팅</option>
-      <option value="O0852">10호기 · O0852 · 오토링크</option>
+      <optgroup label="5호기 · 배정 프로그램"><option value="O0600">5호기 · O0600 · T2 면취 / T3 절단</option></optgroup>
+      <optgroup label="5호기 · 품목 전용·보관용"><option value="O2026">품목 전용 · O2026 / O2027 · 제일연마</option><option value="O0500">보관용 · O0500 · 기존 T2 절단</option></optgroup>
+      <optgroup label="다른 호기 · 기준 원문"><option value="O0400">2호기 기준 · O0400 (배정 2·13호기)</option><option value="O8000">6호기 기준 · O8000 (배정 3·6호기)</option><option value="O0852">10호기 기준 · O0852 (공통 프로그램)</option></optgroup>
       <optgroup label="일반 선반 예제"><option value="basic">기본 외경 · 면취 · 원호</option><option value="idod">외경 / 내경 · 증분 이동</option><option value="step">단차 황삭</option></optgroup>
     </select></label>
     <div class="machine-summary"><strong id="machineName">5호기 · AL</strong><span id="machineNote">T1 보링 → T2 면취기 → T3 아래쪽 절단</span></div>
