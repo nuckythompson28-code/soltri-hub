@@ -222,6 +222,8 @@ class PortTests(unittest.TestCase):
                                         clearance=m['offset']+m['oldz']-((qty-m['done'])*16.9+5)
                                         if m['oldtool']==2 and m['tool']==3 and m['stage']==330:
                                             self.assertAlmostEqual(clearance,10)
+                                        elif m['oldtool']==3 and m['tool']==1 and m['stage']==310 and m['done']==0:
+                                            self.assertAlmostEqual(clearance,5) # O8000 face-to-first-bore entry.
                                         else:self.assertGreaterEqual(clearance,20-1e-8)
 
     def test_rpm_ramps_and_single_quantity(self):
@@ -266,6 +268,27 @@ class PortTests(unittest.TestCase):
         original=re.sub(r'\([^)]*\)','',original).replace('G100','M98 P9010').replace(';','\n')
         old=NC(original).run(program=8000,preset={3901:0,3902:999999})
         new=NC().run()
+        # First bore must follow the reference's Z5 -> tool alignment -> Z2 approach.
+        def first_entry(nc):
+            moves=[]
+            for m in nc.moves:
+                if m['stage']==310:
+                    moves.append(m)
+                    if m['mode']=='G01':break
+            return moves
+        old_entry,new_entry=first_entry(old),first_entry(new)
+        self.assertEqual(len(old_entry),len(new_entry))
+        self.assertEqual([m['z'] for m in new_entry[:2]],[5,2])
+        self.assertEqual(new_entry[1]['words']['M'],53)
+        for a,b in zip(old_entry,new_entry):
+            self.assertEqual(a['mode'],b['mode'])
+            self.assertAlmostEqual(a['x'],b['x'])
+            self.assertAlmostEqual(a['z'],b['z'])
+        # Each later group also approaches Z2 directly after T1 selection.
+        for i,m in enumerate(new.moves):
+            if m['stage']==310 and m['tool']==1 and m['oldtool']!=1:
+                self.assertEqual(new.moves[i+1]['z'],2)
+                self.assertEqual(new.moves[i+2]['mode'],'G01')
         # Compare every chamfer-stage move with O8000, including the retreat.
         # An extra rapid after W10 must fail even if all cutting coordinates match.
         old_chamfer=[m for m in old.moves if m['tool']==2 and m['stage'] in [320,420]]
@@ -287,6 +310,13 @@ class PortTests(unittest.TestCase):
             self.assertAlmostEqual(a['z']+a['offset']-old.offsets[0],b['z']+b['offset']-new.offsets[0])
             self.assertAlmostEqual(a['feed'],b['feed'])
             self.assertAlmostEqual(b['x'],a['x']+3) # Unit 5 ID-5 vs unit 6 ID-2, on negative X.
+
+    def test_no_macro_calculation_between_chamfer_retract_and_parting_selection(self):
+        block=SOURCE.split('N320 (T02 CHAMFER UNIT);',1)[1].split('G00 Z[#119-#522];',1)[0]
+        after_retract=block.split('G00 W10. M55;',1)[1]
+        self.assertNotRegex(after_retract,r'#\d+\s*=')
+        self.assertIn('M01;',after_retract)
+        self.assertIn('G97 G00 X-[#503] S#516 M03 T03;',after_retract)
 
     def test_package_and_no_autolink_commands(self):
         blocks=[b.strip() for b in SOURCE.split('%') if b.strip()]
