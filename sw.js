@@ -1,9 +1,10 @@
 ﻿// 김공장 서비스워커 — 앱 셸 캐시(오프라인) + 백그라운드 갱신
-const CACHE = 'soltri-hub-v45-o0600-entry-flow-20260910';
+const CACHE = 'soltri-hub-v46-unit5-manual-patch-20260910';
 const ASSETS = ['machine-programs.js', 'machine-programs-ui.js', 'machine-programs.css', './', 'index.html', 'status.html', 'cnc-errors.html', 'dorm.html', 'machines.html', 'mtest.html', 'cfbackup.html', 'o0852.html', 'o0400.html', 'o8000.html', 'o8000-guide.html', 'o0400-guide.html', 'o0852-guide.html', 'simulator.html', 'firststep.html', 'cheatsheet.html', 'quiz.html', 'taehyung.html',
   'simulator.css', 'simulator-unit5-gang.js', 'simulator-samples.js', 'simulator-engine.js', 'simulator.js',
   'o2026.html', 'o2026.js', 'programs/o2026-o2027-jeil-unit5.nc',
   'o0500.html', 'o0500.js', 'programs/o0500-unit5.nc', 'programs/o0500-unit5-package.zip', 'programs/o0500/README.txt', 'programs/o0500/O0500.nc', 'programs/o0500/O0500.txt', 'programs/o0500/O9030.nc', 'programs/o0500/O9030.txt', 'programs/o0500/O9031.nc', 'programs/o0500/O9031.txt', 'programs/o0500/O9032.nc', 'programs/o0500/O9032.txt', 'programs/o0500/O9033.nc', 'programs/o0500/O9033.txt', 'programs/o0500/O9034.nc', 'programs/o0500/O9034.txt', 'o0600.html', 'o0600.js', 'programs/o0600-unit5.nc', 'programs/o0600-unit5-package.zip', 'programs/o0600/README.txt', 'programs/o0600/O0600.nc', 'programs/o0600/O0600.txt', 'programs/o0600/O9050.nc', 'programs/o0600/O9050.txt',
+  'o0600-patch.html', 'programs/patches/unit5-o9050-manual-patch-20260910.txt',
   'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'scanner/', 'scanner/index.html', 'scanner/core.js', 'scanner/service.js'];
 self.addEventListener('install', e => {

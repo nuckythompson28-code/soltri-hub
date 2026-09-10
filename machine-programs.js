@@ -71,6 +71,8 @@
     "reference": "5",
     "color": "#ffaf70",
     "package": "programs/o0600-unit5-package.zip",
+    "manualPatch": "o0600-patch.html",
+    "patchTxt": "programs/patches/unit5-o9050-manual-patch-20260910.txt",
     "txt": [
       "programs/o0600/O0600.txt",
       "programs/o0600/O9050.txt"

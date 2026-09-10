@@ -22,6 +22,8 @@
   function programCard(m,id,status){
     const p=directory.programs[id];
     const buttons=[['설명·코드 보기',p.file+'?machine='+m.no,'primary']];
+    if(p.manualPatch)buttons.push(['5호기 패치파일',p.manualPatch,'']);
+    if(p.patchTxt)buttons.push(['수동 패치 TXT',p.patchTxt,'download']);
     if(p.package)buttons.push(['등록 파일 ZIP',p.package,'download']);
     for(const file of p.txt||[])buttons.push([file.split('/').pop(),file,'download']);
     buttons.push([(p.reference===m.no?'가공 보기':p.reference+'호기 원문 가공 보기'),'simulator.html?program='+p.id,'']);
