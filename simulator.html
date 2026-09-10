@@ -33,7 +33,8 @@
         <div class="readout count"><span>완료 / 목표</span><b id="hStock">—</b><small>개</small></div>
         <div class="readout process"><span id="hT">공구 대기</span><b id="hMove">준비</b><small id="hS">주축 정지</small></div>
       </div>
-      <div class="view-tools"><div class="view-buttons"><button id="btnCoord" aria-pressed="false">가공부 확대</button><button id="btnFit">전체 보기</button></div><label><input id="showRapid" type="checkbox">급속 경로</label><label><input id="showHistory" type="checkbox">이전 경로</label></div>
+      <div class="view-tools"><div class="view-buttons"><button id="btnGang" aria-pressed="true" hidden>공구대 함께 보기</button><button id="btnCoord" aria-pressed="false">가공부 확대</button><button id="btnFit">전체 보기</button></div><label><input id="showRapid" type="checkbox">급속 경로</label><label><input id="showHistory" type="checkbox">이전 경로</label></div>
+      <p class="gang-help" id="gangHelp" hidden>사진의 배치처럼 T1·T2·T3가 한 공구대에서 함께 움직입니다. 밝은 공구가 선택된 공구이며, 간격은 실측값이 아닌 개략도입니다.</p>
       <div class="stage"><canvas id="cv" aria-label="척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도"></canvas></div>
       <div class="drawing-caption"><span id="stockDimensions">소재 치수 확인 중</span><span id="legend"></span></div>
       <div class="now" aria-live="polite"><span class="now-label">지금 동작</span><strong id="stepTitle">준비</strong><p id="stepDetail">재생하거나 다음 이동을 눌러 확인하세요.</p></div>
@@ -56,6 +57,7 @@
 </main>
 <script src="simulator-samples.js"></script>
 <script src="simulator-engine.js"></script>
+<script src="simulator-unit5-gang.js"></script>
 <script src="simulator.js"></script>
 </body>
 </html>

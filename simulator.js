@@ -50,6 +50,7 @@ function buildStockInfo(){
 }
 function computeBounds(){
   if(!stockInfo)return;
+  if(hasUnit5Gang()&&!focusView){view=gangBounds(!gangView);return;}
   const {rawO,chuckFaceZ,finLen}=stockInfo,R=rawO/2;
   let minA=chuckFaceZ-Math.max(25,R*.65)-8,maxA=35;
   if(focusView){const p=currentToolPlot();const center=Math.max(chuckFaceZ+10,Math.min(0,p?.[0]??0));const width=Math.max(65,Math.min(125,finLen*5));minA=center-width*.72;maxA=center+width*.28;}
@@ -126,6 +127,7 @@ function drawSegments(){
 }
 function drawInsert(x,y,up,col){const d=up?-1:1;ctx.fillStyle=col;ctx.strokeStyle='#0b151f';ctx.lineWidth=1.5;ctx.fillRect(x-3,y+d*34,6,-d*22);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7,y+d*10);ctx.lineTo(x,y+d*18);ctx.lineTo(x+7,y+d*10);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();}
 function drawTool(){
+  if(hasUnit5Gang()){drawUnit5Gang();return;}
   const p=currentToolPlot(),s=trace[cur];if(!p||!s)return;const x=sx(p[0]),y=sy(p[1]),t=s.state.toolNo,col=color(t),kind=role(t);
   if(x<25||x>CW-15||y<28||y>CH-32){label('공구가 표시 범위 밖에 있습니다',CW/2,CH-42,col,'center');return;}
   ctx.save();ctx.lineWidth=1.5;ctx.strokeStyle=col;
@@ -149,6 +151,8 @@ function draw(){
 
 function renderLineList(){const fragment=document.createDocumentFragment();for(const pl of programLines){const el=document.createElement('div');el.className='ln'+(/^\s*[%(]/.test(pl.raw)?' cmt':'');el.dataset.line=pl.idx;el.innerHTML=`<span class="gut">${pl.idx+1}</span><span class="src">${esc(pl.raw)||' '}</span>`;el.onclick=()=>{const next=trace.findIndex((s,k)=>k>cur&&s.lineIdx===pl.idx),first=trace.findIndex(s=>s.lineIdx===pl.idx);if(next>=0||first>=0)gotoStep(next>=0?next:first);};fragment.append(el);}$('lineList').replaceChildren(fragment);}
 function renderMachine(){
+  const gang=hasUnit5Gang();$('btnGang').hidden=!gang;$('gangHelp').hidden=!gang;document.querySelector('.right').classList.toggle('gang-machine',gang);
+  $('cv').setAttribute('aria-label',gang?'5호기 공구대 개략도. 위쪽 T1 보링바, 가운데 T2 면취기, 아래쪽으로 돌출된 T3 절단바이트가 한 공구대에서 함께 이동합니다.':'척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도');
   $('machineName').textContent=profile.name;$('machineNote').textContent=profile.note;$('analysisLink').hidden=!profile.link;if(profile.link)$('analysisLink').href=profile.link;
   if(mainKey==='852'){const no=trace.find(s=>s.kv[130]>0)?.kv[130];if(no)$('machineName').textContent=`${no}호기 · O0852 설정`;}
   $('toolStrip').innerHTML=Object.entries(profile.tools).map(([n,t])=>`<div class="tool-card" id="tool-${n}" style="--tool-color:${color(n)}"><span class="tool-state">대기</span><b>T${n} ${esc(t[0])}</b><span>${esc(t[1])}</span></div>`).join('');
@@ -163,6 +167,7 @@ function describeStep(s){
   if(s.act==='stop')return ['M00 · 일시정지',s.desc];
   if(s.act==='end')return ['프로그램 종료',`${completed()}개 절단 확인 · ${s.desc}`];
   if(s.pull)return ['오토링크 소재 인출',`T3가 소재를 잡고 +Z로 ${fmt(s.pull)} mm 끌어당깁니다.`];
+  if(isGangTransition(cur))return ['공구대 이동 · '+s.state.tool+' 선택','세 공구가 붙어 있는 공구대 전체를 이동해 선택 공구를 맞춥니다. 전환 모습과 공구 간격은 개략도입니다.'];
   const kind=role(s.state.toolNo),seg=s.seg;
   if(seg&&seg.type===0)return ['공구 접근 · 후퇴',`${s.state.tool} 급속 이동 · X ${fmt(s.state.X)} / Z ${fmt(s.state.Z)}`];
   if(seg&&kind==='part'){
@@ -195,21 +200,21 @@ function updateAll(){
   const s=trace[cur];$('seek').max=trace.length;$('seek').value=cur+1;$('prog').textContent=`${cur+1} / ${trace.length}`;
   document.querySelector('.ln.cur')?.classList.remove('cur');
   if(s&&!$('codePanel').hidden){const el=document.querySelector(`.ln[data-line="${s.lineIdx}"]`);if(el){el.classList.add('cur');const box=$('lineList');if(el.offsetTop<box.scrollTop||el.offsetTop>box.scrollTop+box.clientHeight-28)box.scrollTop=el.offsetTop-box.clientHeight/2;}}
-  for(const n of Object.keys(profile.tools)){const el=$(`tool-${n}`),active=Number(n)===s?.state.toolNo;el.classList.toggle('active',active);el.querySelector('.tool-state').textContent=active?(n==='1'?(s.state.brakeUp?'UP':'DOWN'):'선택됨'):'대기';}
+  for(const n of Object.keys(profile.tools)){const el=$(`tool-${n}`),active=Number(n)===s?.state.toolNo;el.classList.toggle('active',active);el.querySelector('.tool-state').textContent=active?(n==='1'?(s.state.brakeUp?'UP':'DOWN'):'선택됨'):hasUnit5Gang()?'함께 이동':'대기';}
   updateReadouts();const [title,detail]=describeStep(s);$('stepTitle').textContent=title;$('stepDetail').textContent=detail;
   $('actLine').textContent=s?`O${s.prog} · ${s.lineIdx+1}행  ${programLines[s.lineIdx].raw}`:'아직 실행 전입니다.';
   $('vchips').innerHTML=s?KEYVARS.filter(n=>s.kv[n]!=null&&s.kv[n]!==-9999).map(n=>`<span class="vchip${s.changed?.n===n?' hot':''}"><span class="vk">#${n} ${esc(VARLBL[n]||'')}</span><span class="vv">${fmt(s.kv[n])}</span></span>`).join(''):'';
-  fieldCache=null;if(focusView){computeBounds();resize();}else draw();
+  fieldCache=null;if(focusView||hasUnit5Gang()){computeBounds();resize();}else draw();
 }
 function pause(){playing=false;if(rafId)cancelAnimationFrame(rafId);rafId=null;$('btnPlay').textContent='▶ 재생';}
 function gotoStep(i){pause();cur=Math.max(-1,Math.min(trace.length-1,i));animT=1;updateAll();}
-function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
+function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
 function play(){if(playing||!trace.length)return;if(cur>=trace.length-1)cur=-1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance();}
 function advance(){
   if(!playing)return;if(cur>=trace.length-1){pause();return;}cur++;
-  while(cur<trace.length-1&&!trace[cur].seg&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;
+  while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;
   const s=trace[cur];animT=0;updateAll();if(['end','alarm','cap','stop'].includes(s.act)){animT=1;pause();updateAll();return;}
-  const speed=+$('speed').value,duration=s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now();
+  const speed=+$('speed').value,duration=isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now();
   function frame(now){if(!playing)return;animT=Math.min(1,(now-start)/duration);draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(advance);}}
   rafId=requestAnimationFrame(frame);
 }
@@ -217,14 +222,14 @@ function setStatus(message,error=false){$('loadStatus').textContent=message;$('l
 function recompute(text){
   pause();sourceText=text;mainKey=parsePrograms(text).mainKey;profile=machineProfile(text);
   const max=Math.max(10,Math.min(50000,+$('maxMoves').value||2000)),r=runProgram(text,max);trace=r.trace;programLines=r.programLines;cur=-1;animT=1;
-  buildStockInfo();renderMachine();renderLineList();computeBounds();resize();updateAll();
+  buildStockInfo();buildGangFrames();gangView=hasUnit5Gang();focusView=gangView?false:matchMedia('(max-width:650px)').matches;renderMachine();renderLineList();computeBounds();resize();updateAll();
   $('cntInfo').textContent=`${Object.keys(r.programs).length}개 프로그램 · ${programLines.length}줄 · ${r.info.moves}회 이동`;
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
   setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T2 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
   for(const id of ['btnPlay','btnNextMove','btnReset','btnPrev','btnNext'])$(id).disabled=!trace.length;
   syncViewButton();return r;
 }
-function syncViewButton(){$('btnCoord').setAttribute('aria-pressed',String(focusView));}
+function syncViewButton(){$('btnCoord').setAttribute('aria-pressed',String(focusView));$('btnGang').setAttribute('aria-pressed',String(hasUnit5Gang()&&gangView));$('btnFit').setAttribute('aria-pressed',String(!focusView&&!gangView));}
 async function loadSample(key){
   const serial=++loadSerial;pause();setStatus('프로그램을 불러오는 중입니다.');
   try{let text=SAMPLES[key];if(SOURCE_URLS[key]){const response=await fetch(SOURCE_URLS[key]);if(!response.ok)throw new Error('파일을 불러오지 못했습니다 ('+response.status+')');text=await response.text();}
@@ -247,7 +252,8 @@ $('btnReset').onclick=()=>gotoStep(-1);$('btnPrev').onclick=()=>gotoStep(cur-1);
 $('btnNextCut').onclick=()=>{const c=cutEvents.find(c=>c.index>cur);if(c)gotoStep(c.index);else gotoStep(trace.length-1);};
 $('btnNextPull').onclick=()=>{const i=trace.findIndex((s,k)=>k>cur&&s.pull);if(i>=0)gotoStep(i);};
 $('seek').oninput=e=>gotoStep(Number(e.target.value)-1);
-$('btnCoord').onclick=()=>{focusView=!focusView;syncViewButton();computeBounds();resize();};$('btnFit').onclick=()=>{focusView=false;syncViewButton();computeBounds();resize();};
+$('btnGang').onclick=()=>{gangView=true;focusView=false;syncViewButton();computeBounds();resize();};
+$('btnCoord').onclick=()=>{focusView=!focusView;gangView=false;syncViewButton();computeBounds();resize();};$('btnFit').onclick=()=>{focusView=false;gangView=false;syncViewButton();computeBounds();resize();};
 $('showRapid').onchange=draw;$('showHistory').onchange=draw;
 document.addEventListener('keydown',e=>{if(/TEXTAREA|INPUT|SELECT|BUTTON/.test(e.target.tagName))return;if(e.code==='Space'){e.preventDefault();playing?pause():play();}else if(e.key==='ArrowRight'){e.preventDefault();nextMove();}else if(e.key==='ArrowLeft'){e.preventDefault();gotoStep(cur-1);}else if(e.key==='Home')gotoStep(-1);});
 window.addEventListener('resize',()=>{computeBounds();resize();});

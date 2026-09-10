@@ -90,7 +90,7 @@ with sync_playwright() as p:
     mobile=phone.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
     mobile.goto(base+'simulator.html')
     expect(mobile.locator('#loadStatus')).to_contain_text('O0600 불러옴')
-    expect(mobile.locator('#btnCoord')).to_have_attribute('aria-pressed','true')
+    expect(mobile.locator('#btnGang')).to_have_attribute('aria-pressed','true')
     mobile.locator('#btnNextCut').click()
     mobile.screenshot(path=str(out/'mobile-cut.png'),full_page=True)
     assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth')
