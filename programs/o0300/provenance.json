@@ -1,0 +1,28 @@
+{
+  "received": "2026-09-11",
+  "kind": "manual photo transcription, incomplete #513 ending",
+  "photos": {
+    "01-main.jpg": "9b755e38f4e57d15e0610c2ade9afda336d49d963893021216d64e4b80416b33",
+    "02-setup.jpg": "49c826ba681c973b0703ce2f8d3c3cd217607cba16a20979524cfb9cf6b89c82",
+    "03-boring-chamfer.jpg": "bd1381bf26bc8cbf2d36f837d8ad59d309557c8be0b6e3cf484f4823ad9f1125",
+    "04-parting-remainder.jpg": "46ec898a635ad8714c024ef2768745ada3c933ed0db2af37e71a389913455c5b",
+    "05-remainder-exit.jpg": "6eb35ac92de2915524b628cd1a8e7e3c144840e70819bdbaa2776feef0928130"
+  },
+  "comparison": {
+    "O0600.nc": "efd88770de636da11a1ee4df35dcd806043656eda36c61f1b14cea1b368bde5c",
+    "O9050.nc": "2c80ade78e7fb3df695ad86fd5559a4e7b48af2a23763b267b32edc804fd6c73"
+  },
+  "o8000_reference": {
+    "file": "o8000.html",
+    "sha256": "0c7a63d70fd3e7671c221d6e03f2204311102516b51eb465e338a5d90ff4742a",
+    "programs": [
+      "O8000",
+      "O9010"
+    ],
+    "reference_machine": "6",
+    "assigned_machines": [
+      "3",
+      "6"
+    ]
+  }
+}

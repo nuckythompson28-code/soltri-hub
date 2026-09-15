@@ -73,44 +73,65 @@
   .foot{margin-top:26px;text-align:center;font-size:11px;color:var(--dim);line-height:1.6}
 </style>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff8c42">
+<meta name="theme-color" content="#244b78">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="machine-programs.css">
+<link rel="stylesheet" href="machine-setup.css">
+<link rel="stylesheet" href="factory-layout.css">
+<link rel="stylesheet" href="ui.css">
+<script src="ui.js" defer></script>
 </head>
-<body>
+<body class="kim-ui kim-machines">
 <div class="wrap">
 
   <!-- ===== 선택 화면 ===== -->
   <section id="select">
     <div class="top">
       <a class="home" href="index.html">◀ 김공장</a>
-      <h1>호기별 프로그램</h1>
+      <h1>설비·프로그램</h1>
     </div>
-    <p class="sub">호기를 선택하면 <b>배정 프로그램</b>을 먼저 보여줍니다. 품목 전용·보관용 자료와 호기별 M코드도 함께 볼 수 있습니다.</p>
+    <p class="sub">번호순 목록이나 공장 배치도에서 호기를 선택하세요. 장비·제어기 정보와 배정 프로그램·M코드를 볼 수 있습니다.</p>
+    <nav class="machine-views" aria-label="호기 찾는 방식"><a href="#list" id="listViewLink">번호순 목록</a><a href="#layout" id="layoutViewLink">공장 배치도</a></nav>
+    <div id="factoryLayout" hidden></div>
+    <form class="directory-tools" id="machineDirectoryTools" data-directory-tools="grid" role="search" aria-label="설비 검색">
+      <label class="directory-search">설비 검색<input type="search" placeholder="호기 번호, 프로그램, 제어기" aria-label="설비 검색어"></label>
+      <label>배정 프로그램<select aria-label="프로그램 필터"></select></label>
+      <button type="button" data-filter-clear>초기화</button>
+      <p role="status" aria-live="polite"></p><p class="directory-empty" hidden>검색 결과가 없습니다. 다른 검색어를 입력하거나 필터를 초기화하세요.</p>
+    </form>
     <div class="assignment-grid" id="grid"></div><noscript><p>호기별 목록을 표시하려면 JavaScript를 켜 주세요.</p></noscript>
-    <p class="foot">Soltri · 김공장 · 기계 M코드 대조표 기준</p>
+    <div id="controllerOverview" class="controller-overview"></div>
+    <p class="foot">Soltri · 김공장 · 프로그램·M코드 대조표 / 제어기 2026-09-11 사용자 확인</p>
   </section>
 
   <!-- ===== 상세 화면 ===== -->
   <section id="detail" class="detail">
     <div class="dtop">
       <button class="back" onclick="showSelect()">◀ 뒤로</button>
-      <span class="dno" id="dNo">6</span>
-      <span class="dhogi">호기</span>
+      <h1 class="machine-title"><span class="dno" id="dNo">6</span><span class="dhogi">호기</span></h1>
       <span class="dtype" id="dType">HA</span>
     </div>
     <p class="dprog" id="dProg"></p>
+    <div class="machine-detail-grid">
     <div id="linkSlot"></div>
+    <div class="machine-equipment">
+    <div id="controllerInfo"></div>
+    <div id="machineSetup" hidden></div>
     <details class="assignment-group" id="machine-codes"><summary>이 호기의 M코드 보기</summary>
       <div class="mc" id="mc" style="margin-top:12px"></div>
       <div class="note" id="dNote"></div>
     </details>
+    </div></div>
   </section>
 
 </div>
 
+<script src="machine-setups.js"></script>
+<script src="machine-setup-ui.js"></script>
 <script src="machine-programs.js"></script>
 <script src="machine-programs-ui.js"></script>
+<script src="machine-controllers.js"></script>
+<script src="factory-layout.js"></script>
 <script>
 /* ===== 기계 데이터 (출처: 기계 M코드 대조표) =====
    null = 해당 기능 M코드 없음. spin: 정회전(cw)/역회전(ccw). */
@@ -119,10 +140,26 @@ const byNo = SoltriPrograms.byNo;
 /* ---- 선택 그리드 렌더 ---- */
 const grid = document.getElementById('grid');
 SoltriProgramUI.tiles(grid);
+SoltriControllerUI.overview(document.getElementById('controllerOverview'));
+SoltriFactoryLayout.render(document.getElementById('factoryLayout'));
+let selectionView=location.hash==='#layout'?'layout':'list';
+function renderSelection(){
+  const isLayout=selectionView==='layout';
+  document.getElementById('grid').hidden=isLayout;
+  document.getElementById('machineDirectoryTools').hidden=isLayout;
+  document.getElementById('controllerOverview').hidden=isLayout;
+  document.getElementById('factoryLayout').hidden=!isLayout;
+  for(const name of ['list','layout']){
+    const link=document.getElementById(name+'ViewLink');
+    if(name===selectionView)link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+  }
+}
 
 /* ---- 상세 렌더 ---- */
 function esc(v){ return v==null ? null : v; }
 function row(fn, code, opt){
+  if(code===undefined) return '<div class="mcrow unknown"><span class="fn">'+fn+'</span><span class="code">미확인</span></div>';
   if(code==null) return '<div class="mcrow none"><span class="fn">'+fn+'</span><span class="code">없음</span></div>';
   const cls = opt==='std' ? ' std' : '';
   return '<div class="mcrow'+cls+'"><span class="fn">'+fn+'</span><span class="code">'+code+'</span></div>';
@@ -132,7 +169,7 @@ function showDetail(m){
   document.getElementById('select').style.display='none';
   document.getElementById('detail').style.display='block';
   document.getElementById('dNo').textContent = m.no;
-  document.getElementById('dType').textContent = m.type + (m.sub ? ' · '+m.sub : '') + ' 타입';
+  document.getElementById('dType').textContent = m.type ? m.type + (m.sub ? ' · '+m.sub : '') + ' 타입' : '타입 미확인';
   const dProg = document.getElementById('dProg');
   dProg.className='dprog'+(m.program?'':' no');
   dProg.textContent=m.program?'배정 프로그램 · '+m.program:'프로그램 미배정';
@@ -150,33 +187,42 @@ function showDetail(m){
     row('에어 OFF', m.airOff) +
     row('주축 정회전(CW)', m.cw, spinOpt) +
     row('주축 역회전(CCW)', m.ccw, spinOpt) +
-    row('카운팅', 'M12') +
-    row('프로그램 종료', 'M30');
+    row('카운팅', m.codesUnconfirmed ? undefined : 'M12') +
+    row('프로그램 종료', m.codesUnconfirmed ? undefined : 'M30');
 
   const slot = document.getElementById('linkSlot');
+  SoltriControllerUI.render(document.getElementById('controllerInfo'),m);
+  SoltriMachineSetupUI.render(document.getElementById('machineSetup'),m.setupKey);
   SoltriProgramUI.renderPrograms(m,slot);
 
   const note = document.getElementById('dNote');
   if(m.std){
     note.style.display='block';
     note.innerHTML='💡 이 기계는 <b>주축이 표준 방향</b>(M03=정회전)입니다. 다른 기계 대부분은 M03이 <b>역회전</b>이라, 같은 코드를 옮길 때 주축 방향을 확인하세요.';
-  } else {
+  } else if(m.cw&&m.ccw) {
     note.style.display='block';
     note.innerHTML='💡 이 기계는 <b>M03=역회전</b>(M04=정회전)입니다. 6호기 등 표준 기계와 반대 — 프로그램 이식 시 주의.';
+  } else {
+    note.style.display='block';
+    note.textContent='이 호기의 M코드와 주축 회전 방향은 아직 확인되지 않았습니다.';
   }
   window.scrollTo(0,0);
 }
 
 function showSelect(){
   document.title='호기별 프로그램 — 김공장';
-  if(location.hash){ history.pushState('', document.title, location.pathname); }
+  history.pushState('', document.title, location.pathname+(selectionView==='layout'?'#layout':''));
   document.getElementById('detail').style.display='none';
   document.getElementById('select').style.display='block';
+  renderSelection();
 }
 
 function route(){
   document.title='호기별 프로그램 — 김공장';
   document.getElementById('machine-codes').open=false;
+  if(location.hash==='#layout')selectionView='layout';
+  else if(location.hash==='#list'||!location.hash)selectionView='list';
+  renderSelection();
   const h = location.hash.replace('#m','');
   if(h && byNo[h]) showDetail(byNo[h]);
   else { document.getElementById('detail').style.display='none';

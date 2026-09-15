@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#ff8c42"><link rel="manifest" href="manifest.json"><title>O0500 — O0400 기능의 5호기 이식본</title><style>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#244b78"><link rel="manifest" href="manifest.json"><title>O0500 — O0400 기능의 5호기 이식본</title><style>
 :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;--dim:#8a97a6;--accent:#4fb6ff;--accent2:#ffb454;--green:#7ee787;--red:#ff7b72;--purple:#d2a8ff}
 *{box-sizing:border-box}html,body{margin:0;height:100%}body{font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:15px;line-height:1.6}button,input{font:inherit}a{color:var(--accent)}button,a,input{touch-action:manipulation}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,.ln:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
 .app{display:grid;grid-template-columns:260px minmax(0,1fr);height:100dvh}.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:18px 14px}.main{overflow-y:auto;padding:26px 34px 80px;scroll-behavior:smooth;min-width:0}.brand{font-size:18px;font-weight:800}.brand span{color:var(--accent)}.brand-sub{font-size:12px;color:var(--dim);margin:4px 0 18px}.nav-h{font-size:11px;color:var(--dim);letter-spacing:1px;margin:20px 0 8px}.nav a{display:block;padding:9px 12px;border-radius:8px;color:var(--txt);text-decoration:none;font-size:14px;margin-bottom:3px;border:1px solid transparent}.nav a:hover{background:var(--panel2)}.nav a.active{background:var(--panel2);border-color:var(--accent);color:#fff}.nav small{display:block;font-size:11px;color:var(--dim);margin-top:2px}.legend{font-size:12px;color:var(--dim);line-height:1.9}.legend .var,.legend .gc,.legend .mc{border:0}
@@ -9,7 +9,9 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 @media(max-width:760px){.sidebar{padding-top:64px}}
 </style><script src="o0500.js" defer></script><link rel="stylesheet" href="machine-programs.css">
-</head><body>
+<link rel="stylesheet" href="ui.css">
+<script src="ui.js" defer></script>
+</head><body class="kim-ui kim-program">
 <button class="menu-btn" id="menuBtn" aria-label="메뉴 열기" aria-controls="sidebar" aria-expanded="false">☰</button>
 <div class="backdrop" id="backdrop"></div><div class="app">
 <aside class="sidebar" id="sidebar"><div class="brand">O<span>0500</span> 5호기</div><div class="brand-sub">O0400 기능 이식 · 메인 + 서브 5개</div>

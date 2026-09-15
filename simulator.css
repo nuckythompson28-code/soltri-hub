@@ -1,9 +1,23 @@
 :root{--bg:#0b1016;--panel:#141c26;--panel2:#1d2835;--line:#2b394a;--txt:#edf3fa;--dim:#a6b5c5;--accent:#70c7ff;--cyan:#66e0d1;--amber:#ffc16c;--red:#ff958b;--green:#9de4ae}
-.gang-help strong{display:block;color:var(--amber);margin-top:4px}
+.gang-help strong{display:block;color:#edf3fa;margin-top:4px}
+.equipment-details{margin:12px 14px;padding:10px;border:1px solid #47657a;border-radius:8px}.equipment-details>summary{cursor:pointer;font-weight:700;color:#edf3fa}.equipment-details .machine-setup{margin:10px 0 0}
 .running-code{padding:9px 14px;background:#163746;border-block:1px solid #39627a}
 .running-code span{display:flex;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:11px}
 .running-code b{color:var(--accent)}.running-code code{display:block;margin-top:3px;color:#fff;font:600 13px/1.6 Consolas,monospace;overflow-wrap:anywhere}
 .code-position{padding:8px 12px;color:var(--accent);background:#163746;font-weight:700;border-block:1px solid #39627a}
+.program-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 8px}
+.program-tabs button{font:700 13px Consolas,monospace;padding:8px 12px;min-height:40px}
+.program-tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.line-number-help{margin:0;padding:0 12px 10px;color:var(--dim);font-size:11px}
+.source-reference{padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.reference-actions{display:flex;gap:8px}.reference-actions button{flex:1;padding:7px;font-size:12px}
+#copyStatus{margin:7px 0 0;color:var(--dim);font-size:11px;line-height:1.5}
+#copyFallback{width:100%;min-height:110px;margin-top:8px;padding:8px;font:12px/1.6 Consolas,monospace}
+#lineList .ln{padding-block:2px}
+#lineList .ln.selected{box-shadow:inset 0 0 0 1px var(--accent)}
+#lineList .ln:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#lineList .ln.selected .gut{font-weight:700;color:var(--accent)}
+.kim-simulator #codePanel{top:80px;scroll-margin-top:80px}
 #lineList .src{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0;flex:1}
 #lineList .gut{width:55px}#lineList .ln.cur{color:#fff;font-weight:700}#lineList .ln.cur .gut{color:var(--accent)}#lineList .ln.cur .gut::before{content:'▶ ';font-size:10px}
 @media(max-width:650px){.running-code{padding:8px}.running-code code{font-size:12px}}

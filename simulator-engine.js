@@ -83,13 +83,16 @@ function applyProgVars(text){const p=PROGVARS[programVariant(text)]||PROGVARS['8
 
 function parsePrograms(text){
   const lines=text.split(/\r?\n/);
-  const programs={}, programLines=[]; let curp=null, mainKey=null;
+  const programs={}, programLines=[]; let curp=null, mainKey=null, section=null;
   for(let i=0;i<lines.length;i++){
     const raw=lines[i];
     const t=raw.replace(/\([^)]*\)/g,'').trim();
     const om=t.match(/^O\s*(\d+)/i);
-    if(om){ const k=(om[1].replace(/^0+/,'')||'0'); curp=k; programs[k]={lines:[],labels:{}}; if(mainKey===null)mainKey=k; }
-    programLines.push({idx:i, prog:curp, raw});
+    if(om){ const k=(om[1].replace(/^0+/,'')||'0'); curp=k; section=null; programs[k]={lines:[],labels:{}}; if(mainKey===null)mainKey=k; }
+    const sequence=t.match(/^N\s*(\d+)/i);
+    if(curp&&sequence)section='N'+sequence[1];
+    // Display references start at each O header; execution still uses the original global index.
+    programLines.push({idx:i, prog:curp, raw, programLine:curp?programs[curp].lines.length+1:null, section});
     if(curp){
       const pIdx=programs[curp].lines.length; programs[curp].lines.push(i);
       const lm=t.match(/^N\s*(\d+)/i);
@@ -114,6 +117,7 @@ PROGVARS['500']={keys:[100,101,102,103,104,105,106,107,108,109,110,115,116,120,1
 MACHINE_PROFILES['600']={"name":"5호기 · O0600","note":"O8000 방식 · T1 보링 → T2 면취기 → T3 아래쪽 절단","link":"o0600.html","up":53,"down":54,"airOn":51,"airOff":52,"cw":4,"partTool":3,"tools":{"1":["복합 보링바","내·외경 묶음 선가공","compound"],"3":["아래쪽 절단","X 음수 · 위로 절입 ↑","part"],"2":["면취기","M56 전진 / M55 후진","chamfer"]}};
 MACHINE_PROFILES['600'].chamferExtend=56;
 MACHINE_PROFILES['600'].chamferRetract=55;
+MACHINE_PROFILES['600'].setup=globalThis.SoltriMachineSetups?.unit5;
 PROGVARS['600']={"keys":[100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,126,505,507,508,511,512,513,514,515,516,517,518,520,521,522,523,524,525,531,532,534,542],"lbl":{"100":"원점 길이","101":"소재 OD","102":"소재 ID","103":"완성 OD","104":"완성 ID","105":"길이","106":"T3 날 폭","107":"묶음 수량","108":"T1 시작 rpm","109":"T1 끝 rpm","110":"T1 이송","111":"T2 시작 rpm","112":"T2 끝 rpm","113":"T2 이송","114":"T3 시작 rpm","115":"T3 끝 rpm","116":"T3 이송","117":"소재 세팅","118":"제품별 후퇴","119":"뒤 외경 C","120":"목표 수량","121":"짧은 소재","122":"마킹 생략","126":"시스템 수량 검사","505":"피치","507":"선가공 길이","508":"T2 중심 직경","511":"T1 rpm 증분","512":"T2 rpm 증분","513":"T3 rpm 증분","514":"현재 T1 rpm","515":"현재 T2 rpm","516":"현재 T3 rpm","517":"전체 목표","518":"전체 소모 길이","520":"묶음 완료","521":"면취 위치","522":"절단 위치","523":"전체 완료","524":"이번 묶음","525":"완료 묶음","531":"남은 수량","532":"이번 묶음 길이","534":"총 묶음","542":"척 기준 여유"}};
 PROGVARS['2026']={keys:[100,101,102,103,104,105,106,107,108,109,110,111,116,119,120,121,505,515,516,517,518,520,521,522,530,555],lbl:{...PROGVARS['400'].lbl,100:'척 기준 길이',119:'홈 가공',120:'홈 직경 감소',121:'홈 이동 폭',515:'묶음 수량',517:'총 수량',521:'가공 카운트',530:'척 여유',555:'홈 시작 폭'}};
 PROGVARS['400'].keys.push(120,122,124);
@@ -210,7 +214,19 @@ function runProgram(text, maxMoves){
     if(has(96))sMode='G96 주속 일정'; if(has(97))sMode='G97 회전수 일정';
     if(has(98))fmode='mm/min'; if(has(99))fmode='mm/rev';
     if(w.S!=null)rpm=w.S; if(w.F!=null)feed=w.F;
-    if(w.T!=null){ const tv=Math.round(w.T), nextTool=tv>=100?Math.floor(tv/100):tv; if(nextTool!==toolNo)penReset=true; toolNo=nextTool; tool='T'+String(toolNo).padStart(2,'0'); }
+    if(w.T!=null){
+      const tv=Math.round(w.T),nextTool=tv>=100?Math.floor(tv/100):tv;
+      if(nextTool!==toolNo){
+        const previous=machine.setup?.geometry[toolNo],next=machine.setup?.geometry[nextTool];
+        if(previous&&next&&machine.setup.offsetMode==='coordinate-shift'){
+          // Re-express the same carriage position in the newly selected tool's
+          // work coordinates BEFORE applying X/Z/U/W in this block. No extra move.
+          if(xKnown)X+=previous.X-next.X;
+          if(zKnown)Z+=previous.Z-next.Z;
+        }else penReset=true;
+      }
+      toolNo=nextTool;tool='T'+String(toolNo).padStart(2,'0');
+    }
     for(const c of Mc){ if(c===3||c===4)spin=machine.cw?(c===machine.cw?'정회전 CW':'역회전 CCW'):'회전'; else if(c===5)spin='정지';
       if(c===(vars[133]||machine.up))brakeUp=true; if(c===(vars[134]||machine.down))brakeUp=false;
       if(vars[131]>0&&c===vars[131])alClamp='open'; if(vars[132]>0&&c===vars[132])alClamp='closed'; // 오토링크 클램프
@@ -222,7 +238,7 @@ function runProgram(text, maxMoves){
     // G04 정지
     if(has(4)){ const tt=w.P!=null?(w.P+'ms'):(w.X!=null?(w.X+'s'):''); push({lineIdx:here,prog:hprog,act:'dwell',desc:`G04 일시정지 ${tt}`,cm}); continue; }
     // G10 좌표설정
-    if(has(10)){const old=zOff;if(w.Z!=null)zOff=w.Z;if(w.W!=null)zOff+=w.W;if(zKnown)Z+=old-zOff;penReset=true;push({lineIdx:here,prog:hprog,act:'offset',desc:`G10 원점 설정 Z=${fmt(zOff)}`,cm});continue;}
+    if(has(10)){const old=zOff;if(w.Z!=null)zOff=w.Z;if(w.W!=null)zOff+=w.W;if(zKnown)Z+=old-zOff;if(!machine.setup)penReset=true;push({lineIdx:here,prog:hprog,act:'offset',desc:`G10 원점 설정 Z=${fmt(zOff)}`,cm});continue;}
 
     // 모션 모달
     let mG=null; for(const g of G){ if(g===0||g===1||g===2||g===3)mG=g; } if(mG!=null)motion=mG;
@@ -254,7 +270,7 @@ function runProgram(text, maxMoves){
     let act='misc', desc='';
     if(Mc.length){ act=Mc.includes(0)?'stop':'mcode'; desc=Mc.includes(0)?'M00 일시정지 · 재생을 눌러 다음 동작 확인':'M'+Mc.map(c=>Math.round(c)).join(' M')+(cm?` (${cm})`:''); }
     else if(w.S!=null||has(96)||has(97)){ act='spindle'; desc=`주축 ${sMode} S${fmt(rpm)}`; }
-    else if(w.T!=null){ act='tool'; desc=`공구교환 ${tool}`; }
+    else if(w.T!=null){ act='tool'; desc=machine.setup?`공구 선택 · 형상 보정 ${tool}`:`공구교환 ${tool}`; }
     else if(w.F!=null){ act='feed'; desc=`이송 F${fmt(feed)} (${fmode})`; }
     else { act='misc'; desc=line+(cm?` (${cm})`:''); }
     push({lineIdx:here,prog:hprog,act,desc,cm});

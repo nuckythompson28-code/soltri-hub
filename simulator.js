@@ -5,6 +5,7 @@ const SOURCE_URLS={O0600:'programs/o0600-unit5.nc',O0500:'programs/o0500-unit5.n
 let profile=MACHINE_PROFILES['600'], mainKey='600', trace=[],programLines=[],cur=-1,playing=false,animT=1,rafId=null;
 let stockInfo=null,cutEvents=[],referenceOffset=0,CW=0,CH=0,SC=1,OAX=0,OBY=0,view={minA:-100,maxA:30,minB:-50,maxB:50};
 let focusView=matchMedia('(max-width:650px)').matches,loadSerial=0,sourceText='',fieldCache=null;
+let codeProgram=null,selectedSource=null;
 const sx=z=>OAX+z*SC,sy=r=>OBY-r*SC;
 const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const color=t=>COLORS[t]||'#9de4ae';
@@ -149,12 +150,58 @@ function draw(){
   drawTool();
 }
 
-function renderLineList(){const fragment=document.createDocumentFragment();for(const pl of programLines){const el=document.createElement('div');el.className='ln'+(/^\s*[%(]/.test(pl.raw)?' cmt':'');el.dataset.line=pl.idx;el.innerHTML=`<span class="gut">${pl.idx+1}</span><span class="src">${esc(pl.raw)||' '}</span>`;el.onclick=()=>{const next=trace.findIndex((s,k)=>k>cur&&s.lineIdx===pl.idx),first=trace.findIndex(s=>s.lineIdx===pl.idx);if(next>=0||first>=0)gotoStep(next>=0?next:first);};fragment.append(el);}$('lineList').replaceChildren(fragment);}
+const programName=key=>key==null?'파일 앞머리':'O'+key.padStart(4,'0');
+function sourceLocation(pl){return pl?`${programName(pl.prog)} · ${pl.programLine??pl.idx+1}행${pl.section?' · '+pl.section+' 구간':''}`:'선택한 코드 없음';}
+function referenceText(){
+  const pl=programLines[selectedSource];
+  return pl?`${sourceLocation(pl)}\n${pl.raw.trim()||'(빈 줄)'}\n(시뮬레이터 기준: O번호 줄이 1행, 빈 줄·주석 포함)`:'';
+}
+function updateSourceReference(){
+  const pl=programLines[selectedSource];
+  const isCurrent=!!pl&&trace[cur]?.lineIdx===pl.idx;
+  $('codePosition').textContent=sourceLocation(pl)+(pl?(isCurrent?' · 실행 위치':' · 선택'): '');
+  $('copyLine').disabled=!pl;$('followCurrent').disabled=!trace[cur];
+  $('copyFallback').hidden=true;
+  $('copyStatus').textContent='줄을 선택한 뒤 복사하면 프로그램명·행 번호·코드가 함께 복사됩니다.';
+  for(const row of $('lineList').querySelectorAll('.ln')){
+    row.classList.toggle('selected',Number(row.dataset.line)===selectedSource);
+    row.classList.toggle('cur',Number(row.dataset.line)===trace[cur]?.lineIdx);
+    if(row.classList.contains('cur'))row.setAttribute('aria-current','step');else row.removeAttribute('aria-current');
+  }
+}
+function renderProgramTabs(){
+  const keys=[...new Set(programLines.filter(pl=>pl.prog!==null).map(pl=>pl.prog))];
+  $('programTabs').replaceChildren(...keys.map(key=>{
+    const button=document.createElement('button');button.textContent=programName(key);button.dataset.program=key;
+    button.setAttribute('aria-pressed',String(key===codeProgram));
+    button.onclick=()=>{pause();codeProgram=key;selectedSource=programLines.find(pl=>pl.prog===key).idx;renderLineList();updateSourceReference();};
+    return button;
+  }));
+}
+function renderLineList(){
+  const fragment=document.createDocumentFragment();
+  for(const pl of programLines.filter(pl=>pl.prog===codeProgram)){
+    const el=document.createElement('div');el.className='ln'+(/^\s*[%(]/.test(pl.raw)?' cmt':'');el.dataset.line=pl.idx;el.dataset.programLine=pl.programLine??'';el.tabIndex=0;el.setAttribute('role','button');
+    el.setAttribute('aria-label',sourceLocation(pl)+' '+(pl.raw.trim()||'빈 줄'));
+    el.innerHTML=`<span class="gut">${pl.programLine??'—'}</span><span class="src">${esc(pl.raw)||' '}</span>`;
+    const select=()=>{
+      pause();const next=trace.findIndex((s,k)=>k>cur&&s.lineIdx===pl.idx),first=trace.findIndex(s=>s.lineIdx===pl.idx);
+      if(next>=0||first>=0)gotoStep(next>=0?next:first);
+      else {selectedSource=pl.idx;updateSourceReference();}
+    };
+    el.onclick=select;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();select();}};
+    fragment.append(el);
+  }
+  $('lineList').replaceChildren(fragment);$('lineList').scrollTop=0;
+  for(const button of $('programTabs').children)button.setAttribute('aria-pressed',String(button.dataset.program===codeProgram));
+}
 function syncProgramPosition(s=trace[cur]){
-  const location=s?`O${s.prog.padStart(4,'0')} · ${s.lineIdx+1}행`:'프로그램 실행 전';
-  $('runningLocation').textContent=location;$('codePosition').textContent=location;
+  $('runningLocation').textContent=s?sourceLocation(programLines[s.lineIdx]):'프로그램 실행 전';
   $('runningSource').textContent=s?programLines[s.lineIdx].raw.trim():'재생 또는 다음 이동을 누르세요.';
-  const previous=$('lineList').querySelector('.cur');previous?.classList.remove('cur');previous?.removeAttribute('aria-current');
+  const nextProgram=s?s.prog:mainKey;
+  if(codeProgram!==nextProgram){codeProgram=nextProgram;renderLineList();}
+  selectedSource=s?s.lineIdx:programLines.find(pl=>pl.prog===codeProgram)?.idx??null;
+  updateSourceReference();
   const el=s?$('lineList').querySelector(`[data-line="${s.lineIdx}"]`):null;
   if(!el){if(!s)$('lineList').scrollTop=0;return;}
   el.classList.add('cur');el.setAttribute('aria-current','step');
@@ -165,7 +212,9 @@ function syncProgramPosition(s=trace[cur]){
 }
 function renderMachine(){
   const gang=hasUnit5Gang();$('btnGang').hidden=!gang;$('gangHelp').hidden=!gang;document.querySelector('.right').classList.toggle('gang-machine',gang);
-  $('cv').setAttribute('aria-label',gang?'5호기 공구대 개략도. T1 보링바, T2 면취기, T3 절단바이트가 함께 이동하며, T2 헤드는 M56 전진 시 T3보다 약 2mm 앞까지 돌출되고 M55에서 복귀합니다.':'척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도');
+  $('cv').setAttribute('aria-label',gang?'5호기 형상 보정값을 반영한 공구대. T1 보링바, T2 면취기, T3 절단바이트가 함께 이동하며, T2 작업 기준은 T3보다 Z 3.860mm 앞입니다. M56에서 전진하고 M55에서 복귀합니다.':'척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도');
+  $('unit5SetupDetails').hidden=!gang;
+  SoltriMachineSetupUI.render($('simulatorSetup'),gang?'unit5':null);
   $('machineName').textContent=profile.name;$('machineNote').textContent=profile.note;$('analysisLink').hidden=!profile.link;if(profile.link)$('analysisLink').href=profile.link;
   if(mainKey==='852'){const no=trace.find(s=>s.kv[130]>0)?.kv[130];if(no)$('machineName').textContent=`${no}호기 · O0852 설정`;}
   $('toolStrip').innerHTML=Object.entries(profile.tools).map(([n,t])=>`<div class="tool-card" id="tool-${n}" style="--tool-color:${color(n)}"><span class="tool-state">대기</span><b>T${n} ${esc(t[0])}</b><span>${esc(t[1])}</span></div>`).join('');
@@ -180,8 +229,8 @@ function describeStep(s){
   if(s.act==='stop')return ['M00 · 일시정지',s.desc];
   if(s.act==='end')return ['프로그램 종료',`${completed()}개 절단 확인 · ${s.desc}`];
   if(s.pull)return ['오토링크 소재 인출',`T3가 소재를 잡고 +Z로 ${fmt(s.pull)} mm 끌어당깁니다.`];
-  if(isGangActuator(cur))return gangFrames[cur].extensionTo===1?['T2 공압 전진 · M56','면취 헤드가 T3 날끝보다 약 2mm 앞으로 돌출됩니다.'+(s.seg?' 전진한 상태로 공구대가 접근합니다.':'')]:['T2 공압 복귀 · M55',(s.seg?'공구대가 후퇴하고 ':'')+'면취 헤드가 공압으로 복귀합니다.'];
-  if(isGangTransition(cur))return ['공구대 이동 · '+s.state.tool+' 선택','세 공구가 붙어 있는 공구대 전체를 이동해 선택 공구를 맞춥니다. 전환 모습과 공구 간격은 개략도입니다.'];
+  if(isGangActuator(cur))return gangFrames[cur].extensionTo===1?['T2 공압 전진 · M56','면취 헤드가 형상 보정값의 작업 위치로 전진합니다. T3 기준 Z 3.860mm 앞입니다.'+(s.seg?' 전진한 상태로 공구대가 접근합니다.':'')]:['T2 공압 복귀 · M55',(s.seg?'공구대가 후퇴하고 ':'')+'면취 헤드가 공압으로 복귀합니다. 복귀 거리는 개략 표현입니다.'];
+  if(isGangTransition(cur))return s.seg?['공구대 이동 · '+s.state.tool+' 선택','새 공구의 형상 보정 기준으로 이동 지령을 계산합니다. 세 공구는 같은 공구대에서 함께 이동합니다.']:['공구 선택 · '+s.state.tool,'형상 보정 기준을 전환합니다. 축 이동 지령이 없어 공구대는 움직이지 않습니다.'];
   const kind=role(s.state.toolNo),seg=s.seg;
   if(seg&&seg.type===0)return ['공구 접근 · 후퇴',`${s.state.tool} 급속 이동 · X ${fmt(s.state.X)} / Z ${fmt(s.state.Z)}`];
   if(seg&&kind==='part'){
@@ -216,7 +265,7 @@ function updateAll(){
   syncProgramPosition(s);
   for(const n of Object.keys(profile.tools)){const el=$(`tool-${n}`),active=Number(n)===s?.state.toolNo;el.classList.toggle('active',active);el.querySelector('.tool-state').textContent=active?(n==='1'?(s.state.brakeUp?'UP':'DOWN'):'선택됨'):hasUnit5Gang()?'함께 이동':'대기';}
   updateReadouts();const [title,detail]=describeStep(s);$('stepTitle').textContent=title;$('stepDetail').textContent=detail;
-  $('actLine').textContent=s?`O${s.prog} · ${s.lineIdx+1}행  ${programLines[s.lineIdx].raw}`:'아직 실행 전입니다.';
+  $('actLine').textContent=s?`${sourceLocation(programLines[s.lineIdx])}  ${programLines[s.lineIdx].raw}`:'아직 실행 전입니다.';
   $('vchips').innerHTML=s?KEYVARS.filter(n=>s.kv[n]!=null&&s.kv[n]!==-9999).map(n=>`<span class="vchip${s.changed?.n===n?' hot':''}"><span class="vk">#${n} ${esc(VARLBL[n]||'')}</span><span class="vv">${fmt(s.kv[n])}</span></span>`).join(''):'';
   fieldCache=null;if(focusView||hasUnit5Gang()){computeBounds();resize();}else draw();
 }
@@ -236,7 +285,8 @@ function setStatus(message,error=false){$('loadStatus').textContent=message;$('l
 function recompute(text){
   pause();sourceText=text;mainKey=parsePrograms(text).mainKey;profile=machineProfile(text);
   const max=Math.max(10,Math.min(50000,+$('maxMoves').value||2000)),r=runProgram(text,max);trace=r.trace;programLines=r.programLines;cur=-1;animT=1;
-  buildStockInfo();buildGangFrames();gangView=hasUnit5Gang();focusView=gangView?false:matchMedia('(max-width:650px)').matches;renderMachine();renderLineList();computeBounds();resize();updateAll();
+  codeProgram=mainKey;selectedSource=null;
+  buildStockInfo();buildGangFrames();gangView=hasUnit5Gang();focusView=gangView?false:matchMedia('(max-width:650px)').matches;renderMachine();renderProgramTabs();renderLineList();computeBounds();resize();updateAll();
   $('cntInfo').textContent=`${Object.keys(r.programs).length}개 프로그램 · ${programLines.length}줄 · ${r.info.moves}회 이동`;
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
   setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T2 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
@@ -260,7 +310,13 @@ $('fileIn').onchange=async e=>{
   }catch(error){setStatus(error.message,true);}e.target.value='';
 };
 $('codeToggle').onclick=()=>{const open=$('codePanel').hidden;$('codePanel').hidden=!open;$('codeToggle').textContent=open?'프로그램 숨기기':'프로그램 함께 보기';$('codeToggle').setAttribute('aria-expanded',String(open));document.querySelector('.app').classList.toggle('with-code',open);resize();updateAll();};
-$('editToggle').onclick=()=>{const editing=$('editor').hidden;if(editing)pause();$('editor').hidden=!editing;$('lineList').hidden=editing;$('editToggle').textContent=editing?'코드 보기':'편집';if(!editing)syncProgramPosition();};
+$('editToggle').onclick=()=>{const editing=$('editor').hidden;if(editing)pause();$('editor').hidden=!editing;$('lineList').hidden=editing;$('sourceTools').hidden=editing;$('sourceReference').hidden=editing;$('editToggle').textContent=editing?'코드 보기':'편집';if(!editing)syncProgramPosition();};
+$('followCurrent').onclick=()=>{pause();syncProgramPosition();};
+$('copyLine').onclick=async()=>{
+  pause();const text=referenceText();if(!text)return;
+  try{if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');await navigator.clipboard.writeText(text);$('copyStatus').textContent='복사했습니다. 대화창에 붙여넣고 요청을 덧붙이세요.';}
+  catch(error){$('copyFallback').value=text;$('copyFallback').hidden=false;$('copyFallback').focus();$('copyFallback').select();$('copyStatus').textContent='자동 복사가 안 됩니다. 선택된 내용을 Ctrl+C 또는 길게 눌러 복사하세요.';}
+};
 $('loadBtn').onclick=()=>recompute($('editor').value);$('maxMoves').onchange=()=>recompute($('editor').value);
 $('btnReset').onclick=()=>gotoStep(-1);$('btnPrev').onclick=()=>gotoStep(cur-1);$('btnNext').onclick=()=>gotoStep(cur+1);$('btnNextMove').onclick=nextMove;$('btnPlay').onclick=()=>playing?pause():play();
 $('btnNextCut').onclick=()=>{const c=cutEvents.find(c=>c.index>cur);if(c)gotoStep(c.index);else gotoStep(trace.length-1);};

@@ -213,7 +213,8 @@ class PortTests(unittest.TestCase):
                                 for i,m in enumerate(self.cuts(nc),1):
                                     self.assertAlmostEqual(m['offset']+m['z'],(qty-i)*16.9+5)
                                 for m in nc.moves:
-                                    if m['stage'] in [100,200,202,203,330]:self.assertEqual(m['tool'],3)
+                                    if m['stage'] in [100,200,202,203]:self.assertEqual(m['tool'],3)
+                                    if m['stage']==330:self.assertEqual(m['tool'],2 if m['raw'] in ['G00 X-[#508] T02','G00 W[#505+20.] M52'] else 3)
                                     if m['stage']==320:self.assertEqual(m['tool'],2)
                                     if m['tool'] in (2,3) and m['x'] is not None:self.assertLess(m['x'],0)
                                     if m['tool']!=m['oldtool'] and m['oldtool'] and m['oldz'] is not None:
@@ -224,6 +225,8 @@ class PortTests(unittest.TestCase):
                                             self.assertAlmostEqual(clearance,10)
                                         elif m['oldtool']==3 and m['tool']==1 and m['stage']==310 and m['done']==0:
                                             self.assertAlmostEqual(clearance,5) # O8000 face-to-first-bore entry.
+                                        elif m['oldtool']==3 and m['tool']==2 and m['raw']=='G00 X-[#508] T02':
+                                            self.assertAlmostEqual(clearance,-nc.vars[505]) # Cut Z is one pitch behind this part face; geometry is tested separately.
                                         else:self.assertGreaterEqual(clearance,20-1e-8)
 
     def test_rpm_ramps_and_single_quantity(self):

@@ -1,21 +1,48 @@
-/* User-confirmed assignments, 2026-09-10. Shared by home and machine pages. */
+/* User-confirmed assignments, updated 2026-09-11. Shared by home and machine pages. */
 (()=>{
   "use strict";
   const machines=[
  {no:"1", type:"AL", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
- {no:"2", type:"HA", program:"O0400", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:null,clClose:null,airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
+ {no:"2", type:"HA", program:"O0300", archives:["O0400"], boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:null,clClose:null,airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
  {no:"3", type:"HA", program:"O8000", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M08",airOff:"M09",cw:"M04",ccw:"M03"},
  {no:"4", type:"AL", program:null,    boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M52",clClose:"M51",airOn:null,airOff:null,cw:"M04",ccw:"M03"},
- {no:"5", type:"AL", program:"O0600", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:"M171",clClose:"M170",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
+ {no:"5", type:"AL", program:"O0600", setupKey:"unit5", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:"M171",clClose:"M170",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"6", type:"HA", program:"O8000", boringUp:"M53",boringDn:"M54",chFwd:"M56",chBwd:"M55",clOpen:null,clClose:null,airOn:"M51",airOff:"M52",cw:"M03",ccw:"M04",std:true},
  {no:"7", type:"AL", program:"O0852", boringUp:"M53",boringDn:"M54",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"8", type:"AL", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"9", type:"AL", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"10",type:"AL", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
+ {no:"11",program:null,codesUnconfirmed:true},
+ {no:"12",program:null,codesUnconfirmed:true},
  {no:"13",sub:"S3", type:"HA", program:"O0400", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
  {no:"14",sub:"S4", type:"HA", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
+ {no:"15",program:null,codesUnconfirmed:true},
 ];
+  // Equipment labels supplied by the user. OEM labels do not identify a base FANUC model.
+  const controllerGroups=[
+    {key:'smart-plus',label:'FANUC i Series Smart Plus',short:'i Series Smart Plus',units:['1','2','12','13','14'],maker:'현대위아'},
+    {key:'0i-tc',label:'FANUC Series 0i-TC',short:'0i-TC',units:['3'],maker:'현대위아'},
+    {key:'0i-tb',label:'FANUC Series 0i-TB',short:'0i-TB',units:['4']},
+    {key:'0i-td',label:'FANUC Series 0i-TD',short:'0i-TD',units:['5','6','11']},
+    {key:'i-series',label:'FANUC i Series',short:'i Series',units:['7','8','9','10'],maker:'현대위아'},
+    {key:'21i-t',label:'FANUC Series 21i-T',short:'21i-T',units:['15']}
+  ];
+  for(const group of controllerGroups)for(const no of group.units){
+    Object.assign(machines.find(m=>m.no===no),{controllerKey:group.key,controller:group.label,controllerShort:group.short,maker:group.maker,controllerReceived:'2026-09-11'});
+  }
   const programs={
+  "O0300": {
+    "id": "O0300",
+    "file": "o0300.html",
+    "short": "T2 면취 · T3 절단",
+    "description": "2호기 실사용 O0300 · CNC 사진 전사 및 O0600·O8000 면취 비교",
+    "tools": "T1 내·외경 · T2 면취기 · T3 절단",
+    "subs": ["O0310"],
+    "reference": "2",
+    "color": "#72d9cd",
+    "transcript": "programs/o0300/photo-transcript.txt",
+    "simulator": false
+  },
   "O0852": {
     "id": "O0852",
     "file": "o0852.html",
@@ -50,6 +77,7 @@
   "O8000": {
     "id": "O8000",
     "file": "o8000.html",
+    "comparison": "o0300.html#compare",
     "short": "풀커팅",
     "description": "O8000 풀커팅 · 묶음 보링 → 개별 면취·절단",
     "tools": "T1 내·외경 · T2 면취기 · T3 절단",
@@ -62,6 +90,7 @@
   "O0600": {
     "id": "O0600",
     "file": "o0600.html",
+    "comparison": "o0300.html#compare",
     "short": "T2 면취 · T3 절단",
     "description": "5호기 O8000 방식 · 최신 공구 배치 반영",
     "tools": "T1 보링 → T2 면취기 → T3 아래쪽 절단",
@@ -108,5 +137,5 @@
     "package": "programs/o0500-unit5-package.zip"
   }
 };
-  window.SoltriPrograms={machines,programs,byNo:Object.fromEntries(machines.map(m=>[m.no,m]))};
+  window.SoltriPrograms={machines,programs,controllerGroups,byNo:Object.fromEntries(machines.map(m=>[m.no,m]))};
 })();

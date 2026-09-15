@@ -3,158 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏭 김공장 — 쏠트리 현장도구</title>
-<style>
-  :root{--bg:#0f1216;--panel:#161b22;--panel2:#1c232d;--line:#222b36;--txt:#d7dee8;
-    --dim:#8a97a6;--accent:#ff8c42;--accent2:#4fb6ff;}
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;font-family:"Pretendard","Segoe UI","맑은 고딕",system-ui,sans-serif;
-    background:linear-gradient(170deg,#0f1216 0%,#141a22 100%);color:var(--txt);
-    min-height:100vh;padding:30px 18px 60px}
-  .wrap{max-width:560px;margin:0 auto}
-  .head{text-align:center;margin-bottom:26px}
-  .logo{font-size:54px;line-height:1}
-  h1{font-size:25px;font-weight:800;margin:8px 0 3px}
-  h1 span{color:var(--accent)}
-  .tag{color:var(--dim);font-size:14px;margin:0}
-  .sec{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;
-    margin:24px 4px 10px;font-weight:700}
-  .cards{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-  a.card{text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);
-    border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:7px;
-    box-shadow:0 4px 16px rgba(0,0,0,.3);transition:transform .12s,border-color .12s}
-  a.card:active{transform:scale(.97)}
-  a.card:hover{border-color:var(--accent)}
-  a.card .emoji{font-size:32px}
-  a.card .t{font-size:16px;font-weight:800}
-  a.card .b{font-size:12.5px;color:var(--dim);line-height:1.45}
-  a.card .tagbadge{align-self:flex-start;font-size:11px;font-weight:800;background:#2a2018;
-    color:var(--accent);padding:2px 9px;border-radius:999px;margin-top:2px}
-  .foot{margin-top:30px;text-align:center;font-size:12px;color:var(--dim);line-height:1.7}
-  .foot b{color:var(--accent2)}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>김공장 · 현장 작업</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff8c42">
+<meta name="theme-color" content="#244b78">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="김공장">
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});}</script>
 <link rel="stylesheet" href="machine-programs.css">
+<link rel="stylesheet" href="factory-layout.css">
+<link rel="stylesheet" href="ui.css">
+<script src="ui.js" defer></script>
 </head>
-<body>
-  <div class="wrap">
-    <div class="head">
-      <div class="logo">🏭</div>
-      <h1>김<span>공장</span></h1>
-      <p class="tag">쏠트리 현장 도구함 · CNC 코드 레퍼런스</p>
+<body class="kim-ui kim-home">
+<main class="wrap">
+  <section class="home-intro" aria-labelledby="home-title">
+    <div><p class="home-eyebrow">쏠트리 · 설비와 가공 자료</p><h1 id="home-title">현장 작업</h1><p>작업할 호기를 선택하고 프로그램과 장비 정보를 확인하세요.</p></div>
+    <dl class="inventory-summary" aria-label="프로그램 등록 현황">
+      <div><dt>전체 설비</dt><dd><span data-inventory-count="machines">15</span><small>대</small></dd></div>
+      <div><dt>프로그램 배정</dt><dd><span data-inventory-count="assigned">11</span><small>대</small></dd></div>
+      <div><dt>프로그램 미배정</dt><dd><span data-inventory-count="unassigned">4</span><small>대</small></dd></div>
+    </dl>
+  </section>
+  <section class="home-section" aria-labelledby="machine-heading">
+    <div class="section-heading"><div><h2 id="machine-heading">설비별 프로그램</h2><p>등록된 프로그램·제어기 기준</p></div><a class="factory-layout-link" href="machines.html#layout">공장 배치도로 찾기 →</a></div>
+    <form class="directory-tools" data-directory-tools="homeMachines" role="search" aria-label="설비 검색">
+      <label class="directory-search">설비 검색<input type="search" placeholder="호기 번호, 프로그램, 제어기" aria-label="설비 검색어"></label>
+      <label>배정 프로그램<select aria-label="프로그램 필터"></select></label>
+      <button type="button" data-filter-clear>초기화</button>
+      <p role="status" aria-live="polite"></p><p class="directory-empty" hidden>검색 결과가 없습니다. 다른 검색어를 입력하거나 필터를 초기화하세요.</p>
+    </form>
+    <div class="assignment-grid" id="homeMachines" data-machine-directory></div>
+    <noscript><p>설비 목록을 보려면 JavaScript를 켜 주세요.</p><a href="machines.html">설비·프로그램 페이지</a></noscript>
+  </section>
+  <nav class="quick-links" aria-label="주요 작업">
+    <a class="quick-link" href="status.html"><span data-ui-icon="chart"></span><span><strong>설비 현황</strong><small>가동·점검·고장 상태와 현장 이슈</small></span></a>
+    <a class="quick-link" href="simulator.html"><span data-ui-icon="play"></span><span><strong>가공 시뮬레이터</strong><small>공구 움직임과 실행 코드 확인</small></span></a>
+    <a class="quick-link" href="cnc-errors.html"><span data-ui-icon="tools"></span><span><strong>CNC 오류 기록</strong><small>증상·원인·조치 이력</small></span></a>
+  </nav>
+  <section id="tools" aria-labelledby="tools-heading">
+    <div class="section-heading"><div><h2 id="tools-heading">현장 도구</h2><p>작업 준비부터 기록·교육까지</p></div></div>
+    <div class="tool-groups">
+      <section class="tool-group"><h3>가공·작업 준비</h3>
+        <a class="tool-link" href="machines.html"><span class="tool-icon" data-ui-icon="machine"></span><span><strong>설비·프로그램·M코드</strong><small>15대 장비 정보와 배정 자료</small></span></a>
+        <a class="tool-link" href="cfbackup.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>CF카드 백업</strong><small>프로그램 백업 절차</small></span></a>
+        <a class="tool-link" href="mtest.html"><span class="tool-icon" data-ui-icon="tools"></span><span><strong>변수 M코드 테스트</strong><small>호기별 명령 확인·MDI 입력</small></span></a>
+        <a class="tool-link" href="taehyung.html"><span class="tool-icon" data-ui-icon="chart"></span><span><strong>척길이·수량 계산</strong><small>김태형 · 가공 개수 계산기</small></span></a>
+        <a class="tool-link" href="scanner/"><span class="tool-icon" data-ui-icon="file"></span><span><strong>작업지시 스캐너</strong><small>바코드 확인·선생산 추천</small></span></a>
+      </section>
+      <section class="tool-group"><h3>표준 절차·교육</h3>
+        <a class="tool-link" href="passkey.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>통행권 가드 원리</strong><small>중간시작 방지 구조 이해</small></span></a>
+        <a class="tool-link" href="passkey-checklist.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>가드 입력 체크리스트</strong><small>호기별 입력 위치와 진행 현황</small></span></a>
+        <a class="tool-link" href="firststep.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>CNC 첫걸음</strong><small>기계·좌표·코드 입문 8단계</small></span></a>
+        <a class="tool-link" href="cheatsheet.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>현장 치트시트</strong><small>기계 옆에 붙이는 인쇄 자료</small></span></a>
+        <a class="tool-link" href="quiz.html"><span class="tool-icon" data-ui-icon="file"></span><span><strong>입문 이해도 평가</strong><small>기본 개념 10문항</small></span></a>
+      </section>
+      <section class="tool-group"><h3>공장·생활 관리</h3>
+        <a class="tool-link" href="machines.html#layout"><span class="tool-icon" data-ui-icon="layout"></span><span><strong>우리 공장 배치도</strong><small>1~15호기 위치와 장비 정보</small></span></a>
+        <a class="tool-link" href="dorm.html"><span class="tool-icon" data-ui-icon="home"></span><span><strong>기숙사 현황</strong><small>입소·퇴거와 거주자 배치</small></span></a>
+        <a class="tool-link" href="http://192.168.0.60:8588/"><span class="tool-icon" data-ui-icon="tools"></span><span><strong>피복 관리</strong><small>작업복·안전화 · 회사 Wi-Fi 전용</small></span></a>
+      </section>
     </div>
-
-    <section aria-labelledby="machine-heading">
-      <div class="assignment-top"><h2 class="assignment-heading" id="machine-heading">호기별 프로그램</h2><a href="machines.html">배정표·M코드 →</a></div>
-      <p class="assignment-help">작업할 호기를 먼저 고르세요. 5호기는 최신 O0600을 열고, 품목 전용·보관용 프로그램은 별도로 보여줍니다.</p>
-      <div class="assignment-grid" data-machine-directory></div>
-      <noscript><a href="machines.html">호기별 프로그램 보기</a></noscript>
-    </section>
-
-    <div class="sec">🏭 공장현황 (실시간)</div>
-    <div class="cards">
-      <a class="card" href="status.html">
-        <span class="emoji">🏭</span>
-        <span class="t">설비 현황판</span>
-        <span class="b">호기별 가동·점검·고장 상태와 이슈·치공구부족·복구예정일을 현장에서 바로 기록·공유</span>
-        <span class="tagbadge">실시간</span>
-      </a>
-      <a class="card" href="cnc-errors.html">
-        <span class="emoji">🛠️</span>
-        <span class="t">CNC 오류 기록</span>
-        <span class="b">1~10호기 오류 일지 · 증상·원인·조치 · 미조치/진행/완료</span>
-        <span class="tagbadge">현장 일지</span>
-      </a>
-    </div>
-
-    <div class="sec">CNC 도구·분석</div>
-    <div class="cards">
-      <a class="card" href="machines.html">
-        <span class="emoji">🕹️</span>
-        <span class="t">호기별 프로그램·M코드</span>
-        <span class="b">호기별 배정 프로그램 · 등록 세트 · 품목 전용·보관본</span>
-        <span class="tagbadge">12대 배정표</span>
-      </a>
-      <a class="card" href="simulator.html">
-        <span class="emoji">🎬</span>
-        <span class="t">쏠트리 CNC 가공 보기</span>
-        <span class="b">호기별 기준 원문 · 공구·절단 방향 · 한 동작씩 보기</span>
-        <span class="tagbadge">시뮬레이터</span>
-      </a>
-      <a class="card" href="passkey.html">
-        <span class="emoji">🎫</span>
-        <span class="t">통행권 가드 원리</span>
-        <span class="b">중간시작 사고 방지 — 열쇠·도장·검문이 뚫리지 않는 이유</span>
-        <span class="tagbadge">안전 표준</span>
-      </a>
-      <a class="card" href="passkey-checklist.html">
-        <span class="emoji">🛡️</span>
-        <span class="t">가드 입력 체크리스트</span>
-        <span class="b">O0852 삽입 3군데 + 호기별 진행 현황 (852 9개 호기)</span>
-        <span class="tagbadge">현장 작업</span>
-      </a>
-      <a class="card" href="taehyung.html">
-        <span class="emoji">👤</span>
-        <span class="t">김태형</span>
-        <span class="b">척길이→개수 원리 계산기</span>
-        <span class="tagbadge">인터랙티브</span>
-      </a>
-      <a class="card" href="mtest.html">
-        <span class="emoji">🧪</span>
-        <span class="t">변수 M코드 테스트</span>
-        <span class="b">호기 통합 전 점검 · MDI 입력 복사 (2·3·6·13호기)</span>
-        <span class="tagbadge">현장 점검</span>
-      </a>
-      <a class="card" href="cfbackup.html">
-        <span class="emoji">💾</span>
-        <span class="t">CF카드 백업</span>
-        <span class="b">기계 전체 프로그램 한번에 CF카드로 (O-9999 PUNCH)</span>
-        <span class="tagbadge">백업 절차</span>
-      </a>
-      <a class="card" href="scanner/">
-        <span class="emoji">📷</span>
-        <span class="t">작업지시 스캐너</span>
-        <span class="b">바코드 스캔 → 선생산 추천 · 미스캔 현황 (회의실·송림동 공용)</span>
-        <span class="tagbadge">공용 도구</span>
-      </a>
-    </div>
-
-
-    <div class="sec">🧥 현장·생활 관리</div>
-    <div class="cards">
-      <a class="card" href="dorm.html">
-        <span class="emoji">🏠</span>
-        <span class="t">기숙사 현황</span>
-        <span class="b">동·호실별 거주자 배치 · 인원 이동(입소·퇴거) · 국적·예정 표시 (실시간)</span>
-        <span class="tagbadge">실시간</span>
-      </a>
-      <a class="card" href="http://192.168.0.60:8588/">
-        <span class="emoji">🧥</span>
-        <span class="t">피복관리</span>
-        <span class="b">작업복·안전화 지급 등록 · 재고 · 지급이력 조회 (회사 와이파이 전용)</span>
-        <span class="tagbadge">관리 도구</span>
-      </a>
-    </div>
-
-    <div class="sec">🎓 입문 교육 (완전초보 반나절)</div>
-    <div class="cards">
-      <a class="card" href="firststep.html"><span class="emoji">🎓</span><span class="t">CNC 첫걸음</span><span class="b">안전·기계·좌표·코드 입문</span><span class="tagbadge">8단계</span></a>
-      <a class="card" href="cheatsheet.html"><span class="emoji">📄</span><span class="t">치트시트</span><span class="b">인쇄해 기계 옆에</span><span class="tagbadge">A4 1장</span></a>
-      <a class="card" href="quiz.html"><span class="emoji">✅</span><span class="t">미니 평가</span><span class="b">이해도 10문항</span><span class="tagbadge">퀴즈</span></a>
-    </div>
-
-    <p class="foot">
-      📲 <b>홈 화면에 추가</b>하면 앱처럼 쓸 수 있어요<br>
-      회사 전용 · 검색 노출 차단(noindex)
-    </p>
-  </div>
+  </section>
+  <footer class="home-foot">김공장 · 쏠트리 현장 도구<br>휴대폰의 ‘홈 화면에 추가’로 바로 열 수 있습니다.</footer>
+</main>
 <script src="machine-programs.js"></script>
 <script src="machine-programs-ui.js"></script>
 </body>

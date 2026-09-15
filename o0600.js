@@ -7,6 +7,8 @@ NOTES['G00 Z5. M52;']='O8000과 같은 페이스 후 Z5 후퇴. 다음 T1 선택
 NOTES['G97 G00 X#103 S#514 M03 T01;']='O8000처럼 T1의 X 위치와 회전수를 함께 지정합니다. 진입부의 Z20 경유를 삭제했습니다.';
 NOTES['G00 Z2. M53;']='T1을 Z2로 직접 접근하며 5호기 M53으로 보링바를 UP합니다.';
 NOTES['G97 G00 X-[#503] S#516 M03 T03;']='미리 계산한 절단 회전수로 T3를 X 외측에 맞춥니다. G97/S/M03을 첫 X 이동에 함께 지정합니다.';
+NOTES['G00 X-[#508] T02;']='절단 직후 T02 보정의 면취 X 위치로 바로 이동합니다. 154행은 유지하며, 이미 같은 X 위치이면 추가 X 지령 이동은 없습니다. 실제 가공시간 단축은 미확인입니다.';
+NOTES['G00 W[#505+20.] M52;']='T02 보정을 유지한 채 공구대 전체를 Z+피치+20 후퇴하며 에어를 끕니다. 이 줄에는 T03을 추가하지 않습니다.';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let rawSource='';
 const main=document.getElementById('main'), menu=document.getElementById('menuBtn'), sidebar=document.getElementById('sidebar'), backdrop=document.getElementById('backdrop'), tip=document.getElementById('tip');

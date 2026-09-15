@@ -3,12 +3,17 @@ from pathlib import Path
 from functools import partial
 from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
 from threading import Thread
-import json,tempfile
+import hashlib,json,tempfile
 from playwright.sync_api import sync_playwright,expect
 
 root=Path(__file__).resolve().parents[1]
 out=Path(tempfile.gettempdir())/'codex_machine_directory_review';out.mkdir(exist_ok=True)
-expected={'1':'O0852','2':'O0400','3':'O8000','4':None,'5':'O0600','6':'O8000','7':'O0852','8':'O0852','9':'O0852','10':'O0852','13':'O0400','14':'O0852'}
+expected={'1':'O0852','2':'O0300','3':'O8000','4':None,'5':'O0600','6':'O8000','7':'O0852','8':'O0852','9':'O0852','10':'O0852','13':'O0400','14':'O0852'}
+expected.update({'11':None,'12':None,'15':None})
+controllers={str(n):'FANUC i Series Smart Plus' for n in [1,2,12,13,14]}
+controllers.update({str(n):'FANUC i Series' for n in [7,8,9,10]})
+controllers.update({str(n):'FANUC Series 0i-TD' for n in [5,6,11]})
+controllers.update({'3':'FANUC Series 0i-TC','4':'FANUC Series 0i-TB','15':'FANUC Series 21i-T'})
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(root)))
@@ -20,13 +25,41 @@ with sync_playwright() as p:
     context=browser.new_context(viewport={'width':1280,'height':1100})
     page=context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(base+'index.html')
-    expect(page.locator('[data-machine-directory] .assignment-tile')).to_have_count(12)
+    expect(page.locator('[data-machine-directory] .assignment-tile')).to_have_count(15)
+    assert page.locator('[data-machine-directory] .assignment-tile').evaluate_all('(els)=>els.map(e=>Number(e.dataset.machine))')==list(range(1,16))
     assert not page.locator('a.card[href^="o0"],a.card[href="o8000.html"]').count()
     for number,program in expected.items():
         expect(page.locator(f'[data-machine="{number}"] .program-id')).to_have_text(program or '미배정')
+        expect(page.locator(f'[data-machine="{number}"] .assignment-controller')).to_have_text(controllers[number].removeprefix('FANUC Series ').removeprefix('FANUC '))
     page.screenshot(path=str(out/'home-desktop.png'),full_page=True)
+    page.locator('.factory-layout-link').click()
+    expect(page.locator('#factoryLayout')).to_be_visible()
+    expect(page.locator('#grid')).to_be_hidden()
+    expect(page.locator('.floor-machine')).to_have_count(15)
+    expect(page.locator('.floor-aisle')).to_have_text('통로')
+    page.screenshot(path=str(out/'factory-layout-desktop.png'),full_page=True)
+    for number in expected:
+        page.locator(f'[data-floor-machine="{number}"]').click()
+        expect(page.locator('#dNo')).to_have_text(number)
+        page.locator('.back').click()
+        expect(page).to_have_url(base+'machines.html#layout')
+        expect(page.locator('#factoryLayout')).to_be_visible()
+    page.locator('[data-floor-machine="5"]').focus();page.keyboard.press('Enter')
+    expect(page.locator('#dNo')).to_have_text('5')
+    page.go_back()
+    expect(page.locator('#factoryLayout')).to_be_visible()
+    page.locator('#listViewLink').click()
+    expect(page.locator('#factoryLayout')).to_be_hidden()
+    expect(page.locator('#grid')).to_be_visible()
     page.locator('[data-machine="5"]').click()
     expect(page.locator('#dNo')).to_have_text('5')
+    expect(page.locator('#machineSetup')).to_contain_text('FANUC Series 0i-TD')
+    expect(page.locator('#machineSetup [data-geometry-tool]')).to_have_count(3)
+    for tool,x,z in [('1','-752.942','-543.000'),('2','-243.772','-542.340'),('3','-194.772','-546.200')]:
+        expect(page.locator('#machineSetup [data-geometry-tool="'+tool+'"] dd')).to_have_text([x,z])
+    expect(page.locator('#machineSetup')).to_contain_text('24.500mm')
+    expect(page.locator('#machineSetup')).to_contain_text('전진 작업 위치')
+    expect(page.locator('#machineSetup a[href="simulator.html?program=O0600"]')).to_be_visible()
     expect(page.locator('#linkSlot>.assignment-card')).to_have_count(1)
     expect(page.locator('#linkSlot>.assignment-card')).to_have_attribute('data-program','O0600')
     expect(page.locator('#linkSlot>.assignment-card')).to_contain_text('T2 면취기 → T3')
@@ -52,6 +85,20 @@ with sync_playwright() as p:
     for number,program in expected.items():
         page.goto(base+'machines.html#m'+number)
         expect(page.locator('#dNo')).to_have_text(number)
+        expect(page.locator('#controllerInfo h3')).to_have_text(controllers[number])
+        expect(page.locator('#controllerInfo .controller-meta')).to_contain_text('현대위아' if number in ['1','2','3','7','8','9','10','12','13','14'] else '장비 제조사: 미확인')
+        page.locator('#controllerInfo summary').click()
+        expect(page.locator('#controllerInfo .controller-features')).to_be_visible()
+        assert page.locator('#controllerInfo .controller-sources a').count()>=1
+        assert all(link.startswith('https://') for link in page.locator('#controllerInfo .controller-sources a').evaluate_all('(els)=>els.map(e=>e.href)'))
+        if number in ['11','12','15']:
+            expect(page.locator('#linkSlot')).to_contain_text(number+'호기는 아직')
+            expect(page.locator('#dType')).to_have_text('타입 미확인')
+            page.locator('#machine-codes summary').click()
+            expect(page.locator('#mc .unknown')).to_have_count(12)
+            expect(page.locator('#mc .none')).to_have_count(0)
+            expect(page.locator('#dNote')).not_to_contain_text('M03=역회전')
+        if number!='5':expect(page.locator('#machineSetup')).to_be_hidden()
         if program:
             expect(page.locator('#linkSlot>.assignment-card')).to_have_attribute('data-program',program)
             expect(page.locator('#linkSlot>.assignment-card a.primary')).to_have_attribute('href',program.lower()+'.html?machine='+number)
@@ -70,25 +117,52 @@ with sync_playwright() as p:
     page.goto(base+'o0500.html')
     expect(page.locator('.program-location')).to_contain_text('보관용')
     page.goto(base+'machines.html')
+    expect(page.locator('#controllerOverview details')).to_have_count(6)
+    page.locator('#controllerOverview [data-controller="smart-plus"] summary').click()
+    expect(page.locator('#controllerOverview [data-controller="smart-plus"]')).to_contain_text('내부 FANUC 세부 모델은 미확인')
+    page.screenshot(path=str(out/'controllers-desktop.png'),full_page=True)
     page.locator('[data-machine="6"]').focus();page.keyboard.press('Enter')
     expect(page.locator('#dNo')).to_have_text('6')
     page.locator('.back').click();expect(page.locator('#select')).to_be_visible()
     page.evaluate('navigator.serviceWorker.ready');page.wait_for_function('navigator.serviceWorker.controller!==null')
     context.set_offline(True)
+    page.goto(base+'machines.html#layout')
+    expect(page.locator('.floor-machine')).to_have_count(15)
+    layout_photo='docs/evidence/factory-layout-20260911.png'
+    digest=page.evaluate("async url=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await (await fetch(url)).arrayBuffer()))).map(x=>x.toString(16).padStart(2,'0')).join('')",layout_photo)
+    assert digest==hashlib.sha256((root/layout_photo).read_bytes()).hexdigest()
     page.goto(base+'index.html');expect(page.locator('[data-machine="5"]')).to_be_visible()
     page.locator('[data-machine="5"]').click();expect(page.locator('[data-program="O0600"]')).to_be_visible()
+    expect(page.locator('#machineSetup')).to_contain_text('-752.942')
+    expect(page.locator('#controllerInfo h3')).to_have_text('FANUC Series 0i-TD')
+    page.locator('#controllerInfo summary').click()
+    expect(page.locator('#controllerInfo .controller-features')).to_contain_text('Nano CNC')
+    photo='docs/evidence/unit5-geometry-20260911.png'
+    digest=page.evaluate("async url=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await (await fetch(url)).arrayBuffer()))).map(x=>x.toString(16).padStart(2,'0')).join('')",photo)
+    assert digest==hashlib.sha256((root/photo).read_bytes()).hexdigest()
     page.locator('[data-program="O0600"] a.primary').click()
     expect(page.locator('.program-location')).to_contain_text('5호기')
     expect(page.locator('#copy-source')).to_be_enabled()
     context.set_offline(False)
     phone=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     mobile=phone.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
-    for target in ['index.html','machines.html#m5','o0600.html?machine=5','machines.html#m3','o0852.html?machine=1']:
+    for target in ['index.html','machines.html#m5','o0600.html?machine=5','machines.html#m3','o0852.html?machine=1','machines.html#m12','machines.html#m15','machines.html','machines.html#layout']:
         mobile.goto(base+target)
+        if target.startswith('machines.html#m'):
+            mobile.locator('#controllerInfo summary').click()
+        if target=='machines.html':
+            mobile.locator('#controllerOverview summary').evaluate_all('(els)=>els.forEach(e=>e.parentElement.open=true)')
         assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth'),target
         if target=='index.html':mobile.screenshot(path=str(out/'home-mobile.png'),full_page=True)
         if target=='machines.html#m5':mobile.screenshot(path=str(out/'unit5-mobile.png'),full_page=True)
+        if target=='machines.html#m12':mobile.screenshot(path=str(out/'unit12-mobile.png'),full_page=True)
+        if target=='machines.html#layout':
+            mobile.screenshot(path=str(out/'factory-layout-mobile.png'),full_page=True)
+            mobile.locator('[data-floor-machine="15"]').tap()
+            expect(mobile.locator('#dNo')).to_have_text('15')
+            mobile.locator('.back').tap()
+            expect(mobile.locator('#factoryLayout')).to_be_visible()
     browser.close()
 server.shutdown()
 assert not errors,errors
-print(json.dumps({'passed':['12 assignments','unit 5 active/item/archive groups','program/subprogram sets','tool roles','M codes','query context','reference-machine labels','keyboard','mobile','offline'],'errors':errors,'screenshots':str(out)},ensure_ascii=False))
+print(json.dumps({'passed':['15 machines and controller mappings','6 sourced controller profiles','unknown programs and M codes remain unknown','unit 5 active/item/archive groups','program/subprogram sets','tool roles','M codes','query context','reference-machine labels','keyboard','mobile','offline'],'errors':errors,'screenshots':str(out)},ensure_ascii=False))

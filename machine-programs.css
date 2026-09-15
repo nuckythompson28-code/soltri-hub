@@ -3,6 +3,7 @@
 .assignment-tile:hover,.assignment-tile:focus-visible{border-color:#ff8c42;outline:2px solid #ff8c42;outline-offset:2px}
 .assignment-tile .unit{font-size:20px;font-weight:800;line-height:1.2}.assignment-tile .unit small{font-size:12px;color:#a9b7c6}
 .assignment-tile .program-id{font:700 15px Consolas,monospace;color:var(--program-color,#8a97a6)}
+.assignment-tile .assignment-controller{font:600 11px/1.5 Consolas,"맑은 고딕",sans-serif;color:#e0e9f5;border-top:1px solid #425166;padding-top:6px;margin-top:auto;width:100%;overflow-wrap:anywhere}
 .assignment-tile .assignment-kind{font-size:11px;line-height:1.4;color:#a9b7c6}.assignment-tile[data-machine="5"]{border-color:#a76534;background:#251d17}
 .assignment-help{font-size:13px;color:#a9b7c6;line-height:1.6;margin:8px 0 14px}.assignment-heading{font-size:21px;margin:0;color:#e4ebf3;line-height:1.4}
 .assignment-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px}.assignment-top a{color:#77c8ff;font-size:12px;white-space:nowrap}

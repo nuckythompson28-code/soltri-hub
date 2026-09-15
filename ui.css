@@ -1,0 +1,227 @@
+/* Kim Factory: light operations UI. Scoped screen rules preserve the printable documents. */
+@media screen {
+  :root{color-scheme:light;--bg:#f3f5f8;--bg2:#edf1f5;--bg-2:#edf1f5;--panel:#fff;--panel2:#f0f3f7;--card:#fff;--card-2:#f0f3f7;--header:#fff;--line:#d6dee8;--line-2:#a6b4c4;--txt:#202c3b;--text:#202c3b;--dim:#536477;--muted:#536477;--accent:#175cd3;--accent2:#805600;--accent-2:#175cd3;--accentbg:#edf4ff;--blue:#175cd3;--cyan:#006b83;--gold:#805600;--amber:#805600;--green:#187044;--run:#187044;--red:#b42318;--down:#b42318;--danger:#b42318;--warn:#805600;--check:#805600;--stop:#536477;--ok:#187044;--open:#b42318;--progress:#805600;--done:#187044;--purple:#6b3fb5;--comment:#58677a;--num:#175cd3;--shadow:0 2px 8px #172b4d0a}
+  .kim-ui{margin:0;padding:64px 0 0;min-height:100vh;max-width:none;height:auto;background:var(--bg);background-image:none;color:var(--txt);font:15px/1.65 "Segoe UI","맑은 고딕","Apple SD Gothic Neo",system-ui,sans-serif}
+  .kim-ui *{box-sizing:border-box;text-shadow:none!important}
+  .kim-ui [hidden]{display:none!important}
+  .kim-ui a{color:var(--accent);text-underline-offset:3px}
+  .kim-ui :is(h1,h2,h3,h4){color:var(--txt);letter-spacing:-.025em;line-height:1.4}
+  .kim-ui h1{font-family:inherit;font-size:28px;font-weight:750}
+  .kim-ui h2{font-size:21px}
+  .kim-ui :is(button,input,select,textarea){font-family:inherit}
+  .kim-ui :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=range])){min-height:44px}
+  .kim-ui :is(button,select,input,textarea){border-color:var(--line-2);border-radius:6px}
+  .kim-ui :is(input,select,textarea){background:var(--panel);color:var(--txt)}
+  .kim-ui input::placeholder,.kim-ui textarea::placeholder{color:#65758a;opacity:1}
+  .kim-ui :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #175cd3;outline-offset:3px}
+  .kim-ui :is(.muted,.sub,.subtitle,.foot,.brand-sub,.source,.hint,.pending,.scope-note){color:var(--dim)}
+  .kim-ui>.wrap{width:100%;max-width:1200px;margin:0 auto;padding:32px 28px 64px}
+  .kim-ui.kim-doc>.wrap,.kim-document{max-width:960px;margin:auto;padding:32px 24px 64px}
+  .kim-ui>main{padding-top:28px}
+  .kim-ui :is(.top,.dtop){margin-bottom:12px}
+  .kim-ui :is(.top .home,.back){font-family:inherit;font-size:14px;color:var(--dim)}
+  .kim-ui .sub{font-size:15px;margin:8px 0 24px;line-height:1.7}
+  .kim-ui :is(.btn,.actions a,.assignment-actions a,.setup-links a){border-radius:6px;font-size:14px;line-height:1.6;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;background:var(--panel);color:var(--txt);border:1px solid var(--line-2);box-shadow:none}
+  .kim-ui :is(.btn,.actions a,.assignment-actions a,.setup-links a):hover{background:#f0f5ff;border-color:var(--accent)}
+  .kim-ui :is(.assignment-actions a.primary,.actions a.primary,.kim-primary){background:#175cd3;color:#fff;border-color:#175cd3}
+  .kim-ui :is(.assignment-actions a.primary,.actions a.primary,.kim-primary):hover{background:#124ba8}
+  .kim-ui summary{color:var(--txt);font-size:15px;min-height:40px;align-content:center}
+  .kim-ui :is(.card,.panel,.box,.step,.metric,.metrics article,.mtile,.issue,.add,.sheet,.calc,.why,.result,.scell){background:var(--panel);color:var(--txt);border-color:var(--line);box-shadow:none;border-radius:8px}
+  .kim-ui :is(.tip,.check,.summary,.bigmsg,.hl,.info,.explain,.lead,.notice,.warn,.safety,.note,.exp){background:#edf4ff;color:#23436b;border-color:#b6cceb;box-shadow:none;border-radius:6px}
+  .kim-ui :is(.warn,.notice,.note,.check){background:#fffaed;color:#694807;border-color:#ead397}
+  .kim-ui :is(.safety,.step.safety){background:#fff2f0;color:#98271d;border-color:#efb5af}
+  .kim-ui .step .why{background:#eef8f1;color:#226240}
+  .kim-ui :is(.key,.k,.badge,.tagbadge,.step .no){background:#edf2f8;color:#36506f;border-color:#bdc9d8;box-shadow:none}
+  .kim-ui :is(table,.tablewrap){color:var(--txt);border-color:var(--line);background:var(--panel)}
+  .kim-ui :is(th,table.m th){background:#eaf0f6;color:#253b53;font-weight:700}
+  .kim-ui :is(th,td){border-color:var(--line)}
+  .kim-ui tbody tr:hover td{background:#f6f9fd}
+  .kim-ui tr.on td,.kim-ui #compare td:first-child{background:#edf4ff;color:#20416b}
+  .kim-ui .tablewrap{border-radius:6px}
+  .kim-ui :is(.program-location,.assignment-card,.assignment-empty,.assignment-group,.machine-setup,.controller-card){background:#fff;color:var(--txt);border-color:var(--line);border-radius:8px;box-shadow:none}
+  .kim-ui .assignment-card{border-left:3px solid #7894b7;padding:22px;margin:0 0 20px}
+  .kim-ui .assignment-card h2{color:#183b65;font-size:28px}
+  .kim-ui :is(.assignment-card p,.assignment-card .assignment-tools,.assignment-help,.assignment-kind,.controller-scope,.controller-meta,.controller-source-label,.controller-overview>p,.controller-features dd,.machine-setup p,.machine-setup .setup-basis){color:var(--dim);font-size:14px}
+  .kim-ui :is(.assignment-card .assignment-tools,.machine-setup .setup-controller){color:var(--txt);font-weight:650}
+  .kim-ui .assignment-status{background:#eaf2ff;color:#194b94;border-radius:4px;font-size:12px}
+  .kim-ui .assignment-status.archive{background:#f0f1f4;color:#566172}
+  .kim-ui .assignment-set{background:#f3f6fa;color:#334b68;font-size:13px;border-radius:4px}
+  .kim-ui .assignment-note{background:#fffaed;color:#694807!important;border-color:#c9a84f;font-size:13px!important}
+  .kim-ui .assignment-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0 28px}
+  .kim-ui .assignment-tile,.kim-ui .assignment-tile[data-machine="5"]{padding:18px 16px;gap:8px;border-radius:8px;background:#fff;border:1px solid var(--line);box-shadow:0 1px 2px #172b4d04;color:var(--txt);min-height:172px;position:relative}
+  .kim-ui .assignment-tile:hover{background:#f7faff;border-color:#6797d3;outline:none;box-shadow:0 3px 10px #172b4d0b}
+  .kim-ui .assignment-tile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .kim-ui .assignment-tile .unit{font-size:21px;color:#24374e;font-weight:750}
+  .kim-ui .assignment-tile .program-id{color:#204c83;font:650 16px/1.4 Consolas,monospace}
+  .kim-ui .assignment-tile .assignment-kind{color:#536477;font-size:12px}
+  .kim-ui .assignment-tile .assignment-controller{font:500 12px/1.55 "Segoe UI","맑은 고딕",sans-serif;color:#43576f;border-color:#e0e7f0;padding-top:9px}
+  .kim-ui .assignment-heading{font-size:22px;color:var(--txt)}
+  .kim-ui .assignment-top{margin:0;align-items:center}
+  .kim-ui :is(.assignment-top a,.factory-layout-link){color:#175cd3;font-size:14px}
+  .kim-ui .program-location{padding:15px 18px;border-left:3px solid #739bd0;background:#f4f8fe}
+  .kim-ui .program-location strong{color:#1d4e89}.kim-ui .program-location p{color:#445b76;font-size:13px}
+  .kim-ui .program-location a{color:#204c83;border-color:#b6c8e0;background:#fff;border-radius:4px}
+  .kim-ui .program-location a[aria-current=true]{background:#175cd3;color:#fff}
+  .kim-ui :is(.controller-card h3,.controller-card summary,.controller-card summary small,.controller-overview h2,.controller-features dt,.machine-setup h3){color:#24374e}
+  .kim-ui .controller-card h3{font:700 18px/1.5 "Segoe UI","맑은 고딕",sans-serif}
+  .kim-ui .controller-features>div{border-color:var(--line)}
+  .kim-ui .controller-sources a{color:#175cd3;font-size:13px}
+  .kim-ui .setup-geometry-cards article{background:#f4f6f9;border-color:var(--line);border-radius:5px}
+  .kim-ui .setup-geometry-cards :is(b,dd){color:#24374e}.kim-ui .setup-geometry-cards :is(dt,small){color:#536477}
+  .kim-ui .setup-geometry-cards{grid-template-columns:1fr;gap:8px}
+  .kim-ui .setup-geometry-cards b{min-height:0}
+  .kim-ui .mcrow{background:#fff;border:1px solid var(--line);border-radius:5px;padding:12px}
+  .kim-ui .mcrow .fn{color:#43576f;font-size:12px}.kim-ui .mcrow .code{color:#204c83}
+  .kim-ui .mcrow.none{opacity:1;background:#f4f6f8}.kim-ui .mcrow.none .code,.kim-ui .mcrow.unknown .code{color:#536477}
+  .kim-ui .mcrow.std{border-color:#acc7bc}.kim-ui .mcrow.std .code{color:#187044}
+  .kim-ui .machine-views{border-bottom:1px solid var(--line);gap:0;margin:24px 0;background:transparent}
+  .kim-ui .machine-views a{flex:0 1 auto;padding:12px 24px;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:#536477;font-size:15px}
+  .kim-ui .machine-views a[aria-current=page]{border-bottom-color:#175cd3;background:transparent;color:#175cd3}
+  .kim-ui .floor-heading h2,.kim-ui .floor-heading>span{color:#24374e}
+  .kim-ui :is(.floor-help,.floor-caption,.floor-key){color:#536477}
+  .kim-ui .floor-canvas{background-color:#fff;border-color:#8e9fb3;background-image:linear-gradient(to right,#e1e7ee 1px,transparent 1px),linear-gradient(to bottom,#e1e7ee 1px,transparent 1px)}
+  .kim-ui .floor-machine{background:#e0ede5;border-color:#688e75;color:#21492f}
+  .kim-ui .floor-machine:hover,.kim-ui .floor-machine:focus-visible{background:#c7e0d1;outline-color:#175cd3}
+  .kim-ui .floor-aisle{background:#f1e7c9;border-color:#b5a779;color:#584513}
+  .kim-ui .floor-key-machine{background:#e0ede5}.kim-ui .floor-key-aisle{background:#f1e7c9}
+  .kim-ui .factory-layout{max-width:690px;margin:24px auto;padding:24px;background:#fff;border:1px solid var(--line);border-radius:8px}
+  .kim-ui .floor-source{color:#175cd3}
+  .kim-ui .dno{color:#253b53;font-family:inherit;font-size:36px}
+  .kim-ui .dhogi{color:#43576f}.kim-ui .dtype{color:#536477;background:#edf1f6;border-color:var(--line);font-size:12px}
+  .kim-ui .dprog{color:#204c83;font-size:15px;margin:0 0 24px}
+  .kim-ui .machine-detail-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:24px;align-items:start}
+  .kim-ui .machine-equipment{min-width:0}.kim-ui .machine-equipment .controller-card{margin-top:0}
+  .kim-ui .directory-tools{display:flex;align-items:end;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:16px}
+  .directory-tools label{display:grid;gap:5px;font-size:12px;color:#43576f;font-weight:600}
+  .directory-tools .directory-search{flex:1;min-width:170px}
+  .directory-tools :is(input,select){width:100%;padding:9px 12px;font-size:14px}
+  .directory-tools [role=status]{font-size:12px;color:#536477;margin:0 0 10px auto}
+  .directory-tools button{background:#fff;color:#43576f;border:1px solid var(--line-2);padding:9px 14px;cursor:pointer}
+  .directory-empty{flex-basis:100%;margin:0;padding:12px;background:#f4f7fb;color:#43576f;font-size:14px}
+  .kim-header{position:fixed;inset:0 0 auto;z-index:90;display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:64px;padding:0 28px;background:#fff;border-bottom:1px solid #d6dee8;box-shadow:none;color:#24374e}
+  .kim-header .kim-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#233a55;white-space:nowrap;font-size:18px;font-weight:800;line-height:1.2;letter-spacing:-.04em}
+  .kim-header .kim-brand small{display:block;font-size:10px;letter-spacing:.03em;font-weight:500;color:#65758a;margin-top:4px}
+  .kim-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:6px;color:#fff;background:#244b78}
+  .kim-header svg{width:20px;height:20px;flex-shrink:0}
+  .kim-nav{display:flex;align-items:center;gap:4px;padding:0;margin:0}
+  .kim-header .kim-nav a{min-height:44px;padding:10px 12px;display:flex;align-items:center;gap:7px;color:#536477;font-size:14px;font-weight:600;text-decoration:none;border-radius:5px;white-space:nowrap}
+  .kim-header .kim-nav a:hover{background:#f2f5fa;color:#234b7c}
+  .kim-header .kim-nav a[aria-current=page]{background:#eaf2ff;color:#175cd3}
+  .kim-header .kim-menu{display:none;padding:8px 14px;color:#334b68;background:#fff;border:1px solid #a6b4c4;font-size:14px;cursor:pointer}
+  .kim-ui.kim-home>.wrap{max-width:1240px}
+  .home-intro{display:flex;align-items:end;justify-content:space-between;gap:32px;margin:4px 0 30px}
+  .home-eyebrow{color:#536477;font-size:13px;font-weight:600;letter-spacing:.04em;margin:0 0 5px}
+  .kim-home .home-intro h1{font-size:32px;margin:0 0 8px}
+  .home-intro p:last-child{color:#536477;font-size:15px;margin:0}
+  .inventory-summary{display:flex;gap:28px;flex-shrink:0;border-left:1px solid #ccd6e2;padding-left:28px}
+  .inventory-summary div{display:grid;gap:1px}
+  .inventory-summary dt{font-size:12px;color:#536477}
+  .inventory-summary dd{margin:0;font:600 27px/1.4 "Segoe UI",sans-serif;color:#243b56}
+  .inventory-summary dd small{font-size:12px;margin-left:4px;font-weight:500}
+  .kim-ui .home-section{margin-bottom:32px}
+  .kim-home .section-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 8px}
+  .kim-home .section-heading h2{font-size:21px;margin:0}
+  .kim-home .section-heading p{font-size:13px;color:#536477;margin:4px 0}
+  .kim-home .section-heading a{font-size:14px;white-space:nowrap}
+  .kim-home .quick-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:26px 0 36px}
+  .kim-home .quick-link{display:flex;align-items:center;gap:14px;padding:18px;background:#fff;border:1px solid #d6dee8;border-radius:8px;text-decoration:none;color:#24374e}
+  .quick-link>span:first-child,.tool-link .tool-icon{display:grid;place-items:center;width:40px;height:40px;flex-shrink:0;background:#edf3fa;border-radius:6px;color:#365d8b}
+  .kim-ui [data-ui-icon] svg{width:22px;height:22px}
+  .quick-link strong{display:block;font-size:15px}.quick-link small{display:block;font-size:12px;color:#536477;margin-top:3px}
+  .quick-link:hover,.tool-link:hover{border-color:#739bd0!important;background:#f8fbff!important}
+  .kim-home .tool-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+  .tool-group{background:#fff;border:1px solid #d6dee8;border-radius:8px;padding:20px}
+  .kim-home .tool-group h3{font-size:15px;margin:0 0 12px;color:#43576f}
+  .tool-link{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #e3e9f1;text-decoration:none;color:#24374e!important}
+  .tool-link strong{display:block;font-size:14px;font-weight:650}.tool-link small{display:block;font-size:12px;color:#536477;margin-top:2px}
+  .kim-home .home-foot{margin-top:36px;border-top:1px solid #d6dee8;padding-top:20px;font-size:12px;color:#536477}
+  .kim-ui .controller-overview{margin-top:36px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  .kim-ui .controller-overview>h2,.kim-ui .controller-overview>p{grid-column:1/-1;margin:0}
+  .kim-ui .controller-overview .controller-card{margin:0}
+  /* Program analysis keeps its own section navigation and readable code surface. */
+  .kim-program .app{height:calc(100dvh - 64px);grid-template-columns:244px minmax(0,1fr)}
+  .kim-program .sidebar{background:#fff;border-color:#d6dee8}
+  .kim-program .main{padding:28px 32px 70px}
+  .kim-program .nav a.active{background:#eaf2ff;color:#175cd3}
+  .kim-program .nav a{border-radius:4px;min-height:44px}
+  .kim-program :is(.ln:hover,.ln.selected,.ln.block){background:#edf4fb}
+  .kim-program .ln.flash{background:#fff0bb}
+  .kim-program .cm,.kim-program .gut{color:#596a7e}
+  .kim-program #tip{background:#24374e;color:#fff;border-color:#496687}
+  .kim-program .batch .active{background:#eaf2ff}
+  .kim-program .menu-btn{top:76px}
+  .kim-ui :is(pre,.code,.calc){background:#f7f9fc;color:#24374e;border-color:#d6dee8}
+  .kim-ui .source .uncertain{color:#6c4900;background:#fff0c4;border-color:#c68e14}
+  .kim-ui .before{background:#fff1ef;color:#832c23}.kim-ui .after{background:#eef8f2;color:#1c5837}
+  .kim-ui :is(.where,#copyStatus){color:#235a7b}
+  .kim-ui .steps li{background:#fff;border-color:var(--line)}
+  .kim-ui .steps li::before{background:#175cd3;color:#fff}
+  .kim-ui :is(.hl code,.steps code,.warn code){background:#edf2f8;color:#204c83;border-color:#c8d4e2}
+  .kim-ui .opt.correct{background:#edf8f0;color:#185832}.kim-ui .opt.wrong{background:#fff1ef;color:#98271d}
+  .kim-ui :is(.mtile .n,.mtile.down .n){color:#24374e}
+  .kim-ui .mtile :is(.badge,.st){box-shadow:none}
+  .kim-ui .mtile .badge,.kim-ui .add .save{color:#fff}
+  .kim-ui .mtile.stop .st,.kim-ui .stbtns button.sel[data-s=stop]{color:#536477}
+  .kim-ui :is(.shead .close,.stbtns button,.issue .ck,.kinds button,.toast){background:#f2f5f9;color:#43576f;border-color:#b1bfd0;box-shadow:none}
+  .kim-ui .issue.done .ck{background:#187044;color:#fff}
+  .kim-ui .issue:not(.done) .ck{color:transparent}
+  .kim-ui .header{background:#fff;border-color:var(--line)}
+  .kim-ui .header .source{color:#536477}
+  .kim-ui .header .header-meta{color:#536477}
+  /* Keep the machining canvas dark; surrounding controls share the light UI. */
+  .kim-simulator>header:not(.kim-header){background:#fff;padding:18px 24px}
+  .kim-simulator :is(.tool-card,.view-tools,.now){background:#f1f5fa;color:#43576f}
+  .kim-simulator .tool-card.active{background:#eaf2ff;border-color:#175cd3;box-shadow:inset 3px 0 #175cd3}
+  .kim-simulator .tool-card b{color:#24374e}
+  .kim-simulator :is(.running-code,.code-position,.gang-help){background:#eaf2fb;color:#334e70;border-color:#b7cce5}
+  .kim-simulator :is(.running-code code,.gang-help strong,.equipment-details>summary,.now p){color:#24374e}
+  .kim-simulator .load-status{background:#edf8f1;color:#21653f}.kim-simulator .load-status.error{background:#fff1ef;color:#98271d}
+  .kim-simulator .view-tools button[aria-pressed=true]{background:#dfeaff;border-color:#175cd3;color:#194b94}
+  .kim-simulator .controls .play{background:#175cd3;border-color:#175cd3;color:#fff}
+  .kim-simulator #lineList{background:#f8fafc;color:#273d56}
+  .kim-simulator #lineList .ln.cur{background:#dbeaff;color:#123f7a;border-color:#175cd3}
+  .kim-simulator #lineList .ln.cmt,.kim-simulator .gut{color:#5c6f85}
+  .kim-simulator #editor{background:#f8fafc;color:#273d56}
+  .kim-simulator .ln:hover{background:#eaf1f9}
+  .kim-simulator .legend-key{color:#43576f!important}
+  .kim-ui label{color:#43576f}
+  .kim-ui button,.kim-ui .file-button,.kim-ui button.cp{background:#fff;color:#334b68;border:1px solid #a6b4c4}
+  .kim-ui button.primary,.kim-ui .add .save{background:#175cd3;color:#fff;border-color:#175cd3}
+  .kim-ui button.danger{background:#b42318;color:#fff;border-color:#b42318}
+  .kim-ui .seg{background:#f0f4f9;border-color:#b9c8da}
+  .kim-ui .seg button{background:transparent;border:0}
+  .kim-ui .seg button.active{background:#175cd3;color:#fff}
+  .kim-ui .tile-error{color:#43576f}
+  .kim-ui .tile-error.empty{color:#536477}
+  .kim-ui .chogi,.kim-ui table.m td:first-child{color:#6b4f13}
+  .kim-ui .vbox.vok{background:#edf8f0;color:#21583a;border-color:#9bc6aa}
+  .kim-ui .vbox.vng{background:#fff1ef;color:#98271d;border-color:#d9a6a0}
+  .kim-ui .ln.ctx .src{color:#536477}
+  .kim-ui .ln.anchor{background:#eaf2ff}
+  .kim-ui .ln.anchor :is(.src,.tag){color:#194f97}
+  .kim-ui .ln.add{background:#edf8f0}
+  .kim-ui .ln.add :is(.src,.tag){color:#21643e}
+  .kim-ui .big{color:#88450f}
+  .kim-ui .kim-document .mc .st,.kim-ui .kim-document .c{color:#536477}
+  .kim-ui .kim-document .mc.done .st{color:#187044}
+  .kim-ui .note b[style]{color:#694807!important}
+  .kim-ui .patch h2>span{background:#175cd3;color:#fff}
+  .kim-ui .error{color:#b42318}
+  .kim-ui .empty{color:#536477}
+  .kim-ui #tools{scroll-margin-top:88px}
+  .kim-ui .machine-title{display:flex;align-items:baseline;gap:6px;margin:0}
+  .kim-ui .status-open,.kim-ui .sev-high{background:#fff0ee;color:#a12b21}
+  .kim-ui .status-progress,.kim-ui .sev-mid{background:#fff4d4;color:#755209}
+  .kim-ui .status-done{background:#e8f5ed;color:#21643e}
+  .kim-ui .sev-low,.kim-ui .recur-badge{background:#eaf1f8;color:#36506f}
+  .kim-ui .table-wrap .row-actions{white-space:nowrap}
+  .kim-ui .table-wrap .row-actions button{white-space:nowrap}
+  @media(min-width:761px){.kim-ui .table-wrap table{min-width:1450px}.kim-ui .table-wrap th{white-space:nowrap}.kim-ui .table-wrap td:nth-child(1){min-width:84px}.kim-ui .table-wrap td:nth-child(2){min-width:75px}.kim-ui .table-wrap td:nth-child(7){min-width:65px}}
+  @media(min-width:1500px){.kim-header{padding-inline:max(28px,calc((100vw - 1440px)/2))}}
+  @media(max-width:1050px){.kim-header{padding:0 20px;gap:12px}.kim-header .kim-nav a{padding:10px 9px;font-size:13px}.kim-nav svg{display:none}.kim-ui .assignment-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kim-home .tool-groups{grid-template-columns:repeat(2,minmax(0,1fr))}.home-intro{gap:20px}.inventory-summary{gap:18px;padding-left:20px}}
+  @media(max-width:800px){.kim-header .kim-menu{display:block}.kim-nav{display:none}.kim-menu-open .kim-nav{display:grid;grid-template-columns:1fr 1fr;position:absolute;inset:63px 0 auto;padding:12px 16px;background:#fff;border-bottom:1px solid #bccadc;box-shadow:0 8px 16px #172b4d14}.kim-header .kim-nav a{font-size:14px;padding:12px}.kim-nav svg{display:block}.kim-ui .machine-detail-grid{grid-template-columns:1fr}.home-intro{display:block}.inventory-summary{margin:22px 0 0;padding:16px 0 0;border-left:0;border-top:1px solid #d6dee8;gap:32px}.kim-home .quick-links{grid-template-columns:1fr}.kim-ui .controller-overview{grid-template-columns:1fr}}
+  @media(max-width:760px){.kim-program .app{display:block;height:auto}.kim-program .sidebar{top:64px;height:calc(100dvh - 64px)}.kim-program .main{padding:70px 16px 60px}.kim-program .page{max-width:100%}.kim-ui.kim-program h1{font-size:23px}}
+  @media(max-width:600px){.kim-ui>.wrap,.kim-ui.kim-doc>.wrap,.kim-document{padding:24px 16px 48px}.kim-ui h1,.kim-home .home-intro h1{font-size:26px}.kim-ui .assignment-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kim-ui .assignment-tile{padding:15px 13px;min-height:162px}.kim-ui .assignment-tile .unit{font-size:20px}.kim-home .tool-groups{grid-template-columns:1fr}.kim-home .section-heading{align-items:start}.kim-home .section-heading h2{font-size:20px}.kim-ui .directory-tools{padding:12px;gap:10px}.directory-tools .directory-search{flex-basis:100%;min-width:0}.directory-tools label:not(.directory-search){flex:1;min-width:0}.directory-tools [role=status]{flex-basis:100%;margin:0}.kim-ui .factory-layout{padding:16px 10px}.kim-ui .floor-canvas{max-width:100%}.kim-ui .machine-views a{flex:1;padding:12px;font-size:14px}.kim-ui .assignment-card{padding:18px}.kim-ui .assignment-actions{gap:8px}.kim-ui .mc{gap:6px}.kim-ui .mcrow{padding:9px;gap:5px}.kim-ui .mcrow .fn{font-size:11px}.kim-ui .controller-card,.kim-ui .machine-setup{padding:16px}.kim-header{padding:0 16px}.kim-ui .controller-overview{gap:12px}}
+  @media(prefers-reduced-motion:reduce){.kim-ui *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+}
+@media print{.kim-header{display:none!important}.kim-ui{padding-top:0!important}.directory-tools,.machine-views{display:none!important}}

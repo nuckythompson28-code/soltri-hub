@@ -8,7 +8,9 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 @media(max-width:760px){.sidebar{padding-top:64px}}
 </style><link rel="stylesheet" href="machine-programs.css">
-</head><body>
+<link rel="stylesheet" href="ui.css">
+<script src="ui.js" defer></script>
+</head><body class="kim-ui kim-program">
 <button class="menu-btn" id="menuBtn" aria-label="메뉴" aria-expanded="false" aria-controls="sidebar">☰</button><div class="backdrop" id="backdrop"></div>
 <div class="app"><aside class="sidebar" id="sidebar"><div class="brand">O0600 · 5호기</div><div class="brand-sub">O8000 방식 · 메인 + 서브 1개</div><nav class="nav" id="nav" aria-label="O0600 분석">
 <a href="#overview" data-page="overview" class="active">📊 개요·공구 구성</a><a href="#setup" data-page="setup">📝 입력과 가공 순서</a><a href="#O0600" data-page="O0600">O0600 · 메인 입력</a><a href="#O9050" data-page="O9050">O9050 · 풀커팅 로직</a><a href="#vars" data-page="vars">📖 변수 사전</a><a href="#validation" data-page="validation">🔎 검증과 변경점</a><a href="simulator.html?program=O0600">🎬 가공 시뮬레이터</a><a href="o0500.html">↔ O0500 · O0400 방식</a><a href="o8000.html">← 6호기 O8000 원본</a><a href="o2026.html">← 5호기 O2026 참고</a><a href="machines.html#m5">🕹️ 5호기 M코드</a><a href="index.html">🏭 김공장 홈</a></nav></aside>
@@ -23,7 +25,7 @@
 <p class="muted">기본 치수·절삭조건은 O8000 예시입니다. 실제 면취 C값은 T2 면취기의 날 형상과 보정으로 결정됩니다. 계산·좌표 검사를 마쳤으며 5호기 실기 검증 전입니다.</p>
 <div class="actions"><a class="btn" href="simulator.html?program=O0600">🎬 T1 → T2 → T3 가공 보기</a><a class="btn" href="programs/o0600/README.txt" download>↓ 상세 설명 TXT</a><a class="btn" href="o0500.html">O0500 · O0400 방식 보기</a></div>
 </section>
-<section class="page" id="page-setup" hidden><h1>입력과 가공 순서</h1><div class="tip">O8000의 변수 배치를 기준으로, 면취 회전수는 <b>T2</b>, 절단 회전수는 <b>T3</b>에 적용합니다.</div>
+<section class="page" id="page-setup" hidden><p class="tip">2026-09-15: O9050 프로그램별 167행만 G00 X-[#508] T02;로 변경했습니다. 154행과 168행, #118=0은 유지합니다. 절단 직후 T02 면취 X 위치로 이동한 뒤 공구대가 Z축으로 후퇴합니다. 묶음 마지막에도 같은 X 이동을 합니다. 사용자는 실기 동선이 좋아졌다고 보고했으며, 가공시간 단축과 T 보정 전환의 실제 축 동작은 별도로 계측하지 않았습니다.</p><h1>입력과 가공 순서</h1><div class="tip">O8000의 변수 배치를 기준으로, 면취 회전수는 <b>T2</b>, 절단 회전수는 <b>T3</b>에 적용합니다.</div>
 <div class="tablewrap"><table><thead><tr><th>변수</th><th>의미</th><th>기본값</th></tr></thead><tbody>
 <tr><td>#101 / #102</td><td>소재 외경 / 내경</td><td>80 / 68</td></tr><tr><td>#103 / #104</td><td>완성 외경 / 내경</td><td>74.90 / 70</td></tr><tr><td>#105 / #106</td><td>제품 길이 / T3 날 폭</td><td>15 / 1.90</td></tr><tr><td>#120 / #107</td><td>총 수량 / 묶음 수량</td><td>13 / 3</td></tr><tr><td>#108 / #109 / #110</td><td>T1 보링 시작·끝 rpm / 이송</td><td>1600 / 1600 / 0.11</td></tr><tr><td>#111 / #112 / #113</td><td>T2 면취 시작·끝 rpm / 이송</td><td>1600 / 1600 / 0.09</td></tr><tr><td>#114 / #115 / #116</td><td>T3 절단 시작·끝 rpm / 이송</td><td>1600 / 1600 / 0.09</td></tr><tr><td>#119</td><td>T3 뒤쪽 외경 면취 C</td><td>0.55</td></tr><tr><td>#117</td><td>소재 길이 세팅 추가 정지 (1=사용)</td><td>0</td></tr><tr><td>#118</td><td>제품별 기준점 후퇴 (1=사용)</td><td>0</td></tr><tr><td>#121</td><td>짧은 소재 세팅 (1=길이 검사 생략)</td><td>0</td></tr><tr><td>#122</td><td>초기 황삭·마킹 생략 (1=생략)</td><td>0</td></tr><tr><td>#126</td><td>시스템 생산 카운터 제한 (1=사용)</td><td>0</td></tr>
 </tbody></table></div>

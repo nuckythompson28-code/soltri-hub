@@ -1,0 +1,20 @@
+.machine-setup{margin:14px 0;padding:16px;border:1px solid #47657a;border-radius:12px;background:#14232f;color:#edf3fa;line-height:1.65}
+.machine-setup h3{margin:0 0 8px;font-size:18px;color:#fff}.machine-setup p{margin:8px 0;font-size:13px}.machine-setup .setup-controller{font-weight:700;color:#d9efff;font-size:15px}
+.setup-geometry-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.setup-geometry-cards article{min-width:0;padding:12px;background:#0d1821;border:1px solid #40566a;border-radius:8px}.setup-geometry-cards b{display:block;color:#fff;font-size:13px}.setup-geometry-cards dl{margin:9px 0}.setup-geometry-cards dl div{display:flex;justify-content:space-between;gap:12px}.setup-geometry-cards dt{color:#c6d5e3}.setup-geometry-cards dd{margin:0;font:700 16px/1.6 Consolas,monospace;color:#fff}.setup-geometry-cards small{font-size:11px;color:#c6d5e3}.machine-setup .setup-basis{color:#c6d5e3;font-size:12px}.setup-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.setup-links a{padding:6px 10px;border:1px solid #637f95;border-radius:6px;color:#b6e0ff;text-decoration:none;font-size:12px}.setup-links a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:650px){.setup-geometry-cards{grid-template-columns:1fr}.machine-setup{padding:12px}.setup-geometry-cards article{padding:10px}}
+.setup-geometry-cards b{word-break:keep-all;min-height:3.3em}@media(max-width:650px){.setup-geometry-cards b{min-height:0}}
+.controller-card{margin:14px 0;padding:16px;border:1px solid #45566b;border-radius:12px;background:#161f2a;color:#edf3fa;font-size:13px;line-height:1.7}
+.controller-card h3{color:#fff;font:700 18px/1.5 Consolas,"맑은 고딕",sans-serif;margin:0 0 6px}
+.controller-card summary{cursor:pointer;color:#fff;font-weight:700;line-height:1.7}
+.controller-card summary:focus-visible{outline:2px solid #9cd7ff;outline-offset:5px}
+.controller-card summary small{display:block;color:#d5e5f5;font-size:13px;margin-left:17px}
+.controller-meta,.controller-source-label{color:#c8d6e5;font-size:12px;margin:6px 0 12px}
+.controller-scope{color:#d8e3f0;font-size:13px;line-height:1.75}
+.controller-features{margin:12px 0}.controller-features>div{padding:10px 0;border-top:1px solid #3b4a5e}
+.controller-features dt{font-weight:800;color:#fff;font-size:14px}
+.controller-features dd{margin:3px 0 0;color:#e2eaf3;word-break:keep-all;overflow-wrap:anywhere}
+.controller-sources{padding-left:18px;margin:6px 0 0;font-size:12px}
+.controller-sources a{color:#a8dbff;text-underline-offset:3px;overflow-wrap:anywhere}
+.controller-overview{margin:28px 0 0}.controller-overview h2{color:#fff;font-size:18px}
+.controller-overview>p{font-size:13px;color:#d8e3f0;line-height:1.75}
+.mcrow.unknown{border-color:#526177}.mcrow.unknown .code{color:#dce7f5;font-size:12px}

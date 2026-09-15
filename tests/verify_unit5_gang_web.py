@@ -24,6 +24,10 @@ with sync_playwright() as p:
     expect(page.locator('#codePanel')).to_be_visible()
     assert page.locator('#codePanel').bounding_box()['x']>=page.locator('.right').bounding_box()['x']+page.locator('.right').bounding_box()['width']
     assert page.evaluate('Object.keys(gangSnapshot().tools).join()')=='1,2,3'
+    assert page.evaluate('profile.setup===SoltriMachineSetups.unit5')
+    expect(page.locator('#simulatorSetup')).to_contain_text('FANUC Series 0i-TD')
+    expect(page.locator('#simulatorSetup [data-geometry-tool="2"] dd')).to_have_text(['-243.772','-542.340'])
+    expect(page.locator('#unit5SetupDetails summary')).to_be_visible()
     result=page.evaluate('''()=>{
       let motions=0,transitions=0,unknown=0,actuators=0,extendedCuts=0;
       const near=(a,b)=>{if(Math.abs(a-b)>1e-7)throw Error(a+' != '+b);};
@@ -38,7 +42,7 @@ with sync_playwright() as p:
           }
           const t2Local=UNIT5_GANG.t2RetractedZ+(UNIT5_GANG.tips[2].z-UNIT5_GANG.t2RetractedZ)*g.extension;
           near(g.tools[2].z-g.pose.z,t2Local);near(g.tools[2].r-g.pose.r,UNIT5_GANG.tips[2].r);
-          if(g.extension===1)near(g.tools[3].z-g.tools[2].z,2);
+          if(g.extension===1)near(g.tools[3].z-g.tools[2].z,3.86);
           if(s.seg){
             const p=pointAt(plotPts(s.seg),motionFraction(i,f)),tip=UNIT5_GANG.tips[s.state.toolNo];
             near(g.pose.z+tip.z,p[0]);near(g.pose.r+tip.r,p[1]);
@@ -54,7 +58,12 @@ with sync_playwright() as p:
         }
         if(s.seg?.tool===2&&s.seg.type===1){near(a.extension,1);near(b.extension,1);extendedCuts++;}
         if(s.seg)motions++;
-        if(isGangTransition(i)){transitions++;if(s.seg)throw Error('Schematic transition entered NC path');}
+        if(isGangTransition(i)){
+          transitions++;
+          const previous=gangFrames[i-1].to;
+          near(a.pose.z,previous.z);near(a.pose.r,previous.r);
+          if(!s.seg){near(a.pose.z,b.pose.z);near(a.pose.r,b.pose.r);}
+        }
         if(s.state.X==null||s.state.Z==null){unknown++;if(a.transition)throw Error('Invented reference motion');}
         if(s.act==='offset'&&i&&s.state.X!=null&&s.state.Z!=null){near(gangFrames[i].to.z,gangFrames[i-1].to.z);near(gangFrames[i].to.r,gangFrames[i-1].to.r);}
       });
@@ -80,7 +89,7 @@ with sync_playwright() as p:
         page.evaluate('(i)=>gotoStep(i)',index)
         assert page.evaluate('''()=>{const g=gangSnapshot();return Object.values(g.tools).every(p=>sx(p.z)>25&&sx(p.z)<CW-15&&sy(p.r)>28&&sy(p.r)<CH-32)}''')
         page.locator('.stage').screenshot(path=str(out/f'desktop-t{tool}.png'))
-        expect(page.locator('#tool-'+str(tool))).to_have_class('tool-card active')
+    expect(page.locator('#tool-'+str(tool))).to_have_class('tool-card active')
     page.screenshot(path=str(out/'desktop-live-program.png'),full_page=True)
     extend=page.evaluate('gangFrames.findIndex(f=>f.actuator&&f.extensionTo===1)')
     page.evaluate('(i)=>{gotoStep(i-1);play();}',extend)
@@ -107,6 +116,8 @@ with sync_playwright() as p:
     page.locator('#btnGang').click();expect(page.locator('#btnGang')).to_have_attribute('aria-pressed','true')
     page.locator('#sampleSel').select_option('O8000');page.wait_for_function("mainKey==='8000'")
     expect(page.locator('#btnGang')).to_be_hidden();expect(page.locator('#gangHelp')).to_be_hidden()
+    expect(page.locator('#unit5SetupDetails')).to_be_hidden()
+    expect(page.locator('#simulatorSetup [data-geometry-tool]')).to_have_count(0)
     assert page.evaluate('gangFrames.length')==0
     phone=browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
     mobile=phone.new_page();mobile.on('pageerror',lambda e:errors.append(str(e)))
@@ -130,6 +141,8 @@ with sync_playwright() as p:
       if(trace[i].seg||a.pose.z!==b.pose.z||a.pose.r!==b.pose.r)throw Error('M56 moved carriage');
       if(!(b.tools[2].z<a.tools[2].z)||a.tools[1].z!==b.tools[1].z||a.tools[3].z!==b.tools[3].z)throw Error('Head did not move independently');
       if(trace.find(s=>s.act==='tool').state.chamferExtended!==true)throw Error('T selection retracted head');
+      const ti=trace.findIndex(s=>s.act==='tool'),before=gangSnapshot(ti-1,1),after=gangSnapshot(ti,1);
+      if(Math.abs(before.pose.z-after.pose.z)>1e-7||Math.abs(before.pose.r-after.pose.r)>1e-7)throw Error('Standalone T03 moved carriage');
       if(gangFrames.filter(f=>f.actuator).length!==2)throw Error('Incorrect M events');
       return i;
     }''')

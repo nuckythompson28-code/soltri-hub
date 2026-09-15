@@ -41,14 +41,19 @@ G00 X-[#503] T03;
 G00 Z[#119-#522];
 G97 G00 X-[#103+1.] S#516 M03;''',
          after='N320 (T02 CHAMFER UNIT);\n'+between('N320 (T02 CHAMFER UNIT);','G98 G01 X-[#103] F[#516*#116];'),
-         note='G00 Z[-#521+20.];를 이미 지웠다면 삭제가 끝난 상태입니다. 이 구간의 #521=#521+#505;, #522=#522+#505;, #516=#114+#513*#523;는 각각 정확히 한 번만 둡니다. 아래의 G98 G01 X-[#103] F[#516*#116];부터 실제 절단·M12 구간은 그대로 둡니다.'),
+         note='G00 Z[-#521+20.];를 이미 지웠다면 삭제가 끝난 상태입니다. 이 구간의 #521=#521+#505;, #522=#522+#505;, #516=#114+#513*#523;는 각각 정확히 한 번만 둡니다. 아래의 G98 G01 X-[#103] F[#516*#116];부터 절삭 구간은 그대로 두고 절단 후 X 이동은 아래 4번 항목을 적용합니다.'),
+    dict(id='direct-chamfer',title='2026-09-15 · 절단 후 X 이동 한 줄 교체',
+         location='O9050 원본 167행. N330 안의 G01 X-[#504] M51; 다음, G00 W[#505+20.] M52; 바로 앞.',
+         action='이전 3구간 수정이 끝난 기계는 이 항목만 적용합니다. #118=0을 유지하고 167행만 교체합니다.',
+         before='G00 X-[#101+10.];',after='G00 X-[#508] T02;',
+         note='154행은 G97 G00 X-[#508] S#515 M03 T02; 그대로 유지합니다. 168행도 G00 W[#505+20.] M52; 그대로 두며 T03을 붙이지 않습니다. N320 앞에는 줄을 추가하지 않습니다. 묶음 마지막에도 T02 높이로 이동합니다. 실기 동선 개선은 사용자 보고이며 시간 단축은 미확인입니다.'),
 ]
 
 TITLE='5호기 패치파일 · O9050 수동 수정표'
-INTRO='대상: O0600이 호출하는 O9050 / T1 보링 · T2 면취 · T3 절단 / 2026-09-10 수정본 기준'
+INTRO='대상: O0600이 호출하는 O9050 / T1 보링 · T2 면취 · T3 절단 / 2026-09-15 수정본 기준'
 RULES=[
     '이 TXT는 CNC 앞에서 읽는 수동 수정 설명서입니다. 파일 전체를 CNC 프로그램으로 입력하지 않습니다.',
-    '가공을 정지하고 현재 CNC의 O9050을 백업한 뒤, 아래 3구간을 편집합니다. O0600의 품목 치수·회전수·수량 입력값은 수정 대상이 아닙니다.',
+    '가공을 정지하고 현재 CNC의 O9050을 백업한 뒤, 아래 4개 항목을 편집합니다. O0600의 품목 치수·회전수·수량 입력값은 수정 대상이 아닙니다.',
     '줄 번호는 삭제할 때 바뀌므로 N번호와 앞뒤 코드로 찾습니다. 이미 완성 코드와 같으면 해당 구간은 건너뜁니다.',
     '설명은 T02 면취 / T03 절단 배치 기준입니다. 실제 코드가 기존 예시나 완성 코드와 다르면 임의로 다른 구간을 삭제하지 말고 차이를 확인합니다.',
 ]
@@ -63,7 +68,7 @@ LIMIT='이 문서는 현재 게시된 O9050과 대조한 편집 안내입니다.
 PROVENANCE='첫 보링 진입과 면취 후퇴는 O8000 원문을 대조했습니다. #516/#522 계산을 미리 하고 #521 갱신을 옮긴 부분은 최근 요청하신 연결 동작 정리 사항입니다.'
 
 def build():
-    text=[TITLE,INTRO,'','읽는 방법',*RULES,'','수정은 3구간입니다.']
+    text=[TITLE,INTRO,'','읽는 방법',*RULES,'','이전 수정 3개 항목과 2026-09-15 추가 수정 1개 항목입니다.']
     cards=[]
     for number,p in enumerate(PATCHES,1):
         text += ['',f"[{number}] {p['title']}",'찾을 위치: '+p['location'],'작업: '+p['action'],
@@ -89,7 +94,7 @@ def build():
 </style></head><body><main><header><nav><a href="machines.html#m5">← 5호기 프로그램</a><a href="o0600.html">O0600 설명·코드</a></nav>
 <h1>5호기 패치파일</h1><p class="subtitle">O9050 수동 수정표 · T1 보링 / T2 면취 / T3 절단 · 2026-09-10</p>
 <div class="actions"><a class="primary" href="''' + TXT_PATH + '''" download>↓ 5호기 패치 TXT</a><button id="printPatch">인쇄</button><a href="programs/o0600/O9050.txt" download>완성본 O9050.txt</a></div>
-<div class="panel"><b>수정 대상은 O9050의 아래 3구간입니다.</b><ul>''' + ''.join('<li>'+escape(rule)+'</li>' for rule in RULES) + '''</ul></div>
+<div class="panel"><b>수정 대상은 O9050의 아래 4개 항목입니다.</b><ul>''' + ''.join('<li>'+escape(rule)+'</li>' for rule in RULES) + '''</ul></div>
 <nav class="steps" aria-label="수정 위치">''' + ''.join(f'<a href="#{p["id"]}">{i}. '+label+'</a>' for i,(p,label) in enumerate(zip(PATCHES,['페이스 후퇴','첫 보링 진입','면취→절단']),1)) + '''</nav></header>
 <p id="copyStatus" role="status" aria-live="polite"></p>''' + ''.join(cards) + '''
 <section class="panel checks"><h2>마지막 대조</h2>''' + ''.join('<p>'+escape(item)+'</p>' for item in FINAL_CHECKS) + '''</section>
@@ -100,6 +105,7 @@ document.getElementById('printPatch').onclick=()=>window.print();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
 '''
+    page=page.replace('</head>','<link rel="stylesheet" href="ui.css"><script src="ui.js" defer></script></head>',1).replace('<body>','<body class="kim-ui kim-doc">',1)
     (ROOT/PAGE_PATH).write_text(page,encoding='utf-8',newline='\n')
     print('Built',TXT_PATH,'and',PAGE_PATH)
 

@@ -16,7 +16,7 @@ PAGE='o0600-patch.html'
 TXT='programs/patches/unit5-o9050-manual-patch-20260910.txt'
 source=(ROOT/'programs/o0600/O9050.nc').read_text(encoding='ascii')
 html=(ROOT/PAGE).read_text(encoding='utf-8')
-ids=['face','boring','transition']
+ids=['face','boring','transition','direct-chamfer']
 after={key:unescape(re.search(r'<pre class="after" id="after-'+key+r'">(.*?)</pre>',html,re.S).group(1)) for key in ids}
 before=dict(zip(ids,map(unescape,re.findall(r'<pre class="before">(.*?)</pre>',html,re.S))))
 
@@ -27,6 +27,9 @@ def span(code,key):
     elif key=='boring':
         start=code.index('N310 (T01 GROUP BORING);\n')+len('N310 (T01 GROUP BORING);\n')
         end=code.index('G98 G01 Z-[#507] F[#514*#110];',start)
+    elif key=='direct-chamfer':
+        start=code.index('G01 X-[#504] M51;\n')+len('G01 X-[#504] M51;\n')
+        end=code.index('G00 W[#505+20.] M52;',start)
     else:
         start=code.index('N320 (T02 CHAMFER UNIT);')
         end=code.index('G98 G01 X-[#103] F[#516*#116];',start)
@@ -42,7 +45,7 @@ def apply(code,keys=ids):
         code=code[:a]+after[key]+'\n'+code[b:]
     return code
 
-assert len(before)==3
+assert len(before)==4
 for key in ids:
     assert after[key]==extract(source,key),key
 historical_cases=0
@@ -53,7 +56,7 @@ for revision in ['53395d5','372dadf']:
         if revision=='372dadf' and key=='transition':
             expected=expected.replace('G00 Z[-#521+20.];\n','')
         assert extract(old,key)==expected,(revision,key,'before example differs')
-    for bits in itertools.product([False,True],repeat=3):
+    for bits in itertools.product([False,True],repeat=4):
         partial_code=apply(old,[key for key,on in zip(ids,bits) if on])
         assert apply(partial_code)==source,(revision,bits,'manual edits must match the entire current program')
         historical_cases+=1
@@ -91,7 +94,7 @@ try:
         expect(card.locator('a[href="'+PAGE+'"]').first).to_be_visible()
         expect(card.locator('a[href="'+TXT+'"]')).to_have_attribute('download','')
         card.locator('a[href="'+PAGE+'"]').click()
-        expect(page.locator('section.patch')).to_have_count(3)
+        expect(page.locator('section.patch')).to_have_count(4)
         for key in ids:
             assert page.locator('#after-'+key).text_content()==after[key]
             page.locator('[data-copy="after-'+key+'"]').click()
