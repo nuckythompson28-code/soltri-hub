@@ -1,0 +1,21 @@
+{
+  "machine": "13",
+  "label": "S3",
+  "received": "2026-09-30",
+  "materialOD": null,
+  "materialID": null,
+  "workOD": 242,
+  "workID": 230.3,
+  "workLength": 9.87,
+  "tipWidth": 2.0,
+  "grooveDiameterReduction": 3.7,
+  "grooveZTravel": 2.5,
+  "readyForCNC": false,
+  "assumptions": [
+    "T02 tip width 2mm requested assumption",
+    "workID derived from OD242 and wall5.85",
+    "groove travel2.5 is not verified finished bottom width",
+    "raw stock dimensions pending",
+    "speeds and chamfers preserved from supplied files; drawing does not specify chamfers"
+  ]
+}

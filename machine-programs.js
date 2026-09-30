@@ -14,7 +14,7 @@
  {no:"10",type:"AL", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:"M55",chBwd:"M56",clOpen:"M64",clClose:"M63",airOn:"M51",airOff:"M52",cw:"M04",ccw:"M03"},
  {no:"11",program:null,codesUnconfirmed:true},
  {no:"12",program:null,codesUnconfirmed:true},
- {no:"13",sub:"S3", type:"HA", program:"O0400", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
+ {no:"13",sub:"S3", type:"HA", program:"O2028", archives:["O0400"], boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
  {no:"14",sub:"S4", type:"HA", program:"O0852", boringUp:"M54",boringDn:"M53",chFwd:null,chBwd:null,clOpen:"M56",clClose:"M55",airOn:"M57",airOff:"M58",cw:"M04",ccw:"M03"},
  {no:"15",program:null,codesUnconfirmed:true},
 ];
@@ -31,6 +31,7 @@
     Object.assign(machines.find(m=>m.no===no),{controllerKey:group.key,controller:group.label,controllerShort:group.short,maker:group.maker,controllerReceived:'2026-09-11'});
   }
   const programs={
+"O2028":{"id": "O2028", "file": "o2028.html", "short": "제일연마 · 설정 검토", "description": "S3 제일연마 242×230.30×9.87 · 소재값 미확정 / CNC 실행 전 검토", "tools": "T1 내·외경·면취·홈 · T2 위쪽 절단", "subs": ["O2029", "O6000", "O6001", "O6002", "O6003", "O6004"], "reference": "13", "color": "#397b75", "simulator": true},
   "O0300": {
     "id": "O0300",
     "file": "o0300.html",

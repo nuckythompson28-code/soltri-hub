@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright,expect
 
 root=Path(__file__).resolve().parents[1]
 out=Path(tempfile.gettempdir())/'codex_machine_directory_review';out.mkdir(exist_ok=True)
-expected={'1':'O0852','2':'O0300','3':'O8000','4':None,'5':'O0600','6':'O8000','7':'O0852','8':'O0852','9':'O0852','10':'O0852','13':'O0400','14':'O0852'}
+expected={'1':'O0852','2':'O0300','3':'O8000','4':None,'5':'O0600','6':'O8000','7':'O0852','8':'O0852','9':'O0852','10':'O0852','13':'O2028','14':'O0852'}
 expected.update({'11':None,'12':None,'15':None})
 controllers={str(n):'FANUC i Series Smart Plus' for n in [1,2,12,13,14]}
 controllers.update({str(n):'FANUC i Series' for n in [7,8,9,10]})

@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id), cv=$('cv'), ctx=cv.getContext('2d');
 const COLORS={1:'#66e0d1',2:'#ffc16c',3:'#c7a5ff',5:'#80baff'};
-const SOURCE_URLS={O0600:'programs/o0600-unit5.nc',O0500:'programs/o0500-unit5.nc',O2026:'programs/o2026-o2027-jeil-unit5.nc'};
+const SOURCE_URLS={O2028:'programs/o2028/drawing-simulation.txt',O2028_ORIGINAL:'programs/o2028/original-set.txt',O0600:'programs/o0600-unit5.nc',O0500:'programs/o0500-unit5.nc',O2026:'programs/o2026-o2027-jeil-unit5.nc'};
 let profile=MACHINE_PROFILES['600'], mainKey='600', trace=[],programLines=[],cur=-1,playing=false,animT=1,rafId=null;
 let stockInfo=null,cutEvents=[],referenceOffset=0,CW=0,CH=0,SC=1,OAX=0,OBY=0,view={minA:-100,maxA:30,minB:-50,maxB:50};
 let focusView=matchMedia('(max-width:650px)').matches,loadSerial=0,sourceText='',fieldCache=null;
@@ -37,7 +37,7 @@ function buildStockInfo(){
   if(!input){rawO=Math.max(20,...feeds.flatMap(s=>[Math.abs(s.seg.x0),Math.abs(s.seg.x1)]));rawI=0;finO=rawO;finI=0;finLen=10;tip=2;}
   const minCut=Math.min(0,...feeds.flatMap(s=>plotPts(s.seg).map(p=>p[0])));
   const chuckFaceZ=referenceOffset>0?-referenceOffset:minCut-8;
-  const target=mainKey==='600'||mainKey==='500'||mainKey==='400'||mainKey==='8000'?trace.find(s=>s.kv[120]>0)?.kv[120]:mainKey==='2026'?trace.find(s=>s.kv[517]>0)?.kv[517]:null;
+  const target=mainKey==='600'||mainKey==='500'||mainKey==='400'||mainKey==='8000'?trace.find(s=>s.kv[120]>0)?.kv[120]:(mainKey==='2026'||mainKey==='2028')?trace.find(s=>s.kv[517]>0)?.kv[517]:null;
   stockInfo={rawO,rawI,finO,finI,finLen,tip,unitLen:finLen+tip,chuckFaceZ,z0:chuckFaceZ,z1:0,target};
   cutEvents=[];let lastCount=0,lastIndex=-1;
   for(let i=0;i<trace.length;i++){
@@ -284,6 +284,7 @@ function advance(){
 function setStatus(message,error=false){$('loadStatus').textContent=message;$('loadStatus').classList.toggle('error',error);}
 function recompute(text){
   pause();sourceText=text;mainKey=parsePrograms(text).mainKey;profile=machineProfile(text);
+  $('programNotice').hidden=mainKey!=='2028';$('programNotice').textContent=text.includes('SIMULATION ONLY')?'S3 도면 경로 검토: 소재 242 / 230.30은 절삭여유 0인 가상값입니다. 실제 소재 치수는 미확정. 날 폭 2mm 가정, 홈날 형상·공구 보정·간섭은 미검증이며 CNC 실행용이 아닙니다.':'S3 제공 파일 원문/설정 초안: 현재 소재와 장비 보정을 확인한 실행용 확정본이 아닙니다. 상세 조건은 O2028 설명 페이지를 확인하세요.';
   const max=Math.max(10,Math.min(50000,+$('maxMoves').value||2000)),r=runProgram(text,max);trace=r.trace;programLines=r.programLines;cur=-1;animT=1;
   codeProgram=mainKey;selectedSource=null;
   buildStockInfo();buildGangFrames();gangView=hasUnit5Gang();focusView=gangView?false:matchMedia('(max-width:650px)').matches;renderMachine();renderProgramTabs();renderLineList();computeBounds();resize();updateAll();
@@ -305,7 +306,7 @@ $('fileIn').onchange=async e=>{
   const files=Array.from(e.target.files);if(!files.length)return;const serial=++loadSerial;pause();
   try{const chunks=await Promise.all(files.map(f=>f.text()));if(serial!==loadSerial)return;
     const headers=chunks.flatMap(t=>[...t.matchAll(/^\s*O\s*(\d+)/gmi)].map(m=>String(Number(m[1]))));if(new Set(headers).size!==headers.length)throw new Error('같은 프로그램 번호가 중복됩니다. 통합 파일 또는 개별 파일 한 세트만 선택하세요.');
-    const mains=['600','500','2026','400','8000','852'];chunks.sort((a,b)=>Number(!mains.includes(parsePrograms(a).mainKey))-Number(!mains.includes(parsePrograms(b).mainKey)));
+    const mains=['600','500','2026','2028','400','8000','852'];chunks.sort((a,b)=>Number(!mains.includes(parsePrograms(a).mainKey))-Number(!mains.includes(parsePrograms(b).mainKey)));
     const text=chunks.join('\n\n');$('editor').value=text;$('sampleSel').selectedIndex=-1;recompute(text);
   }catch(error){setStatus(error.message,true);}e.target.value='';
 };

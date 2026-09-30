@@ -1,0 +1,13 @@
+{
+  "sources": {
+    "O2028": "285dc5f03ef49429a473850137d4c3410d4a3c5a07849bdd4be4e84403f77153",
+    "O2029": "b15692af39795d42e3b0defd308e552f39dc542c27e56d610a334001dff90d67",
+    "O6000": "9eda56a8a65a224750c2c290219efd20798cbdaa0630a9bfd73f0ce72d337903",
+    "O6001": "174737d36bde0d7855317c54a6b217b23e8a03671ebeab9cf010f2b88796c5f6",
+    "O6002": "919b7ca86a26590e21816403f278dc0600b3cb287908a0326d44cac70ef230c3",
+    "O6003": "5e5ca449c08fe54c79c0d111b2b19b37adc84c01c8d201feddfabf9e92cffb48",
+    "O6004": "16484dbc46a972aa49ead788816a1f0f6b0fedb6c53dd4600ac5b098f107e86a"
+  },
+  "subprograms": "User supplied CNC_기술자료 files, not earlier 제일연마 folder",
+  "photoDifferences": "Photo main has #100=254, #106=2.01, #107=.27, #108=.31, #110=.55, #122/#123 and M55; supplied main has #100=270, #106=1.85 and different chamfers. Latest supplied files are authoritative."
+}

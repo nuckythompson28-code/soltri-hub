@@ -303,7 +303,7 @@ def build():
 <p>피치 16.78 mm, 정상 묶음 3개 × 4회 + 잔량 2개 구성입니다. 사진 속 주석의 T01RPM / T02 RPM은 원문에 유지했으며, #110 / #113은 각각 F 계산에 쓰입니다.</p>''' + codes[0] + '''</section>
 <section id="O0310"><h2>O0310 · 사진에서 읽은 전체 코드</h2><p>사진의 왼쪽 열 다음에 오른쪽 열을 이어 읽었습니다. 공백·화면 줄바꿈만 정리했으며, 노란색 줄은 잘려서 끝을 확인하지 못한 부분입니다.</p>''' + ''.join(codes[1:]) + '''</section>
 <section id="photos"><h2>원본 사진</h2><div class="photos">''' + ''.join(photos) + '''</div></section>
-<footer><p>2호기 기존 O0400 자료는 2호기 화면의 “기존 배정 자료”에 보관합니다. 13호기의 O0400 배정은 유지합니다.</p></footer>
+<footer><p>2호기 기존 O0400 자료는 2호기 화면의 “기존 배정 자료”에 보관합니다. 13호기의 O0400은 기존 배정 자료로 보관합니다.</p></footer>
 </main><script>document.getElementById('print').onclick=()=>window.print();</script><script src="machine-programs.js"></script><script src="machine-programs-ui.js"></script></body></html>
 '''
     page=page.replace('</head>','<link rel="stylesheet" href="ui.css"><script src="ui.js" defer></script></head>',1).replace('<body>','<body class="kim-ui kim-doc">',1)

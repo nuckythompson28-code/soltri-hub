@@ -60,7 +60,7 @@ try:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(base+'index.html')
         expect(page.locator('[data-machine="2"] .program-id')).to_have_text('O0300')
-        expect(page.locator('[data-machine="13"] .program-id')).to_have_text('O0400')
+        expect(page.locator('[data-machine="13"] .program-id')).to_have_text('O2028')
         page.locator('[data-machine="2"]').click()
         expect(page.locator('#linkSlot>.assignment-card')).to_have_attribute('data-program','O0300')
         expect(page.locator('#linkSlot>.assignment-card .assignment-set')).to_contain_text('O0310')
@@ -71,7 +71,7 @@ try:
         page.locator('[data-program="O0400"] a.primary').click()
         expect(page.locator('.program-location strong')).to_have_text('2호기 · O0400 · 보관용')
         page.goto(base+'o0400.html')
-        expect(page.locator('.program-location strong')).to_have_text('13호기 · S3 · O0400 · 배정 프로그램')
+        expect(page.locator('.program-location strong')).to_have_text('2·13호기 · O0400 · 보관용')
         page.goto(base+'machines.html#m2')
         page.locator('[data-program="O0300"] a.primary').click()
         expect(page.locator('.program-location strong')).to_have_text('2호기 · O0300 · 배정 프로그램')
@@ -163,4 +163,4 @@ try:
 finally:
     server.shutdown()
 assert not errors,errors
-print(json.dumps({'passed':['unit2 O0300 assignment','O0400 archived for 2, active for 13','5 source photos','clipped line marked','optional stop OFF','5 NC excerpt exact','O8000 group/remainder excerpts exact','3/6 reference and M-code distinctions','3/5/6 comparison links','TXT CRLF/download','mobile layout','offline photos and TXT','print'],'screenshots':str(out)},ensure_ascii=False))
+print(json.dumps({'passed':['unit2 O0300 assignment','O0400 archived for 2 and 13','5 source photos','clipped line marked','optional stop OFF','5 NC excerpt exact','O8000 group/remainder excerpts exact','3/6 reference and M-code distinctions','3/5/6 comparison links','TXT CRLF/download','mobile layout','offline photos and TXT','print'],'screenshots':str(out)},ensure_ascii=False))

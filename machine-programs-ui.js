@@ -49,7 +49,7 @@
     const activeOwners=owners.filter(m=>m.program===p.id);
     const requested=new URLSearchParams(location.search).get('machine');
     const selected=owners.find(m=>m.no===requested)||(activeOwners.length===1?activeOwners[0]:owners.length===1?owners[0]:null);
-    const role=p.id==='O0500'||selected?.archives?.includes(p.id)?'보관용':p.id==='O2026'?'품목 전용':'배정 프로그램';
+    const role=p.id==='O0500'||selected?.archives?.includes(p.id)||(!activeOwners.length&&owners.length>0&&owners.every(m=>m.archives?.includes(p.id)))?'보관용':p.id==='O2026'?'품목 전용':'배정 프로그램';
     const banner=document.createElement('aside');banner.className='program-location';banner.setAttribute('aria-label','프로그램 호기 배정');
     banner.innerHTML='<strong>'+(selected?machineLabel(selected):owners.map(m=>m.no).join('·')+'호기')+' · '+p.id+' · '+role+'</strong><p>'+esc(p.tools)+'</p>'+(selected?'<p>'+esc(sourceNote(selected,p))+'</p>':'<p>호기를 선택하면 해당 배정 화면으로 이동합니다. 공통 원문에 호기별 설정을 자동 적용하지 않습니다.</p>')+'<div class="location-links">'+owners.map(m=>'<a href="machines.html#m'+m.no+'"'+(selected===m?' aria-current="true"':'')+'>'+machineLabel(m)+' 프로그램</a>').join('')+'<a href="machines.html">전체 호기</a></div>';
     document.getElementById('main').prepend(banner);

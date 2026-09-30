@@ -16,10 +16,12 @@
   <div class="header-actions"><label class="file">TXT / NC 열기<input type="file" id="fileIn" accept=".txt,.nc,.min,.cnc" multiple></label><button id="codeToggle" aria-expanded="true" aria-controls="codePanel">프로그램 숨기기</button></div>
 </header>
 <main>
+  <p id="programNotice" hidden role="note" style="padding:12px;background:#fff3da;color:#573500;border-left:4px solid #a55700"></p>
   <section class="setup" aria-label="장비와 프로그램">
     <label class="select-label" for="sampleSel">장비 · 프로그램<select id="sampleSel">
       <optgroup label="5호기 · 배정 프로그램"><option value="O0600">5호기 · O0600 · T2 면취 / T3 절단</option></optgroup>
       <optgroup label="5호기 · 품목 전용·보관용"><option value="O2026">품목 전용 · O2026 / O2027 · 제일연마</option><option value="O0500">보관용 · O0500 · 기존 T2 절단</option></optgroup>
+      <optgroup label="13호기 S3"><option value="O2028">S3 · O2028 · 도면 경로 / 가상 소재</option><option value="O2028_ORIGINAL">S3 · O2028 · 제공 원문</option></optgroup>
       <optgroup label="다른 호기 · 기준 원문"><option value="O0400">2호기 기존 원문 · O0400 (배정 13호기)</option><option value="O8000">6호기 기준 · O8000 (배정 3·6호기)</option><option value="O0852">10호기 기준 · O0852 (공통 프로그램)</option></optgroup>
       <optgroup label="일반 선반 예제"><option value="basic">기본 외경 · 면취 · 원호</option><option value="idod">외경 / 내경 · 증분 이동</option><option value="step">단차 황삭</option></optgroup>
     </select></label>
