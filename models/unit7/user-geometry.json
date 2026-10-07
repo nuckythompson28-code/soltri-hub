@@ -1,0 +1,82 @@
+{
+  "machine": 7,
+  "received": "2026-10-02",
+  "source": "사용자 입력 보정값 및 공구 사진",
+  "photo": "docs/evidence/unit7-tools-20261002.png",
+  "geometry": {
+    "1": {
+      "X": -518.0,
+      "Z": -488.02,
+      "label": "상하 복합 보링바"
+    },
+    "2": {
+      "X": -586.7,
+      "Z": -436.0,
+      "label": "위쪽 절단바이트"
+    },
+    "3": {
+      "X": -867.5,
+      "Z": -452.0,
+      "label": "오토링크"
+    }
+  },
+  "wearProvided": false,
+  "xConversionConfirmed": true,
+  "userApproximatePartingPosition": {
+    "leftMm": 52,
+    "upMm": 68,
+    "heightMeasurementMethod": "사용자 정정: 68mm는 지름 보정 차이, 실제 X축 방향 거리는 1/2"
+  },
+  "relativeToT1": {
+    "2": {
+      "Z": -52.02,
+      "diameterXDifference": 68.7,
+      "radialIfDiameter": 34.35
+    },
+    "3": {
+      "Z": -36.02,
+      "diameterXDifference": 349.5,
+      "radialIfDiameter": 174.75
+    }
+  },
+  "boring": {
+    "includedAngleDeg": 90,
+    "maxTipGapMm": 7,
+    "currentGapMeasured": false,
+    "appliesTo": "O0852 사용 장비 공통 설명; 보정값은 7호기에만 기록",
+    "rotationDeg": 45,
+    "cuttingVertex": {
+      "upper": "bottom",
+      "lower": "top"
+    },
+    "insertSideMmEstimated": 8,
+    "vertexConfirmed": true
+  },
+  "parting": {
+    "nominalWidthMm": 2,
+    "exactWidthMeasured": false
+  },
+  "notes": [
+    "X는 지름 보정값이므로 상대 물리 간격은 차이/2. Z는 원래 차이를 그대로 사용.",
+    "T2: T1 기준 왼쪽52.020mm/위34.350mm. T3: 왼쪽36.020mm/위174.750mm.",
+    "인서트는 정사각형을45도회전, 상부 아래/하부 위 꼭짓점이 절삭점. 한 변 길이와 깊이 방향 위치는 추정.",
+    "마모 보정, 보링 공압 스트로크와 기계 영점은 미확인.",
+    "평균 절단폭2mm는 표시용이며 NC값은 변경하지 않음."
+  ],
+  "xMode": "diameter",
+  "chuck": {
+    "diameterMm": 300,
+    "bodyWidthMm": 130,
+    "source": "사용자 제공 7호기 실제 치수",
+    "jawsIncludedInWidth": false
+  },
+  "toolEnvelope": {
+    "widthMm": 300,
+    "heightMm": 300,
+    "source": "사용자 제공 공구 전체 가로/세로",
+    "excludes": [
+      "hose"
+    ],
+    "depthMeasured": false
+  }
+}

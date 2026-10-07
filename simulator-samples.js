@@ -65,3 +65,6 @@ O0852: O0852_SRC,
 O8000: O8000_SRC,
 O0400: O0400_SRC
 };
+
+// Simulator-only machine selection. Stored CNC originals are unchanged.
+SAMPLES.O0852_UNIT7=SAMPLES.O0852.replace(/(#130\s*=\s*)10\b/,(_,prefix)=>prefix+'7');

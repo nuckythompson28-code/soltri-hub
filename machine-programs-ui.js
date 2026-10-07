@@ -9,6 +9,7 @@
     if(p.id==='O0600')return '최신 공구 배치: T02 면취기 · T03 절단바이트. 계산 검사 완료 · 실기 검증 전.';
     if(p.id==='O0500')return '보관본입니다. 공구 교환 전 T02 절단 배치와 3면취 기본 원문을 유지합니다.';
     if(p.id==='O2026')return '제일연마 품목용 원문입니다. T02 절단 배치이며 T03은 사용하지 않습니다.';
+    if(p.id==='O0852'&&m.no==='7')return '7호기 3D 가공 보기는 화면에서 #130=7을 적용합니다. M53 상승 / M54 하강. 척 Ø300×130mm, 공구 전체300×300mm, 형상 보정 X÷2 간격 적용. 홀더 세부·공압 스트로크는 미확인. CNC 원본은 변경하지 않습니다.';
     if(p.id==='O0852')return '호기 선택 변수 #130='+m.no+'. 연결된 공통 원문의 기본값은 #130=10이며, 호기별 M코드 표와 대조합니다.';
     if(p.id==='O8000'&&m.no==='3')return '연결 원문은 6호기 기준입니다. 3호기 에어는 M08/M09, M03은 역회전으로 원문 기준과 다릅니다.';
     if(p.id==='O0400'&&m.no==='2')return '2호기 기존 배정 자료를 보관합니다. 현재 실사용 프로그램은 O0300으로 등록했습니다.';
@@ -18,7 +19,7 @@
   function tiles(container){
     container.innerHTML=directory.machines.map(m=>{
       const p=directory.programs[m.program];
-      return '<a class="assignment-tile" data-machine="'+m.no+'" href="machines.html#m'+m.no+'" style="--program-color:'+(p?p.color:'#a8b3bf')+'"><span class="unit">'+machineLabel(m)+'</span><span class="program-id">'+(p?p.id:'미배정')+'</span><span class="assignment-kind">'+(p?p.short:m.codesUnconfirmed?'장비 정보 보기':'M코드 보기')+'</span><span class="assignment-controller">'+esc(m.controllerShort)+'</span></a>';
+      return '<a class="assignment-tile" data-machine="'+m.no+'" href="machines.html#m'+m.no+'" style="--program-color:'+(p?p.color:'#a8b3bf')+'"><span class="unit">'+machineLabel(m)+'</span><span class="program-id">'+(p?p.id:'미배정')+'</span><span class="assignment-kind">'+(p?p.short:m.codesUnconfirmed?'장비 정보 보기':'M코드 보기')+'</span><span class="assignment-controller">'+esc((m.model?m.model+' · ':'')+m.controllerShort)+'</span></a>';
     }).join('');
   }
   function programCard(m,id,status){
@@ -30,6 +31,7 @@
     if(p.transcript)buttons.push(['사진 전사 TXT',p.transcript,'download']);
     if(p.package)buttons.push(['등록 파일 ZIP',p.package,'download']);
     for(const file of p.txt||[])buttons.push([file.split('/').pop(),file,'download']);
+    if(p.id==='O0852'&&m.no==='7')buttons.push(['7호기 3D 가공 보기','simulator.html?program=O0852_UNIT7&view=3d','']);
     if(p.simulator!==false)buttons.push([(p.reference===m.no?'가공 보기':p.reference+'호기 원문 가공 보기'),'simulator.html?program='+p.id,'']);
     return '<article class="assignment-card" data-program="'+id+'" style="--program-color:'+p.color+'"><span class="assignment-status'+(status==='보관용'?' archive':'')+'">'+esc(status)+'</span><h2>'+id+'</h2><p>'+esc(p.description)+'</p><p class="assignment-tools">'+esc(p.tools)+'</p><div class="assignment-set">메인 '+id+'<br>서브 '+p.subs.join(' · ')+'<br>총 '+(p.subs.length+1)+'개 프로그램 한 세트</div><p class="assignment-note">'+esc(sourceNote(m,p))+'</p><div class="assignment-actions">'+buttons.map(([label,url,kind])=>'<a href="'+url+'"'+(kind==='download'?' download':' class="'+kind+'"')+'>'+esc(label)+'</a>').join('')+'</div></article>';
   }

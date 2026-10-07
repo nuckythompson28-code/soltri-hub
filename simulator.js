@@ -148,6 +148,7 @@ function draw(){
   ctx.clearRect(0,0,CW,CH);drawGrid();drawStock();drawSegments();
   ctx.setLineDash([6,5]);ctx.strokeStyle='#70879e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(25,sy(0));ctx.lineTo(CW-15,sy(0));ctx.stroke();ctx.setLineDash([]);label('X0 · 중심선',32,sy(0)-8,'#c3d0df');
   drawTool();
+  window.Unit7View?.sync();
 }
 
 const programName=key=>key==null?'파일 앞머리':'O'+key.padStart(4,'0');
@@ -292,7 +293,7 @@ function recompute(text){
   const error=!!r.info.alarm||!['M30','M99(최상위)','종료(끝)'].includes(r.info.endReason);
   setStatus(error?`확인 필요: ${r.info.alarm||r.info.endReason}`:`${mainKey?'O'+mainKey.padStart(4,'0'):''} 불러옴 · ${cutEvents.length}개 절단 경로 · ${r.info.moves}회 이동 · ${mainKey==='600'?'T2 면취 · ':mainKey==='500'?trace.find(s=>s.kv[121]>0)?.kv[121]+'면취 · ':''}화면 재생 준비`,error);
   for(const id of ['btnPlay','btnNextMove','btnReset','btnPrev','btnNext'])$(id).disabled=!trace.length;
-  syncViewButton();return r;
+  syncViewButton();sim3DRevision++;window.Unit7View?.onProgram();return r;
 }
 function syncViewButton(){$('btnCoord').setAttribute('aria-pressed',String(focusView));$('btnGang').setAttribute('aria-pressed',String(hasUnit5Gang()&&gangView));$('btnFit').setAttribute('aria-pressed',String(!focusView&&!gangView));}
 async function loadSample(key){
@@ -324,9 +325,17 @@ $('btnNextCut').onclick=()=>{const c=cutEvents.find(c=>c.index>cur);if(c)gotoSte
 $('btnNextPull').onclick=()=>{const i=trace.findIndex((s,k)=>k>cur&&s.pull);if(i>=0)gotoStep(i);};
 $('seek').oninput=e=>gotoStep(Number(e.target.value)-1);
 $('btnGang').onclick=()=>{gangView=true;focusView=false;syncViewButton();computeBounds();resize();};
-$('btnCoord').onclick=()=>{focusView=!focusView;gangView=false;syncViewButton();computeBounds();resize();};$('btnFit').onclick=()=>{focusView=false;gangView=false;syncViewButton();computeBounds();resize();};
+$('btnCoord').onclick=()=>{focusView=!focusView;gangView=false;syncViewButton();computeBounds();resize();};$('btnFit').onclick=()=>{if(window.Unit7View?.enabled()){window.Unit7View.fit();return;}focusView=false;gangView=false;syncViewButton();computeBounds();resize();};
 $('showRapid').onchange=draw;$('showHistory').onchange=draw;
 document.addEventListener('keydown',e=>{if(/TEXTAREA|INPUT|SELECT|BUTTON/.test(e.target.tagName))return;if(e.code==='Space'){e.preventDefault();playing?pause():play();}else if(e.key==='ArrowRight'){e.preventDefault();nextMove();}else if(e.key==='ArrowLeft'){e.preventDefault();gotoStep(cur-1);}else if(e.key==='Home')gotoStep(-1);});
 window.addEventListener('resize',()=>{computeBounds();resize();});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+let sim3DRevision=0;
+window.SoltriSim3D={
+ isUnit7:()=>mainKey==='852'&&trace.find(s=>s.kv[130]>0)?.kv[130]===7,
+ snapshot:()=>{
+   const frame=trace[cur],fraction=motionFraction(),pts=frame?.seg?plotPts(frame.seg):[];
+   return {unit7:window.SoltriSim3D.isUnit7(),revision:sim3DRevision,index:cur,stock:stockInfo,frame,point:currentToolPlot(),fraction,field:computeStockField(),segmentPoints:pts.length?[pts[0],pointAt(pts,fraction)]:[]};
+ }
+};
 const initial=new URLSearchParams(location.search).get('program')||'O0600';$('sampleSel').value=initial;loadSample(SOURCE_URLS[initial]||SAMPLES[initial]?initial:'O0600');

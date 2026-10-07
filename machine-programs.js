@@ -30,6 +30,7 @@
   for(const group of controllerGroups)for(const no of group.units){
     Object.assign(machines.find(m=>m.no===no),{controllerKey:group.key,controller:group.label,controllerShort:group.short,maker:group.maker,controllerReceived:'2026-09-11'});
   }
+  for(const no of ['1','7','8','9','10','13','14'])Object.assign(machines.find(m=>m.no===no),{model:'KIT60G',modelReceived:'2026-10-02'});
   const programs={
 "O2028":{"id": "O2028", "file": "o2028.html", "short": "제일연마 · 설정 검토", "description": "S3 제일연마 242×230.30×9.87 · 소재값 미확정 / CNC 실행 전 검토", "tools": "T1 내·외경·면취·홈 · T2 위쪽 절단", "subs": ["O2029", "O6000", "O6001", "O6002", "O6003", "O6004"], "reference": "13", "color": "#397b75", "simulator": true},
   "O0300": {

@@ -80,6 +80,7 @@
 <link rel="stylesheet" href="factory-layout.css">
 <link rel="stylesheet" href="ui.css">
 <script src="ui.js" defer></script>
+<link rel="stylesheet" href="machine-models.css">
 </head>
 <body class="kim-ui kim-machines">
 <div class="wrap">
@@ -115,6 +116,7 @@
     <div class="machine-detail-grid">
     <div id="linkSlot"></div>
     <div class="machine-equipment">
+    <div id="modelInfo" hidden></div>
     <div id="controllerInfo"></div>
     <div id="machineSetup" hidden></div>
     <details class="assignment-group" id="machine-codes"><summary>이 호기의 M코드 보기</summary>
@@ -128,6 +130,8 @@
 
 <script src="machine-setups.js"></script>
 <script src="machine-setup-ui.js"></script>
+<script src="machine-models.js"></script>
+<script src="machine-model-ui.js"></script>
 <script src="machine-programs.js"></script>
 <script src="machine-programs-ui.js"></script>
 <script src="machine-controllers.js"></script>
@@ -191,6 +195,7 @@ function showDetail(m){
     row('프로그램 종료', m.codesUnconfirmed ? undefined : 'M30');
 
   const slot = document.getElementById('linkSlot');
+  SoltriMachineModelUI.render(document.getElementById('modelInfo'),m.model,m.no);
   SoltriControllerUI.render(document.getElementById('controllerInfo'),m);
   SoltriMachineSetupUI.render(document.getElementById('machineSetup'),m.setupKey);
   SoltriProgramUI.renderPrograms(m,slot);

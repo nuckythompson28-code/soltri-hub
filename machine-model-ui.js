@@ -1,0 +1,11 @@
+/* Catalog information is separate from each machine's confirmed controller/M codes. */
+(()=>{
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function render(el,key,unit){
+  const m=window.SoltriMachineModels?.[key];el.hidden=!m;if(!m){el.innerHTML='';return;}
+  const s=m.specs, actual=m.unitOverrides?.[unit];
+  const rows=[['설치 공간 / 높이',`${s.floorLengthMm.toLocaleString()} × ${s.floorWidthMm.toLocaleString()} / ${s.heightMm.toLocaleString()} mm`],['베드 위 스윙',`Ø${s.swingDiameterMm} mm`],['최대 가공경 / 길이',`Ø${s.maxTurningDiameterMm} / ${s.maxTurningLengthMm} mm`],['카탈로그 척 / 봉재 작업 능력',`${s.chuckInch}인치 / Ø${s.barCapacityMm} mm`],['기계 이동량 X / Z',`${s.travelXMm} / ${s.travelZMm} mm`],['급이송 X / Z',`${s.rapidXMPerMin} / ${s.rapidZMPerMin} m/min`],['주축 최고 속도',`${s.maxSpindleRpm.toLocaleString()} rpm`],['주축 출력 최대 / 연속',`${s.motorMaxKw} / ${s.motorContinuousKw} kW`],['주축 토크 최대 / 연속',`${s.torqueMaxNm} / ${s.torqueContinuousNm} N·m`],['베드 / 공구 부착',`${s.bedSlantDeg}° 경사 / 갱 블록 ${s.blockToolCount}개 사양`],['전원 / 중량',`${s.voltageV} V · ${s.frequencyHz} Hz · ${s.powerKva} kVA / ${s.weightKg.toLocaleString()} kg`]];
+  el.innerHTML=`<section class="model-card"><h3>현대위아 KIT60G</h3><p class="model-meta">${m.confirmedUnits.join('·')}호기 · ${m.received} 사용자 확인</p>${actual?`<p><b>${unit}호기 현장 치수: 척 Ø${actual.chuckDiameterMm} × 폭${actual.chuckBodyWidthMm}mm · 공구 전체 ${actual.toolWidthMm} × ${actual.toolHeightMm}mm</b></p>`:""}<dl class="model-specs">${rows.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl><details><summary>3D 반영 범위와 자료</summary><p>본체 전체 크기는 사양 기준입니다. 외장 패널·주축 설치 위치·공구 홀더 세부는 추정 형상입니다. 7호기 시뮬레이터는 사용자 제공 척 Ø300 × 폭130mm, 공구 전체 300 × 300mm를 적용합니다. 카탈로그 10인치 표기와 별도로 관리합니다.</p><p>X 이동량 450mm는 기계 축의 전체 스트로크입니다. 지름 지령 X값에 그대로 대입하거나 작업 원점 기준 한계로 판정하지 않습니다. Ø65는 봉재 통과 능력이며 척에 잡는 소재의 최대 외경이 아닙니다. 36m/min 사양으로 실제 사이클 시간을 보장하지 않습니다.</p><p>6개 공구 부착 사양은 현장 사용 공구 수와 다릅니다. 기존 호기별 제어기·M코드·가공 프로그램을 유지합니다.</p>${m.sources.map(x=>`<p><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.label)}</a><br><small>${esc(x.scope)}</small></p>`).join('')}</details></section>`;
+ }
+ window.SoltriMachineModelUI={render};
+})();

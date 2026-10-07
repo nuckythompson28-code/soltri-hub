@@ -30,7 +30,7 @@ with sync_playwright() as p:
     assert not page.locator('a.card[href^="o0"],a.card[href="o8000.html"]').count()
     for number,program in expected.items():
         expect(page.locator(f'[data-machine="{number}"] .program-id')).to_have_text(program or '미배정')
-        expect(page.locator(f'[data-machine="{number}"] .assignment-controller')).to_have_text(controllers[number].removeprefix('FANUC Series ').removeprefix('FANUC '))
+        expect(page.locator(f'[data-machine="{number}"] .assignment-controller')).to_have_text(('KIT60G · ' if number in ['1','7','8','9','10','13','14'] else '')+controllers[number].removeprefix('FANUC Series ').removeprefix('FANUC '))
     page.screenshot(path=str(out/'home-desktop.png'),full_page=True)
     page.locator('.factory-layout-link').click()
     expect(page.locator('#factoryLayout')).to_be_visible()
@@ -41,6 +41,10 @@ with sync_playwright() as p:
     for number in expected:
         page.locator(f'[data-floor-machine="{number}"]').click()
         expect(page.locator('#dNo')).to_have_text(number)
+        if number in ['1','7','8','9','10','13','14']:
+            expect(page.locator('#modelInfo')).to_contain_text('현대위아 KIT60G')
+            expect(page.locator('#modelInfo')).to_contain_text('2,900 × 1,650 / 1,870 mm')
+        else:expect(page.locator('#modelInfo')).to_be_hidden()
         page.locator('.back').click()
         expect(page).to_have_url(base+'machines.html#layout')
         expect(page.locator('#factoryLayout')).to_be_visible()
@@ -85,6 +89,10 @@ with sync_playwright() as p:
     for number,program in expected.items():
         page.goto(base+'machines.html#m'+number)
         expect(page.locator('#dNo')).to_have_text(number)
+        if number in ['1','7','8','9','10','13','14']:
+            expect(page.locator('#modelInfo')).to_contain_text('현대위아 KIT60G')
+            expect(page.locator('#modelInfo')).to_contain_text('2,900 × 1,650 / 1,870 mm')
+        else:expect(page.locator('#modelInfo')).to_be_hidden()
         expect(page.locator('#controllerInfo h3')).to_have_text(controllers[number])
         expect(page.locator('#controllerInfo .controller-meta')).to_contain_text('현대위아' if number in ['1','2','3','7','8','9','10','12','13','14'] else '장비 제조사: 미확인')
         page.locator('#controllerInfo summary').click()
@@ -102,6 +110,8 @@ with sync_playwright() as p:
         if program:
             expect(page.locator('#linkSlot>.assignment-card')).to_have_attribute('data-program',program)
             expect(page.locator('#linkSlot>.assignment-card a.primary')).to_have_attribute('href',program.lower()+'.html?machine='+number)
+            if number=='7':
+                expect(page.get_by_role('link',name='7호기 3D 가공 보기')).to_have_attribute('href','simulator.html?program=O0852_UNIT7&view=3d')
         else:
             expect(page.locator('#linkSlot')).to_contain_text('배정된 프로그램이 없습니다')
             expect(page.locator('#linkSlot .assignment-card')).to_have_count(0)

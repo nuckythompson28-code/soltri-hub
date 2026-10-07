@@ -1,0 +1,72 @@
+{
+  "id": "KIT60G",
+  "maker": "현대위아",
+  "confirmedUnits": [
+    1,
+    7,
+    8,
+    9,
+    10,
+    13,
+    14
+  ],
+  "received": "2026-10-02",
+  "specs": {
+    "swingDiameterMm": 780,
+    "maxTurningDiameterMm": 254,
+    "maxTurningLengthMm": 530,
+    "barCapacityMm": 65,
+    "chuckInch": 10,
+    "maxSpindleRpm": 4000,
+    "motorMaxKw": 15,
+    "motorContinuousKw": 11,
+    "travelXMm": 450,
+    "travelZMm": 550,
+    "rapidXMPerMin": 36,
+    "rapidZMPerMin": 36,
+    "blockToolCount": 6,
+    "torqueMaxNm": 191,
+    "torqueContinuousNm": 140,
+    "powerKva": 20,
+    "voltageV": 220,
+    "frequencyHz": 60,
+    "floorLengthMm": 2900,
+    "floorWidthMm": 1650,
+    "heightMm": 1870,
+    "weightKg": 4300,
+    "bedSlantDeg": 45
+  },
+  "sources": [
+    {
+      "label": "사용자 제공 장비가격산출표 · KIT60G",
+      "url": "docs/evidence/kit60g-specs-20261002.png",
+      "scope": "45° 베드 각도 외 아래 모든 표기 사양. 사용 호기는 사용자 직접 확인."
+    },
+    {
+      "label": "현대위아 KIT 시리즈 공식 카탈로그",
+      "url": "https://machine.hyundai-wia.com/upload/product/pdf/KIT4500%28de%29.pdf",
+      "scope": "Structure: KIT60G 45° Slant Bed Structure / Specifications: KIT60G. 검색 색인에서 교차 확인; 현재 원본 서버 응답 불안정."
+    }
+  ],
+  "modelAssumptions": {
+    "chuckDisplayDiameterMm": 254,
+    "chuckDepthMm": 110,
+    "spindleHeightMm": 1050,
+    "spindleFromLeftMm": 1050,
+    "spindleFromFrontMm": 650,
+    "enclosurePanels": "schematic, not OEM CAD",
+    "toolMounts": "user photos, not measured offsets",
+    "axisTravel": "total mechanical stroke only; no machine-zero location supplied",
+    "capacity": "catalog reference, not collision or machining approval"
+  },
+  "unitOverrides": {
+    "7": {
+      "chuckDiameterMm": 300,
+      "chuckBodyWidthMm": 130,
+      "toolWidthMm": 300,
+      "toolHeightMm": 300,
+      "received": "2026-10-02",
+      "source": "사용자 직접 제공. 공통 카탈로그 10인치 표기와 별도."
+    }
+  }
+}

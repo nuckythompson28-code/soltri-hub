@@ -420,7 +420,7 @@
         <a class="home" href="index.html">← 김공장</a>
         <p class="eyebrow">현장 오류 일지</p>
         <h1>CNC 호기별 오류 기록</h1>
-        <div class="source">김공장 · 현장 기록 · CNC 1~10호기</div>
+        <div class="source">김공장 · 현장 기록 · CNC 1~15호기</div>
       </div>
       <div class="header-meta">
         이 기기 브라우저에 저장<br>
@@ -431,7 +431,7 @@
   <main>
     <section class="board card" aria-label="호기 현황판">
       <div class="section-head">
-        <h2>1~10호기 현황판</h2>
+        <h2>호기별 현황판 · 1~15호기 / 호기 미확인</h2>
         <p>타일을 누르면 해당 호기로 목록이 걸러집니다. 빈 호기도 유지됩니다.</p>
       </div>
       <div id="machineBoard" class="tiles"></div>
@@ -466,6 +466,12 @@
                 <option>CNC 8호기</option>
                 <option>CNC 9호기</option>
                 <option>CNC 10호기</option>
+                <option>CNC 11호기</option>
+                <option>CNC 12호기</option>
+                <option>CNC 13호기</option>
+                <option>CNC 14호기</option>
+                <option>CNC 15호기</option>
+                <option>호기 미확인</option>
               </select>
             </div>
             <div class="field">
@@ -536,6 +542,12 @@
             <option>CNC 8호기</option>
             <option>CNC 9호기</option>
             <option>CNC 10호기</option>
+            <option>CNC 11호기</option>
+            <option>CNC 12호기</option>
+            <option>CNC 13호기</option>
+            <option>CNC 14호기</option>
+            <option>CNC 15호기</option>
+            <option>호기 미확인</option>
           </select>
         </div>
         <div>
@@ -601,12 +613,38 @@
     "use strict";
     (function () {
       var STORAGE_KEY = "cncErrorRecords.v1";
-      var MACHINES = ["CNC 1호기", "CNC 2호기", "CNC 3호기", "CNC 4호기", "CNC 5호기", "CNC 6호기", "CNC 7호기", "CNC 8호기", "CNC 9호기", "CNC 10호기"];
+      var MACHINES = ["CNC 1호기", "CNC 2호기", "CNC 3호기", "CNC 4호기", "CNC 5호기", "CNC 6호기", "CNC 7호기", "CNC 8호기", "CNC 9호기", "CNC 10호기", "CNC 11호기", "CNC 12호기", "CNC 13호기", "CNC 14호기", "CNC 15호기", "호기 미확인"];
       var STATUSES = ["미조치", "조치중", "완료"];
       var SEVERITIES = ["경미", "주의", "심각"];
       var FIELDS = ["occurredAt", "machine", "errorName", "symptom", "cause", "action", "worker", "status", "note"];
       var HEADERS = ["발생일시", "호기", "오류 코드/명칭", "증상", "원인", "조치내용", "작업자", "상태", "비고"];
       var SEED_RECORDS = [
+        {
+          id: "case-2026-10-07-cnc14-cut-depth",
+          occurredAt: "2026-10-07T00:00",
+          machine: "CNC 14호기",
+          errorName: "절단 깊이 부족 의심 · 설정 -2 → -3.5",
+          symptom: "오늘 CNC 점검에서 14호기의 절단 깊이가 얕은 듯하다는 사용자 보고.",
+          cause: "원인 미확정.",
+          action: "가공속도가 줄더라도 절단 깊이 확보를 우선하여 깊이 설정을 -2에서 -3.5로 변경했다고 사용자 보고.",
+          worker: "미기재",
+          status: "조치중",
+          severity: "",
+          note: "2026-10-07 사용자 보고 기준. 정확한 점검 시각, 해당 프로그램·변수·행, 실제 이송값 변경 여부와 변경 후 절단 결과는 미확인. 현장 변경 이력만 기록하며 실행용 NC 파일은 변경하지 않음."
+        },
+        {
+          id: "case-2026-10-06-rs40-id61-stock-mixup",
+          occurredAt: "2026-10-06T00:00",
+          machine: "호기 미확인",
+          errorName: "RS40 내경 Ø61 · 얇은 t용 소재 오투입",
+          symptom: "얇은 t용으로 말아놓은 내경 Ø61 RS40 소재를, 내경은 비슷하지만 더 큰 외경과 두꺼운 t를 요구하는 작업지시서용으로 가져와 가공함. 외경 쪽 절삭량이 너무 적어 불량이 많이 발생했다고 사용자 보고.",
+          cause: "사용자 보고: 소재 전체 외경을 확인하지 않고 소재를 선택·투입함. 소재에 같은 숫자가 적혀 있어도 외경·두께·용도가 다를 수 있는데 이를 구분하지 못한 사례.",
+          action: "작업자 교육 필요: 소재에 적힌 숫자나 내경만으로 선택하지 말고, 작업지시서의 소재 규격·용도와 실제 소재의 재질·내경·외경·두께를 함께 대조할 것. 같은 숫자가 적혀 있어도 외경이 다르면 다른 용도일 수 있음을 주지할 것. 교육 실시 여부는 미확인.",
+          worker: "미기재",
+          status: "미조치",
+          severity: "",
+          note: "2026-10-07 사용자 보고의 '어제'를 2026-10-06으로 기록. 발생 호기·정확한 시각·양쪽 소재의 외경과 t·불량 수량 및 불량품 처리 결과는 미확인. 14호기 절단 깊이 변경과 별도 사례이며 실행용 NC 파일은 변경하지 않음."
+        },
 {
           "id": "case-2026-09-28-cnc09-o0741-first-part",
           "occurredAt": "2026-09-28T00:00",

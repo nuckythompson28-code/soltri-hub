@@ -125,7 +125,7 @@ PROGVARS['400'].lbl[120]='목표 수량';
 PROGVARS['852'].keys.push(130);
 MACHINE_PROFILES['2028']={name:'13호기 S3 · O2028',note:'T1 내·외경·홈 / T2 X 양수 절단 · 경로 검토용, 실제 보정·간섭 미검증',link:'o2028.html',up:54,down:53,airOn:57,airOff:58,cw:4,partTool:2,tools:{1:['복합 보링바','내·외경·면취·홈 가공','compound'],2:['위쪽 절단','X 양수 · 아래로 절입','part']}};
 PROGVARS['2028']={keys:[100,101,102,103,104,105,106,107,108,109,110,111,112,114,115,116,118,119,120,121,124,505,515,516,517,518,520,521,522,530,555],lbl:{...PROGVARS['2026'].lbl,111:'T1 rpm',112:'보링 이송',114:'면취 이송',115:'홈 절입 이송',116:'T2 rpm',118:'절단 이송',119:'홈 선택값(원문 미사용)',120:'홈 직경 감소',121:'홈 Z 이동량',124:'1개씩 보링'}};
-function machineProfile(text){return MACHINE_PROFILES[programVariant(text)]||MACHINE_PROFILES.generic;}
+function machineProfile(text){const base=MACHINE_PROFILES[programVariant(text)]||MACHINE_PROFILES.generic;return programVariant(text)==='852'&&/^\s*#130\s*=\s*7\b/m.test(text)?{...base,name:'7호기 · O0852',up:53,down:54,setup:globalThis.SoltriMachineSetups?.unit7}:base;}
 
 function runProgram(text, maxMoves){
   applyProgVars(text);
