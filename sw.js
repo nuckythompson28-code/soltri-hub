@@ -1,5 +1,5 @@
 ﻿// 김공장 서비스워커 — 앱 셸 캐시(오프라인) + 백그라운드 갱신
-const CACHE = 'soltri-hub-v66-unit7-full-stock-20261008';
+const CACHE = 'soltri-hub-v68-unit7-autolink-20261008';
 const ASSETS = ['models/unit7/user-geometry.json','docs/evidence/unit7-tools-20261002.png','machine-models.js','machine-model-ui.js','machine-models.css','models/kit60g/context.glb','models/kit60g/specs.json','docs/evidence/kit60g-specs-20261002.png','simulator-unit7-3d.js','simulator-unit7-3d.css','models/unit7/carriage.glb','models/unit7/setup.json','vendor/three/build/three.module.js','vendor/three/build/three.core.js','vendor/three/examples/jsm/controls/OrbitControls.js','vendor/three/examples/jsm/loaders/GLTFLoader.js','vendor/three/examples/jsm/utils/BufferGeometryUtils.js','o2028.html','programs/o2028/drawing-simulation.txt','programs/o2028/drawing-draft.txt','programs/o2028/original-set.txt','programs/o2028/evidence/4.png','machine-programs.js', 'machine-programs-ui.js', 'machine-programs.css', './', 'index.html', 'status.html', 'cnc-errors.html', 'dorm.html', 'machines.html', 'mtest.html', 'cfbackup.html', 'o0852.html', 'o0400.html', 'o8000.html', 'o8000-guide.html', 'o0400-guide.html', 'o0852-guide.html', 'simulator.html', 'firststep.html', 'cheatsheet.html', 'quiz.html', 'taehyung.html',
   'simulator.css', 'simulator-unit5-gang.js', 'simulator-stock-3d.js', 'simulator-samples.js', 'simulator-engine.js', 'simulator.js',
   'machine-setups.js', 'machine-setup-ui.js', 'machine-setup.css', 'machine-controllers.js', 'docs/evidence/unit5-geometry-20260911.png',
@@ -11,7 +11,8 @@ const ASSETS = ['models/unit7/user-geometry.json','docs/evidence/unit7-tools-202
   'o0300.html', 'o0300.css', 'programs/o0300/photo-transcript.txt', 'programs/o0300/provenance.json',
   'programs/o0300/photos/01-main.jpg', 'programs/o0300/photos/02-setup.jpg', 'programs/o0300/photos/03-boring-chamfer.jpg', 'programs/o0300/photos/04-parting-remainder.jpg', 'programs/o0300/photos/05-remainder-exit.jpg',
   'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
-  'scanner/', 'scanner/index.html', 'scanner/core.js', 'scanner/service.js'];
+  'scanner/', 'scanner/index.html', 'scanner/core.js', 'scanner/service.js',
+  'docs/evidence/unit7-autolink-20261008-01.png','docs/evidence/unit7-autolink-20261008-02.png','docs/evidence/unit7-autolink-20261008-03.png','docs/evidence/unit7-autolink-20261008-04.png','docs/evidence/unit7-autolink-20261008-05.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

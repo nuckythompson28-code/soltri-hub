@@ -1,5 +1,14 @@
 .unit7-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;border-top:1px solid #cbd5df;background:#edf3f8;color:#263d50;font-size:12px}
 .unit7-controls button{padding:6px 10px;font-size:12px}.unit7-controls label{white-space:nowrap}
+#jogToggle3d{font-weight:700;border:1px solid #25618d;color:#18527d;background:#fff}#jogToggle3d[aria-pressed=true]{background:#185b8d;color:#fff}
+.jog-panel{display:flex;align-items:center;gap:20px;padding:12px 16px;background:#eef6fc;border-block:1px solid #a9c8df;color:#233e54}
+.jog-pad{display:grid;grid-template-columns:repeat(3,86px);grid-template-rows:repeat(3,48px);gap:4px;flex:none}
+.jog-pad button{padding:3px;border:1px solid #739fbe;background:#fff;color:#174d75;border-radius:7px;touch-action:manipulation}.jog-pad button:hover{background:#dcecf8}.jog-pad button:active{background:#185b8d;color:#fff}
+.jog-pad b{display:block;font-size:15px}.jog-pad small{display:block;font-size:11px}.jog-pad-center{grid-area:2 / 2;text-align:center;align-self:center;font-size:11px;color:#4c6274}
+#jogXPlus3d{grid-area:1 / 2}#jogZMinus3d{grid-area:2 / 1}#jogZPlus3d{grid-area:2 / 3}#jogXMinus3d{grid-area:3 / 2}
+.jog-info{min-width:0;flex:1;font-size:12px}.jog-info p{margin:7px 0}.jog-options{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.jog-options label{white-space:nowrap}.jog-options select,.jog-options button{padding:7px 9px;min-height:40px;font-size:12px;background:#fff;color:#174d75;border-color:#739fbe}
+#jogOffset3d{font-weight:700;font-variant-numeric:tabular-nums}#jogPosition3d{font-family:Consolas,monospace}.jog-help{color:#4c6274;font-size:11px;line-height:1.7}
+@media(max-width:750px){.jog-panel{flex-wrap:wrap;justify-content:center;gap:6px;padding:10px}.jog-info{flex-basis:100%}.jog-options{justify-content:center}.jog-info p{text-align:center}}
 #stage3d{position:absolute;inset:0;background:#f1f4f7;overflow:hidden}#stage3d canvas{display:block;width:100%;height:100%;touch-action:none}
 #status3d{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(255,255,255,.94);border:1px solid #c4d1db;border-radius:6px;color:#26394b;font-size:11px;padding:7px;pointer-events:none}
 #unit7Details{margin:0;padding:9px 14px;font-size:12px;color:#4f3a19;background:#fff4d9;border-bottom:1px solid #dac499}

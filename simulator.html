@@ -45,11 +45,26 @@
       <div class="view-tools"><div class="view-buttons"><button id="btn3d" aria-pressed="false" hidden>7호기 3D 보기</button><button id="btnGang" aria-pressed="true" hidden>공구대 함께 보기</button><button id="btnCoord" aria-pressed="false">가공부 확대</button><button id="btnFit">전체 보기</button></div><label><input id="showRapid" type="checkbox">급속 경로</label><label><input id="showHistory" type="checkbox">이전 경로</label></div>
       <p class="gang-help" id="gangHelp" hidden>T1·T2·T3는 한 공구대에서 함께 이동합니다. 형상 보정값으로 공구 간격을 반영하며, T2 헤드만 M56에서 전진하고 M55에서 복귀합니다.<strong id="t2PneumaticStatus">T2 공압 · 지령 대기</strong></p>
       <div class="unit7-controls" id="unit7Controls" hidden><button id="detail3d">가공부 확대</button><button id="tips3d">날끝 확대</button><button id="machine3d" aria-pressed="false">장비 전체</button><button id="front3d">정면</button><button id="iso3d">입체</button><button id="top3d">위에서</button><label><input id="body3d" type="checkbox" checked>장비 외골격</label><label><input id="ghost3d" type="checkbox" checked>기계 반투명</label><label><input id="capacity3d" type="checkbox">가공능력 참고</label><label><input id="showHose3d" type="checkbox" checked>호스 예시</label></div>
-      <div id="unit7ToolControls" class="unit7-controls" hidden><label>보링 날끝 표시 간격 <input id="boringGap3d" type="number" min="0.1" max="7" step="0.1" value="3.2" style="width:65px"> mm</label><button id="gapAuto3d">제품 벽두께로 표시</button><span id="gapExplain3d"></span></div>
+      <div id="unit7ToolControls" class="unit7-controls" hidden><button id="jogToggle3d" aria-pressed="false" aria-controls="jogPanel3d" disabled>수동 이동 (JOG)</button><button id="autolink3d">오토링크 확대</button><span id="autoLinkInfo3d"></span><label>보링 날끝 표시 간격 <input id="boringGap3d" type="number" min="0.1" max="7" step="0.1" value="3.2" style="width:65px"> mm</label><button id="gapAuto3d">제품 벽두께로 표시</button><span id="gapExplain3d"></span></div>
       <p id="unit7Details" hidden>7호기 KIT60G · 척 Ø300 × 130mm · 공구대 300 × 300mm · X 보정 차이÷2 적용 · 인서트 45° 회전, 상부 아래 / 하부 위 꼭짓점 절삭 · 홀더 세부 형상·공압 스트로크는 추정/미확인</p>
       <p id="stockSummary3d" hidden aria-live="off"></p>
       <div class="running-code" aria-label="현재 프로그램 줄"><span>현재 프로그램 <b id="runningLocation">프로그램 실행 전</b></span><code id="runningSource">재생 또는 다음 이동을 누르세요.</code></div>
       <div class="stage"><canvas id="cv" aria-label="척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도"></canvas><div id="stage3d" hidden><p id="status3d" role="status">3D 준비</p></div></div>
+      <section id="jogPanel3d" class="jog-panel" aria-label="공구대 수동 이동" hidden>
+        <div class="jog-pad" role="group" aria-label="이동 방향">
+          <button id="jogXPlus3d" type="button"><b>↑ X＋</b><small>위로</small></button>
+          <button id="jogZMinus3d" type="button"><b>← Z－</b><small>척 쪽으로</small></button>
+          <span class="jog-pad-center">공구대<br>함께 이동</span>
+          <button id="jogZPlus3d" type="button"><b>Z＋ →</b><small>척에서 멀리</small></button>
+          <button id="jogXMinus3d" type="button"><b>↓ X－</b><small>아래로</small></button>
+        </div>
+        <div class="jog-info">
+          <div class="jog-options"><label>한 번에 <select id="jogStep3d" aria-label="수동 실제 이동 거리"><option value="0.1">0.1 mm</option><option value="1" selected>1 mm</option><option value="10">10 mm</option></select></label><button id="jogReturn3d" type="button">원래 위치로 복귀</button></div>
+          <p id="jogOffset3d" role="status" aria-live="polite"></p>
+          <p id="jogPosition3d"></p>
+          <p class="jog-help">버튼·방향키로 한 칸씩 이동 · X 1mm 이동 = 지름 좌표 2mm<br>재생·줄 이동 시 수동 이동 해제 · 화면 위치 확인용, 소재 절삭·충돌 판정 없음</p>
+        </div>
+      </section>
       <div class="drawing-caption"><span id="stockDimensions">소재 치수 확인 중</span><span id="legend"></span></div>
       <div class="now" aria-live="polite"><span class="now-label">지금 동작</span><strong id="stepTitle">준비</strong><p id="stepDetail">재생하거나 다음 이동을 눌러 확인하세요.</p></div>
       <div class="controls">

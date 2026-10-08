@@ -78,5 +78,44 @@
       "hose"
     ],
     "depthMeasured": false
+  },
+  "autoLink": {
+    "received": "2026-10-08",
+    "source": "사용자 제공 오토링크 정면·측면·후면 사진 5장 및 작동 설명",
+    "photos": [
+      "docs/evidence/unit7-autolink-20261008-01.png",
+      "docs/evidence/unit7-autolink-20261008-02.png",
+      "docs/evidence/unit7-autolink-20261008-03.png",
+      "docs/evidence/unit7-autolink-20261008-04.png",
+      "docs/evidence/unit7-autolink-20261008-05.png"
+    ],
+    "confirmed": {
+      "arms": 3,
+      "motion": "은색 회전축 위의 검은 암 3개가 회전하고, 끝의 은색 원통 핀으로 소재 외경을 안쪽으로 물림",
+      "contactSurface": "소재 외경",
+      "actuation": "측면 공압 실린더가 개폐; 공구대 Z축 이동으로 전체 그리퍼와 소재를 당김",
+      "headFaces": "척 방향 / 음의 NC Z",
+      "pinAxes": "NC Z와 평행",
+      "t3Datum": "기존 T3 보정 기준은 헤드 중심축에 유지"
+    },
+    "dimensionsMeasured": false,
+    "internalGearingMeasured": false,
+    "cylinderStrokeMeasured": false,
+    "estimatedPreviewMm": {
+      "pivotRadius": 48,
+      "armLength": 31,
+      "pinRadius": 5,
+      "pinLength": 18,
+      "pinAxialSpanRelativeT3": [-12, 6],
+      "openingRadialClearance": 8,
+      "frontPlateWidth": 140,
+      "frontPlateHeight": 140,
+      "headThickness": 40
+    },
+    "notes": [
+      "사진의 비례로 추정한 표시용 치수이며 실기 용량·스트로크·내부 기구의 측정값이 아님.",
+      "3개 핀은 소재 외경/2 + 핀 반지름 위치에서 접촉. 암 길이는 고정하고 축 주위 회전으로 개폐.",
+      "T1/T2/T3의 기존 확인 보정값, 300×300 공구 외곽과 다른 공구 치수를 유지."
+    ]
   }
 }

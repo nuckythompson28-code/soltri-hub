@@ -6,7 +6,7 @@ let profile=MACHINE_PROFILES['600'], mainKey='600', trace=[],programLines=[],cur
 let stockInfo=null,cutEvents=[],referenceOffset=0,CW=0,CH=0,SC=1,OAX=0,OBY=0,view={minA:-100,maxA:30,minB:-50,maxB:50};
 let focusView=matchMedia('(max-width:650px)').matches,loadSerial=0,sourceText='',fieldCache=null;
 let codeProgram=null,selectedSource=null;
-let material3D=null,visualTimes3D=[];
+let material3D=null,visualTimes3D=[],autoLinkFrames=[];
 const sx=z=>OAX+z*SC,sy=r=>OBY-r*SC;
 const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const color=t=>COLORS[t]||'#9de4ae';
@@ -28,6 +28,7 @@ function pointAt(points,fraction){let length=0;const lengths=[];for(let i=1;i<po
 function displayFraction(){return mainKey==='852'&&profile.setup?.machine==='7'?animT:motionFraction();}
 function currentToolPlot(){const s=trace[cur];if(!s)return null;if(s.seg)return pointAt(plotPts(s.seg),displayFraction());if(s.state.X==null||s.state.Z==null)return null;return [zPlot(s.state.Z,s.state.zOff),s.state.X/2];}
 function completed(){if(material3D)return material3D.at(cur,displayFraction()).parts.filter(p=>p.kind!=='scrap').length;return cutEvents.filter(c=>c.index<cur||(c.index===cur&&(!playing||animT>=1))).length;}
+function isUnit7Clamp(i){return !!autoLinkFrames[i];}
 
 function buildStockInfo(){
   referenceOffset=trace.find(s=>s.act==='offset'&&s.state.zOff>0)?.state.zOff||0;
@@ -59,8 +60,10 @@ function buildStockInfo(){
   if(mainKey==='852')stockInfo.target=cutEvents.length;
   material3D=mainKey==='852'&&profile.setup?.machine==='7'&&stockInfo.totalLength>0&&globalThis.SoltriStock3D?
     SoltriStock3D.create({trace,stock:stockInfo,plotPts,role}):null;
-  let clock=0;
-  visualTimes3D=trace.map(s=>{const duration=s.pull?1.8:s.seg?(s.seg.type===0?.45:1):0;const start=clock;clock+=duration;return {start,duration};});
+  let clock=0,previousClamp='open';
+  autoLinkFrames=trace.map(s=>{const from=previousClamp==='closed'?1:0,to=s.state.alClamp==='closed'?1:0;previousClamp=s.state.alClamp;return material3D&&from!==to?{from,to}:null;});
+  // The gripper interval is an explanatory animation, not pneumatic cycle time.
+  visualTimes3D=trace.map((s,i)=>{const duration=s.pull?1.8:s.seg?(s.seg.type===0?.45:1):isUnit7Clamp(i)?.7:0;const start=clock;clock+=duration;return {start,duration};});
   fieldCache=null;
 }
 function computeBounds(){
@@ -243,6 +246,7 @@ function describeStep(s){
   if(s.act==='alarm'||s.act==='cap')return ['계산 정지',s.desc];
   if(s.act==='stop')return ['M00 · 일시정지',s.desc];
   if(s.act==='end')return ['프로그램 종료',`${completed()}개 절단 확인 · ${s.desc}`];
+  if(isUnit7Clamp(cur))return autoLinkFrames[cur].to===1?['오토링크 외경 잡기','세 회전팔이 오므라들어 소재 외경을 잡습니다. 움직임과 소요 시간은 설명용입니다.']:['오토링크 놓기','세 회전팔이 벌어져 소재를 놓습니다. 움직임과 소요 시간은 설명용입니다.'];
   if(s.pull)return ['오토링크 소재 인출',`T3가 소재를 잡고 +Z로 ${fmt(s.pull)} mm 끌어당깁니다.`];
   if(isGangActuator(cur))return gangFrames[cur].extensionTo===1?['T2 공압 전진 · M56','면취 헤드가 형상 보정값의 작업 위치로 전진합니다. T3 기준 Z 3.860mm 앞입니다.'+(s.seg?' 전진한 상태로 공구대가 접근합니다.':'')]:['T2 공압 복귀 · M55',(s.seg?'공구대가 후퇴하고 ':'')+'면취 헤드가 공압으로 복귀합니다. 복귀 거리는 개략 표현입니다.'];
   if(isGangTransition(cur))return s.seg?['공구대 이동 · '+s.state.tool+' 선택','새 공구의 형상 보정 기준으로 이동 지령을 계산합니다. 세 공구는 같은 공구대에서 함께 이동합니다.']:['공구 선택 · '+s.state.tool,'형상 보정 기준을 전환합니다. 축 이동 지령이 없어 공구대는 움직이지 않습니다.'];
@@ -272,8 +276,10 @@ function updateReadouts(){
   $('hX').textContent=fmt(x);$('hZ').textContent=fmt(z);$('hStock').textContent=`${completed()} / ${stockInfo?.target??'—'}`;
   $('hT').textContent=st.tool?`${st.tool} · ${profile.tools[st.toolNo]?.[0]||'공구'}`:'공구 대기';
   $('hMove').textContent=s?.seg?(s.seg.type===0?'급속 이동':s.seg.type===1?'절삭 이송':'원호 가공'):st.toolNo===1?(st.brakeUp?'보링바 UP':'보링바 DOWN'):s?.act==='end'?'종료':'준비 · 전환';
+  if(isUnit7Clamp(cur))$('hMove').textContent=autoLinkFrames[cur].to?'오토링크 잡기':'오토링크 놓기';
   $('hS').textContent=(st.spin||'정지')+(st.rpm?` · S${fmt(st.rpm)}`:'');$('hF').textContent=st.feed?`F ${fmt(st.feed)} ${st.fmode}`:'';
   if(hasUnit5Gang()){$('t2PneumaticStatus').textContent=gangAirLabel();$('tool-2').querySelector('.tool-state').textContent=gangAirLabel().replace(/^T2 /,'').split(' · ')[0];}
+  window.Unit7View?.jogReadouts();
 }
 function updateAll(){
   const s=trace[cur];$('seek').max=trace.length;$('seek').value=cur+1;$('prog').textContent=`${cur+1} / ${trace.length}`;
@@ -285,19 +291,20 @@ function updateAll(){
   fieldCache=null;if(focusView||hasUnit5Gang()){computeBounds();resize();}else draw();
 }
 function pause(){playing=false;if(rafId)cancelAnimationFrame(rafId);rafId=null;$('btnPlay').textContent='▶ 재생';}
-function gotoStep(i){pause();cur=Math.max(-1,Math.min(trace.length-1,i));animT=1;updateAll();}
-function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&!isGangActuator(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
-function play(){if(playing||!trace.length)return;if(cur>=trace.length-1)cur=-1;const resume=!!material3D&&cur>=0&&animT<1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance(resume);}
+function gotoStep(i){window.Unit7View?.exitJog(false);pause();cur=Math.max(-1,Math.min(trace.length-1,i));animT=1;updateAll();}
+function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&!isGangActuator(i)&&!isUnit7Clamp(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
+function play(){if(playing||!trace.length)return;window.Unit7View?.exitJog(false);if(cur>=trace.length-1)cur=-1;const resume=!!material3D&&cur>=0&&animT<1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance(resume);}
 function advance(resume=false){
   if(!playing)return;if(cur>=trace.length-1){pause();return;}
-  if(resume!==true){cur++;while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!isGangActuator(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;animT=0;}
+  if(resume!==true){cur++;while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!isGangActuator(cur)&&!isUnit7Clamp(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;animT=0;}
   const s=trace[cur];updateAll();if(['end','alarm','cap','stop'].includes(s.act)){animT=1;pause();updateAll();return;}
-  const speed=+$('speed').value,duration=isGangActuator(cur)?1500*4/speed:isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now()-duration*animT;
-  function frame(now){if(!playing)return;animT=Math.min(1,(now-start)/duration);draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(()=>advance());}}
+  const speed=+$('speed').value,duration=isUnit7Clamp(cur)?700*4/speed:isGangActuator(cur)?1500*4/speed:isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now()-duration*animT;
+  function frame(now){if(!playing)return;animT=Math.max(0,Math.min(1,(now-start)/duration));draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(()=>advance());}}
   rafId=requestAnimationFrame(frame);
 }
 function setStatus(message,error=false){$('loadStatus').textContent=message;$('loadStatus').classList.toggle('error',error);}
 function recompute(text){
+  window.Unit7View?.exitJog(false);
   pause();sourceText=text;mainKey=parsePrograms(text).mainKey;profile=machineProfile(text);
   $('programNotice').hidden=mainKey!=='2028';$('programNotice').textContent=text.includes('SIMULATION ONLY')?'S3 도면 경로 검토: 소재 242 / 230.30은 절삭여유 0인 가상값입니다. 실제 소재 치수는 미확정. 날 폭 2mm 가정, 홈날 형상·공구 보정·간섭은 미검증이며 CNC 실행용이 아닙니다.':'S3 제공 파일 원문/설정 초안: 현재 소재와 장비 보정을 확인한 실행용 확정본이 아닙니다. 상세 조건은 O2028 설명 페이지를 확인하세요.';
   const max=Math.max(10,Math.min(50000,+$('maxMoves').value||2000)),r=runProgram(text,max);trace=r.trace;programLines=r.programLines;cur=-1;animT=1;
@@ -311,6 +318,7 @@ function recompute(text){
 }
 function syncViewButton(){$('btnCoord').setAttribute('aria-pressed',String(focusView));$('btnGang').setAttribute('aria-pressed',String(hasUnit5Gang()&&gangView));$('btnFit').setAttribute('aria-pressed',String(!focusView&&!gangView));}
 async function loadSample(key){
+  window.Unit7View?.exitJog();
   const serial=++loadSerial;pause();setStatus('프로그램을 불러오는 중입니다.');
   try{let text=SAMPLES[key];if(SOURCE_URLS[key]){const response=await fetch(SOURCE_URLS[key]);if(!response.ok)throw new Error('파일을 불러오지 못했습니다 ('+response.status+')');text=await response.text();}
     if(serial!==loadSerial)return;if(!text)throw new Error('프로그램이 없습니다.');$('editor').value=text;recompute(text);
@@ -319,6 +327,7 @@ async function loadSample(key){
 $('sampleSel').onchange=e=>loadSample(e.target.value);
 $('fileIn').onchange=async e=>{
   const files=Array.from(e.target.files);if(!files.length)return;const serial=++loadSerial;pause();
+  window.Unit7View?.exitJog();
   try{const chunks=await Promise.all(files.map(f=>f.text()));if(serial!==loadSerial)return;
     const headers=chunks.flatMap(t=>[...t.matchAll(/^\s*O\s*(\d+)/gmi)].map(m=>String(Number(m[1]))));if(new Set(headers).size!==headers.length)throw new Error('같은 프로그램 번호가 중복됩니다. 통합 파일 또는 개별 파일 한 세트만 선택하세요.');
     const mains=['600','500','2026','2028','400','8000','852'];chunks.sort((a,b)=>Number(!mains.includes(parsePrograms(a).mainKey))-Number(!mains.includes(parsePrograms(b).mainKey)));
@@ -341,15 +350,19 @@ $('seek').oninput=e=>gotoStep(Number(e.target.value)-1);
 $('btnGang').onclick=()=>{gangView=true;focusView=false;syncViewButton();computeBounds();resize();};
 $('btnCoord').onclick=()=>{focusView=!focusView;gangView=false;syncViewButton();computeBounds();resize();};$('btnFit').onclick=()=>{if(window.Unit7View?.enabled()){window.Unit7View.fit();return;}focusView=false;gangView=false;syncViewButton();computeBounds();resize();};
 $('showRapid').onchange=draw;$('showHistory').onchange=draw;
-document.addEventListener('keydown',e=>{if(/TEXTAREA|INPUT|SELECT|BUTTON/.test(e.target.tagName))return;if(e.code==='Space'){e.preventDefault();playing?pause():play();}else if(e.key==='ArrowRight'){e.preventDefault();nextMove();}else if(e.key==='ArrowLeft'){e.preventDefault();gotoStep(cur-1);}else if(e.key==='Home')gotoStep(-1);});
+document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.target.isContentEditable||/TEXTAREA|INPUT|SELECT|BUTTON/.test(e.target.tagName))return;if(e.code==='Space'){e.preventDefault();playing?pause():play();}else if(e.key==='ArrowRight'){e.preventDefault();nextMove();}else if(e.key==='ArrowLeft'){e.preventDefault();gotoStep(cur-1);}else if(e.key==='Home')gotoStep(-1);});
 window.addEventListener('resize',()=>{computeBounds();resize();});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 let sim3DRevision=0;
 window.SoltriSim3D={
+ pause:()=>{pause();updateReadouts();},
+ refreshReadouts:updateReadouts,
  isUnit7:()=>mainKey==='852'&&trace.find(s=>s.kv[130]>0)?.kv[130]===7,
  snapshot:()=>{
    const frame=trace[cur],fraction=displayFraction(),pts=frame?.seg?plotPts(frame.seg):[],clock=visualTimes3D[cur];
-   return {unit7:window.SoltriSim3D.isUnit7(),revision:sim3DRevision,index:cur,stock:stockInfo,frame,point:currentToolPlot(),fraction,playing,material:material3D?.at(cur,fraction),visualTime:clock?clock.start+clock.duration*fraction:0,field:computeStockField(),segmentPoints:pts.length?[pts[0],pointAt(pts,fraction)]:[]};
+   const point=currentToolPlot(),coordinates=point?[point[1]*2,point[0]-zPlot(0,frame?.seg?.zOff??frame?.state.zOff)]:null,actuator=autoLinkFrames[cur];
+   const autoLink={closed:actuator?actuator.from+(actuator.to-actuator.from)*fraction:frame?.state.alClamp==='closed'?1:0,changing:!!actuator&&fraction<1};
+   return {unit7:window.SoltriSim3D.isUnit7(),revision:sim3DRevision,index:cur,stock:stockInfo,frame,point,coordinates,fraction,playing,autoLink,material:material3D?.at(cur,fraction),visualTime:clock?clock.start+clock.duration*fraction:0,field:computeStockField(),segmentPoints:pts.length?[pts[0],pointAt(pts,fraction)]:[]};
  },
  eventTime:(index,fraction=1)=>{const clock=visualTimes3D[index];return clock?clock.start+clock.duration*fraction:0;}
 };

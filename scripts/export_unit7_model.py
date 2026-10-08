@@ -1,6 +1,9 @@
-import bpy,json
+import bpy,json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
+sys.dont_write_bytecode=True
+from build_unit7_autolink import build_autolink
 bpy.ops.wm.open_mainfile(filepath=str(ROOT/'models/unit7/source.blend'))
 keep=[]
 for obj in list(bpy.data.objects):
@@ -83,11 +86,20 @@ for name,loc in [('TOOLS_MIN',(xmin,0,zmin)),('TOOLS_MAX',(xmax,0,zmax))]:
 for name,xyz in [('ANCHOR_T1',T1),('ANCHOR_T2',T2),('ANCHOR_T3',T3),('BORING_UPPER_TIP',T1),('BORING_LOWER_TIP',(T1[0],T1[1],T1[2]-gap))]:
     obj=bpy.data.objects.new(name,None);bpy.context.scene.collection.objects.link(obj);obj.parent=root;obj.location=xyz;obj['estimated']=True
     if name=='BORING_LOWER_TIP':obj['gapFollower']=True;obj['baseGapMm']=gap
+autolink_head,autolink_meta=build_autolink(root,T3)
+root['machine']='7';root['program']='O0852';root['geometryStatus']='user-confirmed anchor separations; photo-based external gripper with estimated dimensions'
 bpy.context.preferences.filepaths.save_version=0
 bpy.context.scene.unit_settings.system='METRIC';bpy.context.scene.unit_settings.scale_length=.001
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'models/unit7/carriage-current.blend'))
-root['machine']='7';root['program']='O0852';root['geometryStatus']='user-confirmed anchor separations; schematic holders'
 bpy.context.scene.unit_settings.scale_length=1
 bpy.ops.export_scene.gltf(filepath=str(ROOT/'models/unit7/carriage.glb'),export_format='GLB',export_extras=True,export_cameras=False,export_lights=False,export_yup=True)
 meta={'machine':7,'machineModel':'KIT60G','equipmentSpecs':'../kit60g/specs.json','program':'O0852','status':'user-dimensions-with-schematic-holders','physicalOffsetsConfirmed':True,'hosePlacement':'retracted educational example, not measured on machine7','pneumaticStrokeConfirmed':False,'source':'O0852 Blender training model, user supplied photos 2026-10-02','blenderVersion':bpy.app.version_string,'units':'illustrative millimetres','anchors':{'1':{'x':-12,'y':-22,'z':41},'2':{'x':T2[0],'y':T2[2],'z':-T2[1]},'3':{'x':T3[0],'y':T3[2],'z':-T3[1]}},'mCodes':{'boringUp':53,'boringDown':54,'autoLinkOpen':64,'autoLinkClose':63},'userGeometry':user,'baseTipGapMm':gap,'maxTipGapMm':7,'nominalPartingWidthMm':2,'boringIncludedAngleDeg':90,'boringRotationDeg':45,'cuttingVertex':{'upper':'bottom','lower':'top'},'toolEnvelopeMm':[300,300],'notes':['User confirmed X is diameter; radial anchor separation = geometry difference/2.','Holder shapes and front/back depth remain estimates; wear and machine zero unknown.','Stroke not animated until measured.','Program interpreter drives selected anchor; all other objects move together.']}
+meta['source']='O0852 Blender training model; user tool photos 2026-10-02 and five autolink photos 2026-10-08'
+meta['autoLink']=autolink_meta
+meta['notes']=[n for n in meta['notes'] if n!='Stroke not animated until measured.']+[
+    'Autolink has three rigid rotating arms and axial pins gripping raw-material external diameter; side pneumatic cylinder opens/closes.',
+    'Autolink T3 remains the measured axis datum. Arm, pin, housing and cylinder dimensions are photograph-based estimates.',
+    'Autolink rotation is illustrative external-diameter contact geometry; internal gearing and pneumatic stroke are not measured.',
+    'Carriage NC Z pulls the complete gripper. Boring pneumatic stroke remains unmeasured and is not animated.'
+]
 (ROOT/'models/unit7/setup.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')

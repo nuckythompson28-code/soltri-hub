@@ -8,6 +8,9 @@
   let workFrame,machineBody,capacity,dimensions,chuckBody,jaws=[],wholeMachine=false;
   let stockMeasure,stockMeasureLine,stockMeasureLabel,measureText='',materialState=null;
   let viewportWidth=0,viewportHeight=0;
+  let jog=null; // View-only offsets in physical millimetres; the NC trace is frozen.
+  let autoLinkHead,autoLinkJaws=[],autoLinkPins=[],autoLinkState=null;
+  let autoLinkFocus=false;const autoLinkMeshes=new Set();
   const dropped=new Map();
   const equipment=window.SoltriMachineModels.KIT60G, catalog=equipment.specs, assumptions=equipment.modelAssumptions, actual=equipment.unitOverrides[7];
   const meshes=[],materialOriginal=new Map(),gapFollowers=[];let gapManual=false,displayGap=3.2;
@@ -23,9 +26,11 @@
     button.textContent=enabled?'2D 단면으로':'7호기 3D 보기';
   }
   function toggle(on){
+    if(!on)exitJog(false);
     enabled=!!on&&eligible();ui();
     $('cv').hidden=enabled;stage.hidden=!enabled;$('unit7Details').hidden=!enabled;$('unit7ToolControls').hidden=!enabled;
     $('stockSummary3d').hidden=!enabled;
+    jogUI();
     $('btnCoord').disabled=enabled;$('btnGang').disabled=enabled;
     if(!enabled)return;
     if(contextLost){say('3D 그래픽 연결이 끊겼습니다. 2D 단면으로 확인하거나 새로고침하세요.');return;}
@@ -42,7 +47,7 @@
       renderer.setClearColor(0xf1f4f7);renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.domElement.setAttribute('aria-label','7호기 3D 가공 화면. 드래그하여 회전, 휠로 확대');
       stage.insertBefore(renderer.domElement,status);
-      renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;stage.dataset.error='WebGL context lost';say('3D 그래픽 연결이 끊겼습니다. 2D 단면으로 확인하세요.');});
+      renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;exitJog(false);jogUI();stage.dataset.error='WebGL context lost';say('3D 그래픽 연결이 끊겼습니다. 2D 단면으로 확인하세요.');});
       scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(34,1,.5,12000);camera.position.set(120,180,900);
       scene.add(new THREE.HemisphereLight(0xffffff,0x7d8b9b,2.4));
       const sun=new THREE.DirectionalLight(0xffffff,2.5);sun.position.set(-100,450,500);scene.add(sun);
@@ -64,6 +69,11 @@
         anchors[t]=node.getWorldPosition(new THREE.Vector3());
         const expected=setup.anchors[t];if(anchors[t].distanceTo(new THREE.Vector3(expected.x,expected.y,expected.z))>.05)throw Error('모델 단위 또는 기준점 불일치');
       }
+      autoLinkHead=model.getObjectByName('AUTOLINK_HEAD');
+      autoLinkJaws=[1,2,3].map(n=>model.getObjectByName('AUTOLINK_JAW_'+n));
+      autoLinkPins=[1,2,3].map(n=>model.getObjectByName('AUTOLINK_PIN_'+n));
+      if(!autoLinkHead||autoLinkJaws.some(o=>!o)||autoLinkPins.some(o=>!o))throw Error('오토링크 모델을 새로고침해 주세요.');
+      autoLinkHead.traverse(o=>{if(o.isMesh)autoLinkMeshes.add(o);});
       for(const [t,title] of [[1,'T1 · 90° 보링'],[2,'T2 · 2mm 절단날'],[3,'T3 · 오토링크']]){const a=anchors[t];const label=textSprite(title,[a.x+(t===2?-55:30),a.y+(t===1?-55:45),a.z+20],100);label.userData.toolLabel=true;model.add(label);}
       stockMesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshStandardMaterial({color:0xdca44c,roughness:.55,metalness:.08,side:THREE.DoubleSide}));workFrame.add(stockMesh);
       stockMesh.name='Remaining full-length material';
@@ -89,13 +99,14 @@
     for(const o of meshes){
       const original=materialOriginal.get(o);const isHose=o.userData.role==='hose'||/HOSE|SLEEVE|INTERIOR/.test(o.name);
       o.visible=!isHose||$('showHose3d').checked;
-      o.material.opacity=$('ghost3d').checked && !isHose && o.userData.role!=='cutting' ? .24 : 1;
+      o.material.opacity=autoLinkFocus?(autoLinkMeshes.has(o)?1:.035):$('ghost3d').checked && !isHose && !['cutting','grip'].includes(o.userData.role) ? .24 : 1;
       o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;
       o.material.color.copy(original.color);o.material.needsUpdate=true;
     }
-    machineBody?.traverse(o=>{if(o.isMesh){o.material.opacity=$('ghost3d').checked ? .32 : 1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}});
+    machineBody?.traverse(o=>{if(o.isMesh){o.material.opacity=autoLinkFocus?.02:$('ghost3d').checked ? .32 : 1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}});
     // Show the complete bar through the chuck in the existing transparent view.
-    for(const o of [chuckBody,...jaws])if(o){o.material.opacity=$('ghost3d').checked?.22:1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}
+    for(const o of [chuckBody,...jaws])if(o){o.material.opacity=autoLinkFocus?.05:$('ghost3d').checked?.22:1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}
+    model.traverse(o=>{if(o.userData.toolLabel)o.visible=!wholeMachine&&!autoLinkFocus;});
     render();
   }
   function size(){
@@ -181,25 +192,81 @@
     const p=s.segmentPoints||[];const points=p.map(([x,y])=>new THREE.Vector3(x,y,1));
     pathLine.visible=points.length>1;if(points.length>1){pathLine.geometry.dispose();pathLine.geometry=new THREE.BufferGeometry().setFromPoints(points);}
   }
+  function layoutPoint(s){return s.index<0?[25,s.stock.rawO/2+22]:s.point;}
+  function jogUI(s=lastSnapshot){
+    const available=enabled&&ready&&!contextLost&&eligible()&&!!s&&!!layoutPoint(s);
+    $('jogToggle3d').disabled=!available;
+    $('jogToggle3d').setAttribute('aria-pressed',String(!!jog));
+    $('jogToggle3d').textContent=jog?'수동 이동 종료':'수동 이동 (JOG)';
+    $('jogToggle3d').title=available?'공구대 전체를 X·Z 방향으로 직접 이동':'공구 위치가 표시된 이동 줄에서 사용할 수 있습니다.';
+    $('jogPanel3d').hidden=!jog||!enabled;
+  }
+  function enterJog(){
+    if(!enabled||!ready||contextLost||!eligible())return;
+    window.SoltriSim3D.pause();
+    const s=window.SoltriSim3D.snapshot();if(!layoutPoint(s))return;
+    jog={snapshot:s,x:0,z:0};sync();
+  }
+  function exitJog(redraw=true){
+    if(!jog)return;
+    jog=null;stage.dataset.jog='false';
+    if(window.Unit7View?.debug)window.Unit7View.debug.jog={active:false,x:0,z:0};
+    jogUI();window.SoltriSim3D.refreshReadouts();
+    if(redraw)sync();
+  }
+  function jogMove(axis,direction){
+    if(!jog||!enabled||contextLost)return;
+    const step=Number($('jogStep3d').value);if(![.1,1,10].includes(step))return;
+    jog[axis]=Math.round((jog[axis]+direction*step)*1000)/1000;sync();
+  }
+  function jogReadouts(){
+    if(!jog)return;
+    const s=jog.snapshot,tool=s.frame?.state.toolNo||1,point=layoutPoint(s);
+    const [x,z]=s.coordinates||[point[1]*2,point[0]];
+    const X=(x+jog.x*2).toFixed(3),Z=(z+jog.z).toFixed(3);
+    const signed=v=>(v>0?'+':'')+v.toFixed(3);
+    $('jogOffset3d').textContent=`시작 위치에서 실제 이동: X ${signed(jog.x)} / Z ${signed(jog.z)} mm`;
+    $('jogPosition3d').textContent=`${s.index<0?'배치 미리보기':'현재'} T${tool} 날끝: X ${X} (지름) / Z ${Z} mm`;
+    $('hX').textContent=X;$('hZ').textContent=Z;$('hMove').textContent='수동 이동';
+    $('hS').textContent='가공 재생 일시정지';
+  }
+  function adjustAutoLink(s){
+    const config=setup.autoLink;if(!config||!autoLinkHead)return;
+    const R=config.pivotRadiusMm,L=config.armLengthMm,pin=config.pinRadiusMm;
+    const target=s.stock.rawO/2+pin,low=Math.abs(R-L),high=R+L;
+    const bounded=r=>Math.max(low,Math.min(high,r));
+    const beta=r=>Math.acos(Math.max(-1,Math.min(1,(r*r-R*R-L*L)/(2*R*L))));
+    const closed=s.autoLink.closed,closedAngle=beta(bounded(target)),openAngle=beta(bounded(target+config.openClearanceMm));
+    const angle=openAngle+(closedAngle-openAngle)*closed;
+    autoLinkJaws.forEach((jaw,i)=>{jaw.rotation.x=config.pivotAnglesRad[i]+angle;});
+    const contactRadius=Math.sqrt(Math.max(0,R*R+L*L+2*R*L*Math.cos(angle)))-pin;
+    autoLinkState={closed,changing:s.autoLink.changing,supported:target>=low&&target<=high,openingLimited:target+config.openClearanceMm>high,contactRadius,clearance:contactRadius-s.stock.rawO/2,jaws:autoLinkJaws,pins:autoLinkPins,head:autoLinkHead};
+    const state=closed<=0?'열림':closed>=1?'외경 잡음':s.frame?.state.alClamp==='closed'?'오므리는 중':'벌어지는 중';
+    $('autoLinkInfo3d').textContent=autoLinkState.supported?`오토링크 ${state} · 소재 외경 Ø${s.stock.rawO} · 회전 범위는 추정${autoLinkState.openingLimited?' · 열림 표시 범위 제한':''}`:'현재 소재 외경은 추정 집게 모델의 표현 범위를 벗어납니다. 실측 치수가 필요합니다.';
+  }
   function sync(){
     if(!enabled||!ready||contextLost)return;
-    const s=window.SoltriSim3D.snapshot();if(!s.unit7)return;
+    const live=window.SoltriSim3D.snapshot();if(!live.unit7)return;
+    if(jog&&(live.playing||live.revision!==jog.snapshot.revision||live.index!==jog.snapshot.index||live.fraction!==jog.snapshot.fraction))exitJog(false);
+    const s=jog?.snapshot||live;
     lastSnapshot=s;if(revision!==s.revision){revision=s.revision;lastField='';cameraReady=false;clearDrops();}
-    adjustGap(s);surface(s);fallingParts(s);activePath(s);
+    adjustGap(s);adjustAutoLink(s);surface(s);fallingParts(s);activePath(s);
     const state=s.frame?.state||{},tool=state.toolNo||1,anchor=anchors[tool]||anchors[1];
-    const known=!!s.point;let p=s.point;
-    if(s.index<0)p=[25,s.stock.rawO/2+22]; // explicit layout preview before NC positioning
+    const known=!!s.point;let p=layoutPoint(s);
+    if(jog)p=[p[0]+jog.z,p[1]+jog.x];
     model.visible=!!p;
-    marker.visible=known;
+    marker.visible=known||!!jog;
     if(p){
       model.position.set(p[0]-anchor.x,p[1]-anchor.y,-anchor.z);
-      if(known)marker.position.set(p[0],p[1],0);
+      if(marker.visible)marker.position.set(p[0],p[1],0);
     }
     const pstate=state.brakeUp?'상승 M53':'하강 M54';
-    say(s.index<0?'배치 미리보기 · 재생하면 NC 좌표와 연결됩니다.':!known?'기계 복귀/좌표 설정 중 · 실제 복귀 위치가 없어 공구대 위치를 생략합니다.':`T${tool} 기준점 추종 · 보링바 ${pstate} · 오토링크 ${state.alClamp==='closed'?'잡음':'열림'} · M코드 상태만 표시`);
+    say(jog?`수동 이동 · T1·T2·T3 함께 이동 · ${s.index<0?'배치 미리보기 기준':'가공 재생 일시정지'}`:s.index<0?'배치 미리보기 · 재생하면 NC 좌표와 연결됩니다.':!known?'기계 복귀/좌표 설정 중 · 실제 복귀 위치가 없어 공구대 위치를 생략합니다.':`T${tool} 기준점 추종 · 보링바 ${pstate} · 오토링크 ${s.autoLink.changing?(state.alClamp==='closed'?'오므리는 중':'벌어지는 중'):state.alClamp==='closed'?'외경 잡음':'열림'} · 개폐 움직임은 설명용`);
+    if(jog)pathLine.visible=false;
+    jogUI(s);jogReadouts();stage.dataset.jog=String(!!jog);
     stage.dataset.tool=String(tool);stage.dataset.located=String(known);stage.dataset.index=String(s.index);
     // Debug interface supports automated invariants, not hidden CNC corrections.
-    window.Unit7View.debug={position:model.position.toArray(),anchor:anchor.toArray(),target:p,located:known,revision,index:s.index,brakeUp:state.brakeUp,clamp:state.alClamp,anchors,model,chuckRadius:actual.chuckDiameterMm/2,chuckBodyWidth:actual.chuckBodyWidthMm,bedAngle:catalog.bedSlantDeg,wholeMachine,machineBody,workFrame,displayGap,setup,stockMesh,materialState,fallingParts:[...dropped.values()],visualTime:s.visualTime,chuck};
+    window.Unit7View.debug={position:model.position.toArray(),anchor:anchor.toArray(),target:p,located:known,revision,index:s.index,brakeUp:state.brakeUp,clamp:state.alClamp,anchors,model,chuckRadius:actual.chuckDiameterMm/2,chuckBodyWidth:actual.chuckBodyWidthMm,bedAngle:catalog.bedSlantDeg,wholeMachine,machineBody,workFrame,displayGap,setup,stockMesh,materialState,fallingParts:[...dropped.values()],visualTime:s.visualTime,chuck,marker,autoLink:autoLinkState,jog:{active:!!jog,x:jog?.x||0,z:jog?.z||0}};
     if(!cameraReady){fit('front');cameraReady=true;}
     render();
   }
@@ -210,6 +277,7 @@
   }}
   function fit(view='front'){
     if(!ready)return;
+    if(autoLinkFocus){autoLinkFocus=false;$('autolink3d').setAttribute('aria-pressed','false');appearance();}
     const s=lastSnapshot||window.SoltriSim3D.snapshot();if(!s.stock)return;
     scene.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(chuck);box.union(new THREE.Box3().setFromObject(stockMesh));
@@ -233,6 +301,10 @@
   function geometryInfo(){
     const u=setup.userGeometry;if(!u)return;
     $('unit7GeometryInfo').innerHTML='<section class="model-card"><h3>7호기 공구 정보 · 사용자 제공</h3><p>O0852: T1 정사각형 45° 회전 · 상부 아래 / 하부 위 꼭짓점 절삭 / T2 평균 폭 2mm 절단날 / T3 사진 빨간 원의 오토링크</p><table style="width:100%;text-align:right"><thead><tr><th>공구</th><th>형상 X</th><th>형상 Z</th></tr></thead><tbody>'+Object.entries(u.geometry).map(([n,g])=>'<tr><th>T0'+n+'</th><td>'+g.X.toFixed(3)+'</td><td>'+g.Z.toFixed(3)+'</td></tr>').join('')+'</tbody></table><p>보링 날끝 간격: 제품별 조절, 최대 7mm. 현재 표시값은 실측값이 아닙니다. 절단날 모델 폭 2mm는 NC 절단폭 설정과 별개입니다.</p><p><b>7호기 실측 척 Ø300 × 폭130mm · 공구 전체 가로/세로 300 × 300mm</b></p><p>X 형상값은 지름 기준으로 확인되었습니다. T1 기준 T2: 왼쪽52.020 / 위34.350mm, T3: 왼쪽36.020 / 위174.750mm. Z는 절반으로 나누지 않습니다.</p><p>T 선택 시 같은 공구대 위치를 유지하도록 좌표를 다시 표현합니다. 공구 홀더의 세부 형상·깊이·마모·공압 스트로크는 미확인입니다.</p><a href="'+u.photo+'" target="_blank" rel="noopener">제공 공구 사진 보기</a></section>';
+    if(setup.autoLink){
+      const photos=setup.autoLink.photos||[];
+      $('unit7GeometryInfo').insertAdjacentHTML('beforeend','<section class="model-card"><h3>오토링크 · 2026-10-08 사진 반영</h3><p>공압으로 세 회전팔을 오므려 원통형 물림부가 소재 외경을 잡습니다. 잡은 상태에서 공구대 Z축 이동으로 소재를 인출합니다.</p><p>열림·닫힘은 프로그램의 M코드를 따릅니다. 본체 치수, 팔 길이, 핀 지름, 열림 각도와 개폐 시간은 설명용 추정값이며 실측 능력 범위가 아닙니다.</p><p>'+photos.map((photo,i)=>'<a href="'+photo+'" target="_blank" rel="noopener">사진 '+(i+1)+'</a>').join(' · ')+'</p></section>');
+    }
   }
   function textSprite(text,position,width=300){
     const c=document.createElement('canvas');let ctx=c.getContext('2d');ctx.font='bold 48px sans-serif';c.width=Math.ceil(ctx.measureText(text).width)+40;c.height=80;ctx=c.getContext('2d');
@@ -260,16 +332,35 @@
     $('machine3d').setAttribute('aria-pressed',String(value));$('detail3d').setAttribute('aria-pressed',String(!value));
     sync();fit(value?'iso':'front');
   }
-  window.Unit7View={sync,fit,enabled:()=>enabled,onProgram(){ui();if(!eligible())return;if($('sampleSel').value==='O0852_UNIT7'||new URLSearchParams(location.search).get('view')==='3d')toggle(true);else sync();}};
+  window.Unit7View={sync,fit,exitJog,jogReadouts,enabled:()=>enabled,onProgram(){exitJog(false);ui();if(!eligible())return;if($('sampleSel').value==='O0852_UNIT7'||new URLSearchParams(location.search).get('view')==='3d')toggle(true);else sync();}};
   button.onclick=()=>toggle(!enabled);
+  $('jogToggle3d').onclick=()=>jog?exitJog():enterJog();
+  $('jogReturn3d').onclick=()=>{exitJog();$('jogToggle3d').focus();};
+  for(const [id,axis,direction] of [['jogXPlus3d','x',1],['jogXMinus3d','x',-1],['jogZPlus3d','z',1],['jogZMinus3d','z',-1]])$(id).onclick=()=>jogMove(axis,direction);
+  document.addEventListener('keydown',e=>{
+    if(!jog||e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
+    const move={ArrowUp:['x',1],ArrowDown:['x',-1],ArrowRight:['z',1],ArrowLeft:['z',-1]}[e.key];
+    if(move){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)jogMove(...move);}
+  },true);
   $('boringGap3d').onchange=()=>{const value=Number($('boringGap3d').value);if(!Number.isFinite(value)||value<.1||value>7){$('boringGap3d').setCustomValidity('표시 간격은 0.1~7mm입니다.');$('boringGap3d').reportValidity();return;}$('boringGap3d').setCustomValidity('');gapManual=true;displayGap=value;sync();};
   $('gapAuto3d').onclick=()=>{gapManual=false;$('boringGap3d').setCustomValidity('');sync();};
   $('body3d').onchange=()=>{if(machineBody){machineBody.visible=$('body3d').checked;dimensions.visible=wholeMachine&&machineBody.visible;render();}};
   $('tips3d').onclick=()=>{
     if(!ready||!model.visible)return;wholeMachine=false;dimensions.visible=false;
+    autoLinkFocus=false;$('autolink3d').setAttribute('aria-pressed','false');appearance();camera.up.set(0,1,0);
     scene.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model.getObjectByName('UPPER_CARBIDE'));box.union(new THREE.Box3().setFromObject(model.getObjectByName('LOWER_CARBIDE')));
     const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);camera.position.copy(center).addScaledVector(new THREE.Vector3(0,Math.SQRT1_2,Math.SQRT1_2),90);camera.updateProjectionMatrix();controls.update();
     $('machine3d').setAttribute('aria-pressed','false');$('detail3d').setAttribute('aria-pressed','false');render();
+  };
+  $('autolink3d').onclick=()=>{
+    if(!ready||!model.visible||!autoLinkHead)return;
+    wholeMachine=false;dimensions.visible=false;autoLinkFocus=true;appearance();scene.updateMatrixWorld(true);
+    const box=new THREE.Box3().setFromObject(autoLinkHead),center=box.getCenter(new THREE.Vector3()),span=box.getSize(new THREE.Vector3());
+    const distance=Math.max(span.length(),span.length()/camera.aspect)*1.55;
+    const direction=new THREE.Vector3(-1,.22,.35).normalize().applyQuaternion(workFrame.quaternion);
+    camera.up.copy(new THREE.Vector3(0,1,0).applyQuaternion(workFrame.quaternion));
+    controls.target.copy(center);camera.position.copy(center).addScaledVector(direction,distance);camera.updateProjectionMatrix();controls.update();
+    $('autolink3d').setAttribute('aria-pressed','true');$('machine3d').setAttribute('aria-pressed','false');$('detail3d').setAttribute('aria-pressed','false');render();
   };
   $('machine3d').onclick=()=>setWhole(true);$('detail3d').onclick=()=>setWhole(false);
   $('capacity3d').onchange=()=>{if(capacity){capacity.visible=$('capacity3d').checked;fit(wholeMachine?'iso':'front');}};
