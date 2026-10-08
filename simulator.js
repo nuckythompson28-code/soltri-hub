@@ -6,6 +6,7 @@ let profile=MACHINE_PROFILES['600'], mainKey='600', trace=[],programLines=[],cur
 let stockInfo=null,cutEvents=[],referenceOffset=0,CW=0,CH=0,SC=1,OAX=0,OBY=0,view={minA:-100,maxA:30,minB:-50,maxB:50};
 let focusView=matchMedia('(max-width:650px)').matches,loadSerial=0,sourceText='',fieldCache=null;
 let codeProgram=null,selectedSource=null;
+let material3D=null,visualTimes3D=[];
 const sx=z=>OAX+z*SC,sy=r=>OBY-r*SC;
 const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const color=t=>COLORS[t]||'#9de4ae';
@@ -24,8 +25,9 @@ function segPlotPts(seg){
 }
 function plotPts(seg){return segPlotPts(seg).map(([z,r])=>[zPlot(z,seg.zOff),r]);}
 function pointAt(points,fraction){let length=0;const lengths=[];for(let i=1;i<points.length;i++){const d=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);lengths.push(d);length+=d;}let remaining=length*fraction;for(let i=1;i<points.length;i++){if(remaining<=lengths[i-1]&&lengths[i-1]>0){const t=remaining/lengths[i-1];return [points[i-1][0]+(points[i][0]-points[i-1][0])*t,points[i-1][1]+(points[i][1]-points[i-1][1])*t];}remaining-=lengths[i-1];}return points.at(-1);}
-function currentToolPlot(){const s=trace[cur];if(!s)return null;if(s.seg)return pointAt(plotPts(s.seg),motionFraction());if(s.state.X==null||s.state.Z==null)return null;return [zPlot(s.state.Z,s.state.zOff),s.state.X/2];}
-function completed(){return cutEvents.filter(c=>c.index<cur||(c.index===cur&&(!playing||animT>=1))).length;}
+function displayFraction(){return mainKey==='852'&&profile.setup?.machine==='7'?animT:motionFraction();}
+function currentToolPlot(){const s=trace[cur];if(!s)return null;if(s.seg)return pointAt(plotPts(s.seg),displayFraction());if(s.state.X==null||s.state.Z==null)return null;return [zPlot(s.state.Z,s.state.zOff),s.state.X/2];}
+function completed(){if(material3D)return material3D.at(cur,displayFraction()).parts.filter(p=>p.kind!=='scrap').length;return cutEvents.filter(c=>c.index<cur||(c.index===cur&&(!playing||animT>=1))).length;}
 
 function buildStockInfo(){
   referenceOffset=trace.find(s=>s.act==='offset'&&s.state.zOff>0)?.state.zOff||0;
@@ -39,6 +41,14 @@ function buildStockInfo(){
   const chuckFaceZ=referenceOffset>0?-referenceOffset:minCut-8;
   const target=mainKey==='600'||mainKey==='500'||mainKey==='400'||mainKey==='8000'?trace.find(s=>s.kv[120]>0)?.kv[120]:(mainKey==='2026'||mainKey==='2028')?trace.find(s=>s.kv[517]>0)?.kv[517]:null;
   stockInfo={rawO,rawI,finO,finI,finLen,tip,unitLen:finLen+tip,chuckFaceZ,z0:chuckFaceZ,z1:0,target};
+  // #103/G10 describes the exposed working length, not the whole O0852 bar.
+  // Read evaluated assignments so the model also supports macro expressions.
+  if(mainKey==='852'){
+    const entered={};
+    for(const step of trace){if(step.seg)break;if(step.changed&&[101,102].includes(step.changed.n)&&step.changed.v>=0)entered[step.changed.n]=step.changed.v;}
+    const total=(entered[101]??0)+(entered[102]??0);
+    if(total>0)stockInfo.totalLength=total;
+  }
   cutEvents=[];let lastCount=0,lastIndex=-1;
   for(let i=0;i<trace.length;i++){
     if(trace[i].state.parts<=lastCount)continue;lastCount=trace[i].state.parts;
@@ -47,6 +57,10 @@ function buildStockInfo(){
     lastIndex=i;
   }
   if(mainKey==='852')stockInfo.target=cutEvents.length;
+  material3D=mainKey==='852'&&profile.setup?.machine==='7'&&stockInfo.totalLength>0&&globalThis.SoltriStock3D?
+    SoltriStock3D.create({trace,stock:stockInfo,plotPts,role}):null;
+  let clock=0;
+  visualTimes3D=trace.map(s=>{const duration=s.pull?1.8:s.seg?(s.seg.type===0?.45:1):0;const start=clock;clock+=duration;return {start,duration};});
   fieldCache=null;
 }
 function computeBounds(){
@@ -254,7 +268,7 @@ function describeStep(s){
 }
 function updateReadouts(){
   const s=trace[cur],st=s?.state||{};let x=st.X,z=st.Z;
-  if(playing&&s?.seg){const p=pointAt(segPlotPts(s.seg),motionFraction());x=p[1]*2;z=p[0];}
+  if((playing||material3D&&animT<1)&&s?.seg){const p=pointAt(segPlotPts(s.seg),displayFraction());x=p[1]*2;z=p[0];}
   $('hX').textContent=fmt(x);$('hZ').textContent=fmt(z);$('hStock').textContent=`${completed()} / ${stockInfo?.target??'—'}`;
   $('hT').textContent=st.tool?`${st.tool} · ${profile.tools[st.toolNo]?.[0]||'공구'}`:'공구 대기';
   $('hMove').textContent=s?.seg?(s.seg.type===0?'급속 이동':s.seg.type===1?'절삭 이송':'원호 가공'):st.toolNo===1?(st.brakeUp?'보링바 UP':'보링바 DOWN'):s?.act==='end'?'종료':'준비 · 전환';
@@ -273,13 +287,13 @@ function updateAll(){
 function pause(){playing=false;if(rafId)cancelAnimationFrame(rafId);rafId=null;$('btnPlay').textContent='▶ 재생';}
 function gotoStep(i){pause();cur=Math.max(-1,Math.min(trace.length-1,i));animT=1;updateAll();}
 function nextMove(){let i=cur+1;while(i<trace.length-1&&!trace[i].seg&&!isGangTransition(i)&&!isGangActuator(i)&&trace[i].act!=='alarm'&&trace[i].act!=='cap')i++;gotoStep(i);}
-function play(){if(playing||!trace.length)return;if(cur>=trace.length-1)cur=-1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance();}
-function advance(){
-  if(!playing)return;if(cur>=trace.length-1){pause();return;}cur++;
-  while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!isGangActuator(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;
-  const s=trace[cur];animT=0;updateAll();if(['end','alarm','cap','stop'].includes(s.act)){animT=1;pause();updateAll();return;}
-  const speed=+$('speed').value,duration=isGangActuator(cur)?1500*4/speed:isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now();
-  function frame(now){if(!playing)return;animT=Math.min(1,(now-start)/duration);draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(advance);}}
+function play(){if(playing||!trace.length)return;if(cur>=trace.length-1)cur=-1;const resume=!!material3D&&cur>=0&&animT<1;playing=true;$('btnPlay').textContent='Ⅱ 일시정지';advance(resume);}
+function advance(resume=false){
+  if(!playing)return;if(cur>=trace.length-1){pause();return;}
+  if(resume!==true){cur++;while(cur<trace.length-1&&!trace[cur].seg&&!isGangTransition(cur)&&!isGangActuator(cur)&&!['end','alarm','cap','stop'].includes(trace[cur].act))cur++;animT=0;}
+  const s=trace[cur];updateAll();if(['end','alarm','cap','stop'].includes(s.act)){animT=1;pause();updateAll();return;}
+  const speed=+$('speed').value,duration=isGangActuator(cur)?1500*4/speed:isGangTransition(cur)?900*4/speed:s.pull?1800:(s.seg?.type===0?450:1000)*4/speed,start=performance.now()-duration*animT;
+  function frame(now){if(!playing)return;animT=Math.min(1,(now-start)/duration);draw();updateReadouts();if(animT<1)rafId=requestAnimationFrame(frame);else{updateAll();rafId=requestAnimationFrame(()=>advance());}}
   rafId=requestAnimationFrame(frame);
 }
 function setStatus(message,error=false){$('loadStatus').textContent=message;$('loadStatus').classList.toggle('error',error);}
@@ -334,8 +348,9 @@ let sim3DRevision=0;
 window.SoltriSim3D={
  isUnit7:()=>mainKey==='852'&&trace.find(s=>s.kv[130]>0)?.kv[130]===7,
  snapshot:()=>{
-   const frame=trace[cur],fraction=motionFraction(),pts=frame?.seg?plotPts(frame.seg):[];
-   return {unit7:window.SoltriSim3D.isUnit7(),revision:sim3DRevision,index:cur,stock:stockInfo,frame,point:currentToolPlot(),fraction,field:computeStockField(),segmentPoints:pts.length?[pts[0],pointAt(pts,fraction)]:[]};
- }
+   const frame=trace[cur],fraction=displayFraction(),pts=frame?.seg?plotPts(frame.seg):[],clock=visualTimes3D[cur];
+   return {unit7:window.SoltriSim3D.isUnit7(),revision:sim3DRevision,index:cur,stock:stockInfo,frame,point:currentToolPlot(),fraction,playing,material:material3D?.at(cur,fraction),visualTime:clock?clock.start+clock.duration*fraction:0,field:computeStockField(),segmentPoints:pts.length?[pts[0],pointAt(pts,fraction)]:[]};
+ },
+ eventTime:(index,fraction=1)=>{const clock=visualTimes3D[index];return clock?clock.start+clock.duration*fraction:0;}
 };
 const initial=new URLSearchParams(location.search).get('program')||'O0600';$('sampleSel').value=initial;loadSample(SOURCE_URLS[initial]||SAMPLES[initial]?initial:'O0600');

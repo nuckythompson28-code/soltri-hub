@@ -6,6 +6,9 @@
   let enabled=false,ready=false,loading=null,revision=-1,lastField='',cameraReady=false,contextLost=false;
   let anchors={},setup=null,lastSnapshot=null,resizeObserver;
   let workFrame,machineBody,capacity,dimensions,chuckBody,jaws=[],wholeMachine=false;
+  let stockMeasure,stockMeasureLine,stockMeasureLabel,measureText='',materialState=null;
+  let viewportWidth=0,viewportHeight=0;
+  const dropped=new Map();
   const equipment=window.SoltriMachineModels.KIT60G, catalog=equipment.specs, assumptions=equipment.modelAssumptions, actual=equipment.unitOverrides[7];
   const meshes=[],materialOriginal=new Map(),gapFollowers=[];let gapManual=false,displayGap=3.2;
   const stage=$('stage3d'),status=$('status3d'),button=$('btn3d');
@@ -22,6 +25,7 @@
   function toggle(on){
     enabled=!!on&&eligible();ui();
     $('cv').hidden=enabled;stage.hidden=!enabled;$('unit7Details').hidden=!enabled;$('unit7ToolControls').hidden=!enabled;
+    $('stockSummary3d').hidden=!enabled;
     $('btnCoord').disabled=enabled;$('btnGang').disabled=enabled;
     if(!enabled)return;
     if(contextLost){say('3D 그래픽 연결이 끊겼습니다. 2D 단면으로 확인하거나 새로고침하세요.');return;}
@@ -62,6 +66,9 @@
       }
       for(const [t,title] of [[1,'T1 · 90° 보링'],[2,'T2 · 2mm 절단날'],[3,'T3 · 오토링크']]){const a=anchors[t];const label=textSprite(title,[a.x+(t===2?-55:30),a.y+(t===1?-55:45),a.z+20],100);label.userData.toolLabel=true;model.add(label);}
       stockMesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshStandardMaterial({color:0xdca44c,roughness:.55,metalness:.08,side:THREE.DoubleSide}));workFrame.add(stockMesh);
+      stockMesh.name='Remaining full-length material';
+      stockMeasure=new THREE.Group();workFrame.add(stockMeasure);
+      stockMeasureLine=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x8d570b,depthTest:false}));stockMeasureLine.renderOrder=90;stockMeasure.add(stockMeasureLine);
       chuck=new THREE.Group();chuck.name='Unit7 chuck diameter300 bodywidth130';workFrame.add(chuck);
       const cr=actual.chuckDiameterMm/2, cd=actual.chuckBodyWidthMm, bore=33;
       chuckBody=new THREE.Mesh(new THREE.LatheGeometry([[bore,-cd],[cr,-cd],[cr,0],[bore,0],[bore,-cd]].map(p=>new THREE.Vector2(...p)),64),new THREE.MeshStandardMaterial({color:0x68798b,roughness:.4,metalness:.65}));
@@ -87,26 +94,22 @@
       o.material.color.copy(original.color);o.material.needsUpdate=true;
     }
     machineBody?.traverse(o=>{if(o.isMesh){o.material.opacity=$('ghost3d').checked ? .32 : 1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}});
+    // Show the complete bar through the chuck in the existing transparent view.
+    for(const o of [chuckBody,...jaws])if(o){o.material.opacity=$('ghost3d').checked?.22:1;o.material.transparent=o.material.opacity<1;o.material.depthWrite=!o.material.transparent;}
     render();
   }
   function size(){
     if(!renderer||!enabled)return;
     const w=stage.clientWidth,h=stage.clientHeight;if(w<1||h<1)return;
-    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();render();
+    const changed=viewportWidth>0&&(Math.abs(w-viewportWidth)>2||Math.abs(h-viewportHeight)>2);
+    viewportWidth=w;viewportHeight=h;
+    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+    if(changed&&cameraReady&&lastSnapshot)fit(wholeMachine?'iso':'front');else render();
   }
-  function surface(s){
-    const f=s.field;if(!f)return;
-    const key=`${s.revision}:${s.index}:${Math.round(s.fraction*45)}`;if(lastField===key)return;lastField=key;
-    const xs=[],outer=[],inner=[],stride=Math.max(1,Math.ceil(f.nz/160));
-    const pull=(s.frame?.pull||0)*s.fraction;
-    const add=j=>{xs.push(f.z0+j*f.dz+pull);outer.push(f.outer[j]);inner.push(f.inner[j]);};
-    for(let j=0;j<=f.nz;j+=stride){if(f.z0+j*f.dz>f.freeEnd+.001)break;add(j);}
-    const end=Math.min(f.nz,Math.max(0,Math.floor((f.freeEnd-f.z0)/f.dz)));
-    if(xs.length&&Math.abs(xs.at(-1)-(f.z0+end*f.dz+pull))>.001)add(end);
-    if(xs.length<2){stockMesh.visible=false;return;}stockMesh.visible=true;
-    const pos=[],idx=[],N=36,L=xs.length;
+  function tubeGeometry(xs,outer,inner,origin=0){
+    const pos=[],idx=[],N=48,L=xs.length;
     for(let i=0;i<L;i++)for(let side=0;side<2;side++)for(let k=0;k<N;k++){
-      const a=2*Math.PI*k/N,r=(side?inner:outer)[i];pos.push(xs[i],r*Math.cos(a),r*Math.sin(a));
+      const a=2*Math.PI*k/N,r=(side?inner:outer)[i];pos.push(xs[i]-origin,r*Math.cos(a),r*Math.sin(a));
     }
     for(let i=0;i<L-1;i++)for(let side=0;side<2;side++)for(let k=0;k<N;k++){
       const a=i*N*2+side*N+k,b=i*N*2+side*N+(k+1)%N,c=a+N*2,d=b+N*2;
@@ -115,13 +118,64 @@
     for(const i of [0,L-1])for(let k=0;k<N;k++){
       const a=i*N*2+k,b=i*N*2+(k+1)%N,c=a+N,d=b+N;idx.push(a,c,b,b,c,d);
     }
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
-    stockMesh.geometry.dispose();stockMesh.geometry=g;
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;
+  }
+  function surface(s){
+    const f=s.material;if(!f)return;materialState=f;
+    const key=`${s.revision}:${s.index}:${Math.round(s.fraction*90)}:${f.parts.length}`;if(lastField===key)return;lastField=key;
+    const xs=[],outer=[],inner=[];
+    const end=Math.min(f.nz,Math.max(0,Math.floor((f.freeEnd-f.z0)/f.dz)));
+    const same=(a,b)=>Math.abs(f.outer[a]-f.outer[b])<1e-6&&Math.abs(f.inner[a]-f.inner[b])<1e-6;
+    const add=(x,j)=>{xs.push(x);outer.push(f.outer[j]);inner.push(f.inner[j]);};
+    // Preserve every profile change, including the 2 mm kerf; only omit the
+    // interior of perfectly straight sections. Endpoints retain exact length.
+    for(let j=0;j<=end;j++)if(j===0||j===end||!same(j,j-1)||!same(j,Math.min(j+1,end)))add(f.z0+j*f.dz,j);
+    if(xs.length&&Math.abs(xs.at(-1)-f.freeEnd)>1e-7)add(f.freeEnd,end);
+    stockMesh.visible=xs.length>=2&&f.remainingLength>1e-6;
+    if(stockMesh.visible){stockMesh.geometry.dispose();stockMesh.geometry=tubeGeometry(xs,outer,inner);}
     chuck.position.set(s.stock.chuckFaceZ,0,0);
     const open=s.frame?.state.mainChuck==='open';
     chuckBody.material.color.set(open?0xb98869:0x68798b);
     jaws.forEach((jaw,i)=>{const angle=i*2*Math.PI/3,r=s.stock.rawO/2+14+(open?8:0);jaw.position.set(-16,r*Math.cos(angle),r*Math.sin(angle));jaw.rotation.x=angle;});
     machineBody.position.x=s.stock.chuckFaceZ;capacity.position.x=s.stock.chuckFaceZ;dimensions.position.x=s.stock.chuckFaceZ;
+    showStockMeasure(s,f);
+  }
+  function disposeLabel(label){if(!label)return;label.material.map?.dispose();label.material.dispose();label.removeFromParent();}
+  function showStockMeasure(s,f){
+    const y=s.stock.rawO/2+38,z=s.stock.rawO/2+8,front=f.freeEnd,back=f.z0;
+    stockMeasure.visible=stockMesh.visible;
+    const points=[[back,y,z],[front,y,z],[back,y-6,z],[back,y+6,z],[front,y-6,z],[front,y+6,z]].map(p=>new THREE.Vector3(...p));
+    stockMeasureLine.geometry.dispose();stockMeasureLine.geometry=new THREE.BufferGeometry().setFromPoints(points);
+    const label=`${f.remainingLength.toFixed(2).replace(/\.?0+$/,'')} mm`;
+    if(label!==measureText){measureText=label;disposeLabel(stockMeasureLabel);stockMeasureLabel=textSprite(label,[0,0,0],120);stockMeasure.add(stockMeasureLabel);}
+    stockMeasureLabel.position.set((back+front)/2,y+16,z);
+    const count=f.parts.filter(p=>p.kind!=='scrap').length,scraps=f.parts.length-count;
+    $('stockSummary3d').innerHTML=`<span>입력 전장 <strong>${s.stock.totalLength.toFixed(2).replace(/\.?0+$/,'')} mm</strong></span><span>남은 소재 <strong>${f.remainingLength.toFixed(2)} mm</strong></span><span>누적 인출 ${f.totalPull.toFixed(2)} mm</span><span>분리 제품 <strong>${count}개</strong>${scraps?` · 자투리 ${scraps}개`:''}</span><small>척 뒤 소재까지 포함 · 전장 = #101 + #102 · 낙하는 이해를 위한 표현이며 충돌·실제 가공시간 검증은 아닙니다.</small>`;
+  }
+  function clearDrops(){for(const item of dropped.values()){item.mesh.removeFromParent();item.mesh.geometry.dispose();item.mesh.material.dispose();}dropped.clear();}
+  function fallingParts(s){
+    const keep=new Set();
+    for(const part of s.material?.parts||[]){
+      const age=Math.max(0,s.visualTime-window.SoltriSim3D.eventTime(part.index,part.fraction));
+      // Once below the machine the piece is outside this view. Its record stays
+      // in the deterministic material timeline, so seeking restores it exactly.
+      if(age>1.2)continue;
+      keep.add(part.id);let item=dropped.get(part.id);
+      if(!item){
+        const center=(part.zStart+part.zEnd)/2;
+        const mesh=new THREE.Mesh(tubeGeometry(part.zs,part.outer,part.inner,center),stockMesh.material.clone());
+        mesh.name=part.kind==='scrap'?'Detached facing scrap':'Detached product';
+        mesh.material.color.set(part.kind==='scrap'?0xbc9556:0xeeb557);scene.add(mesh);
+        item={id:part.id,mesh,center,age:0,kind:part.kind,width:part.zEnd-part.zStart};dropped.set(part.id,item);
+      }
+      item.age=age;
+      // Scene Y is vertical; workFrame Y is tilted by the 45-degree bed.
+      // Deliberately slow the illustrative fall so a thin ring remains visible
+      // while the tool retracts. This is presentation time, not measured motion.
+      item.mesh.position.set(item.center,-.5*2400*age*age,0);
+      item.mesh.rotation.set(workFrame.rotation.x,Math.min(.85,age*2.5),Math.min(.45,age*.9));
+    }
+    for(const [id,item] of dropped)if(!keep.has(id)){item.mesh.removeFromParent();item.mesh.geometry.dispose();item.mesh.material.dispose();dropped.delete(id);}
   }
   function activePath(s){
     const p=s.segmentPoints||[];const points=p.map(([x,y])=>new THREE.Vector3(x,y,1));
@@ -130,8 +184,8 @@
   function sync(){
     if(!enabled||!ready||contextLost)return;
     const s=window.SoltriSim3D.snapshot();if(!s.unit7)return;
-    lastSnapshot=s;if(revision!==s.revision){revision=s.revision;lastField='';cameraReady=false;}
-    adjustGap(s);surface(s);activePath(s);
+    lastSnapshot=s;if(revision!==s.revision){revision=s.revision;lastField='';cameraReady=false;clearDrops();}
+    adjustGap(s);surface(s);fallingParts(s);activePath(s);
     const state=s.frame?.state||{},tool=state.toolNo||1,anchor=anchors[tool]||anchors[1];
     const known=!!s.point;let p=s.point;
     if(s.index<0)p=[25,s.stock.rawO/2+22]; // explicit layout preview before NC positioning
@@ -145,7 +199,7 @@
     say(s.index<0?'배치 미리보기 · 재생하면 NC 좌표와 연결됩니다.':!known?'기계 복귀/좌표 설정 중 · 실제 복귀 위치가 없어 공구대 위치를 생략합니다.':`T${tool} 기준점 추종 · 보링바 ${pstate} · 오토링크 ${state.alClamp==='closed'?'잡음':'열림'} · M코드 상태만 표시`);
     stage.dataset.tool=String(tool);stage.dataset.located=String(known);stage.dataset.index=String(s.index);
     // Debug interface supports automated invariants, not hidden CNC corrections.
-    window.Unit7View.debug={position:model.position.toArray(),anchor:anchor.toArray(),target:p,located:known,revision,index:s.index,brakeUp:state.brakeUp,clamp:state.alClamp,anchors,model,chuckRadius:actual.chuckDiameterMm/2,chuckBodyWidth:actual.chuckBodyWidthMm,bedAngle:catalog.bedSlantDeg,wholeMachine,machineBody,workFrame,displayGap,setup};
+    window.Unit7View.debug={position:model.position.toArray(),anchor:anchor.toArray(),target:p,located:known,revision,index:s.index,brakeUp:state.brakeUp,clamp:state.alClamp,anchors,model,chuckRadius:actual.chuckDiameterMm/2,chuckBodyWidth:actual.chuckBodyWidthMm,bedAngle:catalog.bedSlantDeg,wholeMachine,machineBody,workFrame,displayGap,setup,stockMesh,materialState,fallingParts:[...dropped.values()],visualTime:s.visualTime,chuck};
     if(!cameraReady){fit('front');cameraReady=true;}
     render();
   }
@@ -159,6 +213,9 @@
     const s=lastSnapshot||window.SoltriSim3D.snapshot();if(!s.stock)return;
     scene.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(chuck);box.union(new THREE.Box3().setFromObject(stockMesh));
+    box.union(new THREE.Box3().setFromObject(stockMeasure));
+    // Keep a little vertical room for the detached ring in the machining view.
+    if(!wholeMachine)box.expandByPoint(new THREE.Vector3(s.stock.chuckFaceZ/2,-190,0));
     if(wholeMachine&&machineBody.visible){box.union(new THREE.Box3().setFromObject(machineBody));box.expandByScalar(140);}
     if($('capacity3d').checked)box.union(new THREE.Box3().setFromObject(capacity));
     if(model.visible)box.union(new THREE.Box3().setFromObject(model));

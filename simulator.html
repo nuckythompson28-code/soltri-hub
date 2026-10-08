@@ -47,6 +47,7 @@
       <div class="unit7-controls" id="unit7Controls" hidden><button id="detail3d">가공부 확대</button><button id="tips3d">날끝 확대</button><button id="machine3d" aria-pressed="false">장비 전체</button><button id="front3d">정면</button><button id="iso3d">입체</button><button id="top3d">위에서</button><label><input id="body3d" type="checkbox" checked>장비 외골격</label><label><input id="ghost3d" type="checkbox" checked>기계 반투명</label><label><input id="capacity3d" type="checkbox">가공능력 참고</label><label><input id="showHose3d" type="checkbox" checked>호스 예시</label></div>
       <div id="unit7ToolControls" class="unit7-controls" hidden><label>보링 날끝 표시 간격 <input id="boringGap3d" type="number" min="0.1" max="7" step="0.1" value="3.2" style="width:65px"> mm</label><button id="gapAuto3d">제품 벽두께로 표시</button><span id="gapExplain3d"></span></div>
       <p id="unit7Details" hidden>7호기 KIT60G · 척 Ø300 × 130mm · 공구대 300 × 300mm · X 보정 차이÷2 적용 · 인서트 45° 회전, 상부 아래 / 하부 위 꼭짓점 절삭 · 홀더 세부 형상·공압 스트로크는 추정/미확인</p>
+      <p id="stockSummary3d" hidden aria-live="off"></p>
       <div class="running-code" aria-label="현재 프로그램 줄"><span>현재 프로그램 <b id="runningLocation">프로그램 실행 전</b></span><code id="runningSource">재생 또는 다음 이동을 누르세요.</code></div>
       <div class="stage"><canvas id="cv" aria-label="척은 왼쪽, 소재 자유단은 오른쪽. 위는 X 양수, 아래는 X 음수인 선반 가공 단면도"></canvas><div id="stage3d" hidden><p id="status3d" role="status">3D 준비</p></div></div>
       <div class="drawing-caption"><span id="stockDimensions">소재 치수 확인 중</span><span id="legend"></span></div>
@@ -87,6 +88,7 @@
 <script src="simulator-samples.js"></script>
 <script src="simulator-engine.js"></script>
 <script src="simulator-unit5-gang.js"></script>
+<script src="simulator-stock-3d.js"></script>
 <script src="simulator.js"></script>
 <script src="simulator-unit7-3d.js" defer></script>
 </body>
